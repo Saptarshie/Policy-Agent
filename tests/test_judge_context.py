@@ -70,6 +70,15 @@ class TestJudgeContextSelection(unittest.TestCase):
         self.verifier.check(r, "how many remote days?")
         self.assertIn("NOTE ON COVERAGE", self.captured["user"])
 
+    def test_document_inventory_is_included(self):
+        """Claims about WHICH documents exist must be checkable by the judge."""
+        self.db.add_document("expense_policy", "e.md", "md", 10, "ready")
+        r = self._result([])
+        self.verifier.check(r, "how many remote days?")
+        self.assertIn("DOCUMENT INVENTORY", self.captured["user"])
+        self.assertIn("remote_policy", self.captured["user"])
+        self.assertIn("expense_policy", self.captured["user"])
+
     def test_unresolvable_citation_does_not_crash(self):
         r = self._result(["ghost_doc § 9"])
         ids = self.verifier._judge_context_ids(r)

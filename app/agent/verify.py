@@ -228,11 +228,42 @@ class AnswerVerifier:
             for cid in picked:
                 if cid not in cited:
                     cited.append(cid)
+            # a document's title / effective date / scope sit in its header
+            # chunk, which a section citation does not cover
+            if chunks:
+                header = min(chunks, key=lambda c: (c.get("chunk_index") or 0, c["id"]))
+                if int(header["id"]) not in cited:
+                    cited.append(int(header["id"]))
         order = list(cited)
         for cid in result.seen_chunk_ids:
             if int(cid) not in order:
                 order.append(int(cid))
         return order
+
+    def _inventory(self) -> str:
+        """Every ingested document plus its ingestion summary.
+
+        Titles, effective dates and applicability scope live in a document's
+        header, which retrieval rarely returns and a section citation never
+        covers - so without this the judge flags correct statements about *which
+        document says what* as invented (observed on all remote-work conflict
+        cases). The ingestion summary is included because the agent may quote it
+        via ``get_document_summary``: it is a legitimate evidence source that is
+        not a chunk, so it never appears in the judge's passage window.
+        """
+        try:
+            docs = self.db.list_documents()
+        except Exception as e:               # never break verification on this
+            log.info("document inventory unavailable: %s", e)
+            return ""
+        lines = []
+        for doc in docs[:40]:
+            name = str(doc.get("name") or "")
+            if not name:
+                continue
+            summary = _WS.sub(" ", str(doc.get("summary") or "")).strip()
+            lines.append(f"- {name}" + (f": {summary[:600]}" if summary else ""))
+        return "\n".join(lines)
 
     # ------------------------------------------------------------------ judge
 
@@ -255,6 +286,21 @@ class AnswerVerifier:
             user = (
                 f"USER MESSAGE (the employee's own words - context, not evidence):\n"
                 f"{user_message.strip()[:2000]}\n\n" + user
+            )
+        inventory = self._inventory()
+        if inventory:
+            user += (
+                "\n\nDOCUMENT INVENTORY (every ingested document, verified by "
+                "listing rather than retrieval):\n"
+                f"{inventory}\n\n"
+                "SCOPE OF THIS CHECK: the inventory is verified metadata, not "
+                "retrieval. Claims about which documents exist, and a document's "
+                "own title, effective date and applicability scope as stated in "
+                "its inventory line, are SUPPORTED by this inventory and must not "
+                "be flagged merely because no passage repeats them. A conclusion "
+                "that follows from comparing two passages is supported when both "
+                "premises are present. Claims about policy CONTENT (numbers, "
+                "rules, tiers, obligations) must appear in a context above."
             )
         try:
             obj, err = self.llm.chat_json(self.system_prompt, user)

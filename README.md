@@ -143,9 +143,13 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 
 ## Anti-hallucination measures
 
-1. **Intent gate (regex, zero LLM)** — greetings and "what documents
-   exist" are answered deterministically; real questions always reach
-   the agent.
+1. **Triage before retrieval (one LLM call)** — the raw input is classified
+   into one of 8 categories and the route is derived from the category:
+   greetings and document listings are answered directly, non-HR input and
+   prompt injection are refused, everything about workplace policy goes to the
+   grounded agent. The layer **fails open** and **never refuses a workplace
+   question** (it has not read the corpus), so it cannot become a coverage
+   outage. It also de-noises the question and proposes the search queries.
 2. **Grounding prompt** — answer only from tool output; explicit
    "the documents don't cover this" escape hatch; conflicts must be surfaced,
    never silently resolved.
@@ -160,10 +164,14 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
    fabricated result.
 6. **Fallback tool calling** — endpoints without native function calling
    can emit `<tool_call>{...}</tool_call>`; same repair/validation path.
-7. **Evidence + faithfulness verification** — the answer is compared
-   against only the passages the agent actually saw (`seen_chunk_ids`);
-   an LLM judge flags unsupported claims (`faithful: false` + warnings).
-   Unverifiable stays `null` — nothing invented.
+7. **Evidence + faithfulness verification** — the judge reads the passages
+   the answer **cites**, then the rest of what the agent saw (24 chunks /
+   24k chars), plus the ingested-document inventory so statements about which
+   policy exists are checkable. It flags unsupported claims
+   (`faithful: false` + the quoted claims in `citation_warnings`); a verdict
+   that names no claim is retried once and then degraded to `unknown`, never
+   reported as a failure. Truncated evidence adds an explicit coverage note so
+   an omission can never turn into an accusation.
 8. **Precision-biased verifier** — different scope / complementary rules /
    topical similarity only are explicitly *not* contradictions; uncertain →
    false. Unverifiable-but-strong gate hits are marked UNVERIFIED, not
@@ -204,7 +212,7 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `INTENT_REASONING_EFFORT` | `off` | reasoning budget for the classifier; JSON extraction needs none |
 | `INTENT_CACHE_PATH` | *(empty)* | decision cache; empty = `DATA_DIR/intent_cache.json` |
 | `LLM_REASONING_EFFORT` | *(empty)* | provider reasoning budget for agent/judge; empty leaves the endpoint default |
-| `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v1` / `v1` / `v1` | prompt variants; the ablation picks the winner |
+| `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v1` / `v1` / `v1` | prompt variants; v1 and v2 tie end-to-end (see `eval/ABLATION.md`) |
 | `RAG_TOP_K` | `6` | passages per `search_policy_docs` call |
 | `RETRIEVAL_MODE` | `hybrid` | `vector` / `keyword` / `hybrid` (RRF fusion of cosine + FTS5/BM25) |
 | `RRF_K` | `60` | RRF damping constant (higher = flatter rank weights) |
@@ -274,6 +282,7 @@ policy-rag-agent/
 pip install -r requirements-dev.txt
 pytest                              # full offline suite (no LLM, no Ollama)
 python run.py selftest              # same suite via unittest
+python scripts/demo.py              # fact / table / off-policy / refusal, as JSON
 python eval/run_eval.py             # 18-case eval against a live stack
 python eval/run_intent_eval.py --variant legacy,v1,v2 --hard   # triage ablation
 python eval/run_ablation.py --variant A,B,C,D                  # end-to-end prompts
@@ -292,8 +301,18 @@ plan injection), retrieval (FTS5 keyword index, RRF fusion, mode fallbacks),
 the faithfulness verifier (gating, judge context selection, unsubstantiated
 verdicts) and the HTTP API end-to-end.
 
-The measured comparison of prompt variants and retrievers lives in
-`eval/ABLATION.md`.
+### What the measurements changed
+
+| finding | change |
+|---|---|
+| regex triage: 74.6% route accuracy, 15 of 22 adversarial inputs sent to the agent | replaced by an LLM triage layer: **100%** route accuracy, 1 miss, 0 false refusals |
+| end-to-end, 23 labelled cases | A (regex) **87%** → B/C (triage) **100%**; A fails exactly the injection, the harassment escalation and the joke |
+| classifier truncated at 700 output tokens | cap raised + corrective retry; `reasoning_effort=off` gives the same decisions at **4.1s vs 5.2s** |
+| judge accused correct conflict answers of inventing facts | judge now sees the cited chunks, the document inventory and each cited document's header — 5 false alarms → **0** |
+| keyword retrieval returned 0/17 | FTS backfill fixed (it was counting the content table); hybrid RRF is now the default |
+| dense vs sparse vs hybrid | tied at k≥3 on a 7-document corpus; sparse wins one top-1 exact-token case. Reported as a tie, not a win |
+
+Full tables, the relabelled cases and the threat list: `eval/ABLATION.md`.
 
 ## Troubleshooting
 

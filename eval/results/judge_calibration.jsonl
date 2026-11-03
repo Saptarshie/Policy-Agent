@@ -1,0 +1,10 @@
+{"id": "q01", "claim": "The standard tier covers dental implants at 100% with no waiting period.", "verdicts": {"v1": {"clean": false, "tampered": false}, "v2": {"clean": false, "tampered": false}}}
+{"id": "q02", "claim": "The company also reimburses home gym equipment up to $2,000 per year.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}
+{"id": "q03", "claim": "Employees receive 25 casual leave days per year in addition to sick leave.", "verdicts": {"v1": {"clean": false, "tampered": false}, "v2": {"clean": false, "tampered": false}}}
+{"id": "q04", "claim": "Remote work is permitted 4 days per week without manager approval.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}
+{"id": "q05", "claim": "In addition, employees may carry forward up to 30 days of casual leave.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": false, "tampered": false}}}
+{"id": "q06", "claim": "In addition, employees may carry forward up to 30 days of casual leave.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}
+{"id": "q07", "claim": "International per diem is $150 per day for all grades.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}
+{"id": "q08", "claim": "In addition, employees may carry forward up to 30 days of casual leave.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}
+{"id": "q09", "claim": "The standard tier covers dental implants at 100% with no waiting period.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}
+{"id": "q10", "claim": "International per diem is $150 per day for all grades.", "verdicts": {"v1": {"clean": true, "tampered": false}, "v2": {"clean": true, "tampered": false}}}

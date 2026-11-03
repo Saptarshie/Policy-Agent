@@ -31,7 +31,7 @@ from app.admin import AdminAPI  # noqa: E402
 from app.agent.verify import AnswerVerifier  # noqa: E402
 from app.prompts import FAITHFULNESS_SYSTEM, FAITHFULNESS_SYSTEM_V2  # noqa: E402
 
-RUNS = ROOT / "eval" / "results" / "ablation_runs.jsonl"
+RESULTS = ROOT / "eval" / "results"
 OUT = ROOT / "eval" / "results" / "judge_calibration.jsonl"
 
 # claims that do not exist anywhere in the sample corpus
@@ -51,12 +51,19 @@ def main() -> int:
     ap.add_argument("--variant", default="C", help="ablation variant to draw answers from")
     args = ap.parse_args()
 
-    if not RUNS.exists():
-        print("run eval/run_ablation.py first")
-        return 2
-    rows = [json.loads(l) for l in RUNS.read_text(encoding="utf-8").splitlines() if l.strip()]
-    rows = [r for r in rows if r["variant"] == args.variant
-            and r.get("pattern_ok") and not r.get("refused") and len(r.get("answer", "")) > 80]
+    rows = {}
+    for path in sorted(RESULTS.glob("ablation_*.jsonl")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            rows[(r["variant"], r["id"])] = r
+    rows = [r for r in rows.values() if r["variant"] == args.variant
+            and r.get("pattern_ok") and not r.get("refused")
+            and len(r.get("answer", "") or "") > 80]
     if not rows:
         print("no suitable answered rows in the ablation log")
         return 2

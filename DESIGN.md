@@ -190,6 +190,11 @@ Cheap layers first, expensive last:
    and the layer **fails open**: any error routes to the agent, because a
    triage outage must not become a coverage outage. The old regex gate is kept
    as `app/agent/intent_legacy.py` purely as the ablation baseline.
+   Measured on 67 labelled cases (45 canonical + 22 adversarial/ambiguous):
+   **route accuracy 74.6% → 100%**, missed refusals **15 → 1**, false refusals 0
+   in both, at the cost of one cached call (p50 5.2s, 4.1s with reasoning
+   disabled). The regex gate is 0s and wrong about one in four real questions,
+   which is the trade the numbers support.
 2. **Prompt contract** (`app/prompts.py`) — grounding, search-first, verify
    truncated snippets, mandatory citation format, exact "documents do not
    cover this" refusal text, "present both sides on conflicts", scope limits.
@@ -345,16 +350,37 @@ Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/docu
    keeps the code simple and thread-safe for background ingestion.
 7. **In-process background threads ✂ Celery/RQ** — no broker dependency;
    job rows in SQLite already give resumable progress tracking.
+8. **LLM triage ✂ regex/keyword gate** — a lexical gate cannot separate "what
+   policies apply to parental leave?" from "what policy documents do you
+   have?", and it cannot see a grievance with no policy vocabulary. Measured:
+   route accuracy 74.6% (regex) vs 100% (LLM), 15 vs 1 missed refusals, at the
+   cost of one cached call (~4.1s, reasoning disabled). The regex gate stays in
+   the repo as the ablation baseline, not as a fallback.
+9. **RRF over score fusion ✂ weighted sum of cosine + BM25** — the two scores
+   live on incomparable scales and per-query normalisation flips ranking when
+   one retriever returns a single strong hit. RRF needs ranks only, so it
+   cannot be dominated by whichever retriever produces bigger numbers; the
+   weights stay available for tuning (`HYBRID_*_WEIGHT`).
+10. **One global output ceiling ✂ per-caller `max_tokens` budgets** — a cap is
+    not a budget: billing follows actual output, so a 64k ceiling on a 40-token
+    verdict costs nothing, while a small cap truncates a reasoning model's JSON
+    (this happened: the classifier's verdict was cut mid-object at 700 tokens).
+    `MAX_OUTPUT_TOKENS` is therefore global; `reasoning_effort` is the lever
+    that actually controls cost/latency per caller.
 
 ## 7. If I had two more weeks
 
-1. **Eval harness v2** — run `eval/eval_set.jsonl` in CI against a frozen
-   corpus with per-change retrieval hit@k, citation precision and refusal
-   accuracy (the set + runner already exist in `eval/`).
-2. **Hybrid search** — add BM25 + RRF fusion and a heading-path bonus on top
-   of dense cosine (helps exact ids, clause numbers and benefit names).
-3. **Reranker** — small cross-encoder over the top-20 hits (bge-reranker via
-   Ollama); usually the single biggest precision jump.
+1. **Eval harness in CI** — the sets and runners exist (`eval/run_ablation.py`,
+   `measure_retrieval.py`, `run_intent_eval.py`, `calibrate_judge.py`); what is
+   missing is a `make eval` gate on a frozen corpus so a retrieval or prompt
+   change cannot silently regress. The label-only retrieval check needs no LLM,
+   so it can run on every commit for free.
+2. **Reranker** — small cross-encoder over the top-20 hits (bge-reranker via
+   Ollama); usually the single biggest precision jump once the corpus is big
+   enough for the fusion step to matter.
+3. **Judge verdict cache** — verdicts vary run to run at temperature 0; caching
+   them keyed by `sha(question + answer + contexts)` makes demos reproducible and
+   re-runs free (the triage layer already does exactly this).
 4. **Table-aware extraction** — row-level digests for tables (PDF tables via
    pdfplumber with bbox detection), so "does tier X cover Y?" hits the exact
    cell.

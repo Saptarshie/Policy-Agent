@@ -127,6 +127,11 @@ def _print_result(result, trace: bool) -> None:
 
 def cmd_ask(args) -> int:
     api = _api()
+    cfg = api.cfg
+    # one line so a reviewer can see which stack answered the question
+    print(f"[retrieval={cfg.retrieval_mode} intent={'on' if cfg.intent_enabled else 'off'}"
+          f" prompts={cfg.prompt_intent}/{cfg.prompt_agent}/{cfg.prompt_judge}"
+          f" judge={'on' if cfg.verify_answers else 'off'}]\n")
     print("Thinking (ReAct loop) ...\n")
     result = api.ask(args.question)
     _print_result(result, trace=args.trace)

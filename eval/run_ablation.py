@@ -128,15 +128,20 @@ def score(case: dict, result) -> dict:
         if pattern_ok and is_refusal and not case.get("allow_refusal"):
             pattern_ok = False        # a refusal cannot satisfy a factual case
     doc_ok = True
-    hint = (case.get("expect_doc") or "").lower()
-    if hint and result.citations:
-        doc_ok = hint in " ".join(result.citations).lower()
+    hints = [h.strip().lower() for h in (case.get("expect_doc") or "").split("|") if h.strip()]
+    cited = " ".join(result.citations or []).lower()
+    if hints and result.citations:
+        # "a|b" means either document is acceptable
+        doc_ok = any(h in cited for h in hints)
     return {
         "pattern_ok": pattern_ok,
         "doc_ok": doc_ok,
         "refused": is_refusal,
         "citation_warnings": len(result.citation_warnings),
+        "warnings": list(result.citation_warnings),
         "faithful": result.faithful,
+        "unsupported_claims": result.unsupported_claims,
+        "judge_context_ids": list(getattr(result, "judge_context_ids", []) or []),
         "error": result.error or "",
     }
 

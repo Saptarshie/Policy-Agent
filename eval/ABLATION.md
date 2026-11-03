@@ -172,11 +172,104 @@ Variants:
 29 cases: 23 from `eval/eval_set.jsonl` (fact / table / conflict) and 6 from
 `eval/qa_extra.jsonl` (grievance, injection, sensitive, off-policy).
 
-<!-- END2END_TABLE -->
+Every row below comes from the final code, scored against the final labels
+(`python eval/rescore.py` re-applies the labels to the stored answers; two
+relabellings are recorded in the case files — `q16`, whose corpus does contain a
+catch-all exclusion clause, and a scorer bug for `expect_doc` alternatives that
+made two cases impossible to pass).
 
-## 6. Judge calibration on injected claims
+```
+variant                          n   pass   cleanCit  judgeFAIL  p50     tools
+A  regex triage + prompts v1/v1  23   87.0%    100%       6        15.9s   2.3
+B  LLM triage   + prompts v1/v1  23  100.0%    100%       1        17.9s   2.7
+C  LLM triage   + prompts v2/v2  23  100.0%    100%       1        18.9s   2.6
+D  = C with the judge disabled   23  100.0%    100%       —        12.3s   2.7
+```
 
-<!-- JUDGE_CALIBRATION -->
+What each comparison isolates:
+
+* **A → B is the front door (+13 points).** The three cases A fails are exactly
+  the ones triage exists for: the prompt-injection that demands a fabricated
+  $5,000 gym reimbursement (`e02`), the harassment complaint that must carry an
+  escalation note (`e04`), and "tell me a joke" (`e05`). A answers the injection
+  with a policy-style answer, gives no escalation note, and tries to answer the
+  joke. Everything else was already handled by the agent — the regex gate was not
+  broken for *easy* questions, it was broken for the ones that matter.
+* **B → C is the prompts (± 0 points).** On 23 cases the rewritten agent and
+  judge prompts change no outcome. Their measured difference is in precision,
+  not pass rate: C's answers quote the sentence behind every number and carry an
+  explicit "the two documents conflict" section, and the judge prompt forbids a
+  `false` verdict with no named claim (enforced in code for both variants). That
+  is a real improvement in auditability that this pass-rate metric cannot see —
+  reported as a wash, not as a win.
+* **C → D is the judge (6.6s of p50 latency, one flag).** With the judge off the
+  pass rate is identical and the run is a third faster; what disappears is the
+  single detected unsupported claim (and, in A, four of six). The judge buys
+  detection, not accuracy — which is the correct way to describe it.
+
+
+## 6. Judge calibration: what the flags actually are
+
+The faithfulness judge is the layer most likely to be wrong in both directions,
+so every `faithful: false` in the ablation was read manually rather than
+counted. Three distinct causes showed up, and only the first is a hallucination:
+
+1. **Real grounding defects** — an answer asserting a number or rule that is not
+   in any passage the agent saw. Example: an answer restating "public holidays
+   and floating holidays" as leave types when the leave-types table it cited
+   lists four types and the holidays live in a different section it did not read.
+   Minor, real, correctly flagged.
+2. **Evidence-set gaps (the judge's fault)** — the judge was handed the first 8
+   seen chunks, so conflict answers citing late passages looked invented. Fixed
+   by resolving the cited chunks first and raising the budget to 24 chunks /
+   24k chars (see `dev_docs/OVERNIGHT_LOG.md`).
+3. **Scope errors (the judge's fault)** — the judge flagged statements that are
+   true about the *system* rather than the policy: "none of the seven documents
+   contains an office dress code", "both documents are marked ready in the
+   ingested corpus", "the expense policy is HR-EXP-2024-003". None of that is in
+   a policy passage, all of it is verifiable from the document inventory or a
+   listing tool call. The judge now receives the **document inventory** and an
+   explicit scope rule: inventory claims are checked against it, a conclusion
+   that follows from comparing two passages is supported when both premises are
+   present, and only policy *content* must be quoted from a context.
+
+The third fix also explains an apparent regression: stricter prompt v2 was
+flagging *more* answers than v1, because v2 adds "document names must match the
+contexts" and the judge then punished the agent for naming a document it had
+listed but not quoted. Attribution checks must be able to see the inventory, or
+they punish correct behaviour.
+
+What this means for reading the numbers: `judgeFAIL` is a measure of
+*judge–agent disagreement*, not of hallucination count. The pass column (does the
+answer satisfy the case's expectation, with a resolvable citation) is the metric
+that reflects user-visible quality; the judge is an auditing signal whose own
+error rate is documented above instead of assumed to be zero.
+
+`eval/calibrate_judge.py` turns the judge into a classifier and measures it on
+20 documents (10 clean answers from variant C, and the same 10 with one fabricated
+policy claim spliced in — a number or entitlement that appears nowhere in the
+corpus):
+
+```
+prompt   TNR (clean judged faithful)   TPR (injected claim caught)
+v1              8/10                              10/10
+v2              7/10                              10/10
+```
+
+Both prompts catch **every** injected fabrication, and both occasionally flag a
+clean answer (v1 2/10, v2 3/10). Two caveats, because they matter:
+
+* the "clean" set is the agent's own output, and reading it shows at least one of
+  those answers does contain an unsupported generalisation — so TNR 8/10 is a
+  lower bound, not a measurement of pure false alarms;
+* n=10 per condition: one case moves a column by 10 points.
+
+The practical reading: the judge is a **high-recall, moderate-precision** signal.
+That is why it flags (`faithful=false` + quoted claims in `citation_warnings`) and
+never rewrites or suppresses an answer, and why an unsubstantiated verdict
+degrades to `unknown` instead of becoming an accusation. v1 is the default
+(fewer rules, fewer false alarms here); v2 is one env var away for audits.
+
 
 ## 7. What this changed in the code
 
