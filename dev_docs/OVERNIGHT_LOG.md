@@ -85,7 +85,7 @@ content table, so the index was never built (keyword search scored 0/17).
 
 | variant | pass | clean citations | judge flags | p50 | tools |
 |---|---|---|---|---|---|
-| A regex + prompts v1 | 87.0% | 100% | 6 | 15.9s | 2.3 |
+| A regex + prompts v1 | 87.0% | 100% | 2 | 15.5s | 2.3 |
 | B triage + prompts v1 | 100% | 100% | 1 | 17.9s | 2.7 |
 | C triage + prompts v2 | 100% | 100% | 1 | 18.9s | 2.6 |
 | D = C, judge off | 100% | 100% | — | 12.3s | 2.7 |
@@ -119,7 +119,7 @@ stored answers instead of spending 20 minutes re-running the agent.
    narrow — the judge still counted a document's own scope line as unsupported
    content. Fix: inventory metadata (title, effective date, applicability) counts
    as support.
-4. **Final**: B/C flag 1, D 0, A 6. The surviving flags are substantive: an answer
+4. **Final**: B/C flag 1, D 0, A 2. The surviving flags are substantive: an answer
    generalising "casual leave cannot be encashed" from a context that only said
    excess above the cap lapses; an answer narrating "similarity scores were
    uniformly near zero" into the final answer; an answer adding "cryotherapy is
@@ -127,6 +127,12 @@ stored answers instead of spending 20 minutes re-running the agent.
 
 Net effect: judge false alarms went from 5/23 (all artifacts of the evidence set
 it was given) to 0/23 on correct answers, while still catching the real ones.
+
+One bookkeeping trap worth recording: an early log file (`ablation_runs.jsonl`,
+from the first killed run) held four pre-fix A rows. It matched the
+`ablation_*.jsonl` glob, and because it sorted after `ablation_A.jsonl` its stale
+rows overwrote the good ones, inflating A's judge flags from 2 to 6 in the first
+write-up. The file is gone and the counts are now 23 rows per variant.
 
 ### 4.6 Judge as a classifier (injected-claim calibration)
 

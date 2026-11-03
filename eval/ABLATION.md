@@ -180,7 +180,7 @@ made two cases impossible to pass).
 
 ```
 variant                          n   pass   cleanCit  judgeFAIL  p50     tools
-A  regex triage + prompts v1/v1  23   87.0%    100%       6        15.9s   2.3
+A  regex triage + prompts v1/v1  23   87.0%    100%       2        15.5s   2.3
 B  LLM triage   + prompts v1/v1  23  100.0%    100%       1        17.9s   2.7
 C  LLM triage   + prompts v2/v2  23  100.0%    100%       1        18.9s   2.6
 D  = C with the judge disabled   23  100.0%    100%       —        12.3s   2.7
@@ -204,8 +204,13 @@ What each comparison isolates:
   reported as a wash, not as a win.
 * **C → D is the judge (6.6s of p50 latency, one flag).** With the judge off the
   pass rate is identical and the run is a third faster; what disappears is the
-  single detected unsupported claim (and, in A, four of six). The judge buys
-  detection, not accuracy — which is the correct way to describe it.
+  single detected unsupported claim (and, in A, two). The judge buys detection,
+  not accuracy — which is the correct way to describe it.
+* A's two flags are the substantive kind, and both are prompt-quality symptoms
+  rather than retrieval misses: an answer generalising "casual leave cannot be
+  encashed" from a passage that only said the excess above the cap lapses, and an
+  answer narrating its own search diagnostics ("similarity scores were uniformly
+  near zero") into the reply. v2's prompt forbids both explicitly.
 
 
 ## 6. Judge calibration: what the flags actually are
