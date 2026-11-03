@@ -13,7 +13,7 @@ import logging
 import re
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 import numpy as np
@@ -556,6 +556,45 @@ class Database:
         except json.JSONDecodeError:
             d["detail"] = {}
         return d
+
+    def reconcile_stale_jobs(self, max_age_minutes: int = 30) -> List[Dict[str, Any]]:
+        """Mark jobs abandoned by a dead process as failed.
+
+        Ingestion runs on a daemon thread; if the process is killed the `jobs`
+        row stays `running` forever and the document stays `ingesting`, so the UI
+        polls a job that will never finish and the document is unusable. A job
+        that has not been touched for *max_age_minutes* is treated as abandoned.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=max(1, max_age_minutes))
+        fixed: List[Dict[str, Any]] = []
+        with self.lock:
+            rows = self.conn.execute(
+                "SELECT id, doc_id, kind, stage, updated_at, created_at FROM jobs"
+                " WHERE status='running'").fetchall()
+            for row in rows:
+                stamp = row["updated_at"] or row["created_at"] or ""
+                try:
+                    when = datetime.fromisoformat(stamp)
+                except ValueError:
+                    when = None
+                if when is not None and when.tzinfo is None:
+                    when = when.replace(tzinfo=timezone.utc)
+                if when is not None and when >= cutoff:
+                    continue
+                self.conn.execute(
+                    "UPDATE jobs SET status='error', error=?, updated_at=?"
+                    " WHERE id=?",
+                    ("interrupted: no progress recorded since "
+                     f"{stamp or 'unknown'}", _now(), row["id"]))
+                self.conn.execute(
+                    "UPDATE documents SET status='error', updated_at=?"
+                    " WHERE id=? AND status IN ('ingesting','pending')",
+                    (_now(), row["doc_id"]))
+                fixed.append({"job_id": row["id"], "doc_id": row["doc_id"],
+                              "kind": row["kind"], "stage": row["stage"]})
+            if fixed:
+                self.conn.commit()
+        return fixed
 
     def latest_job_for_doc(self, doc_id: int, kind: Optional[str] = None) -> Optional[Dict[str, Any]]:
         with self.lock:

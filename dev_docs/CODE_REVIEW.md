@@ -33,7 +33,7 @@ below) · **BY DESIGN** = looks like a defect, is not.
 
 ## 2. Open, ranked
 
-### O1 (medium) — an interrupted ingestion leaves a document stuck forever
+### O1 — FIXED — an interrupted ingestion left a document stuck forever
 `AdminAPI.upload_document_async` ingests on a daemon thread. If the process
 dies, the `documents` row stays `ingesting` and the `jobs` row stays `running`;
 nothing reconciles them on the next start, and the UI polls a job that will never
@@ -78,9 +78,10 @@ sees the same shape it sees today for .md.
 dozens of calls with no cache. Fix: cache the parse keyed by a hash of the window
 text (re-uploads become free) — the same trick the intent layer uses.
 
-### O7 (low) — uploads are never pruned
-Deleting a document removes rows but not the file under `data/uploads/`. Fix:
-unlink in `delete_document` (the path is in the `documents` row).
+### O7 — FIXED — uploads were never pruned
+Deleting a document removed rows but not the file under `data/uploads/`.
+`AdminAPI.delete_document` now unlinks the stored file (best-effort: an OSError
+is logged, never raised, because the row is already gone).
 
 ### O8 (low) — the scan is O(chunks × top_k) per document, with no prefilter
 Fine for the demo corpus, not for a 100-document library. Fix: prefilter

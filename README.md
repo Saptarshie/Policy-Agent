@@ -219,6 +219,7 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `RRF_K` | `60` | RRF damping constant (higher = flatter rank weights) |
 | `HYBRID_VECTOR_WEIGHT` / `HYBRID_KEYWORD_WEIGHT` | `1.0` / `1.0` | per-retriever weight inside the fusion |
 | `MAX_UPLOAD_MB` | `20` | upload ceiling; larger files get HTTP 413 |
+| `STALE_JOB_MINUTES` | `30` | a job untouched this long is marked `error` at startup (killed process), so its document cannot stay `ingesting` |
 | `DATA_DIR` | `./data` | SQLite DB + uploads |
 
 ## Project layout

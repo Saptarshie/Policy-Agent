@@ -128,6 +128,9 @@ class Config:
     # its verdict from disk, which makes demos and regressions reproducible
     judge_cache: bool = True
     max_upload_mb: int = 20
+    # a job untouched for this long is treated as abandoned by a dead
+    # process at startup, so its document cannot stay "ingesting" forever
+    stale_job_minutes: int = 30
     # Retrieval: "hybrid" fuses dense (cosine) and sparse (FTS5/BM25) rankings
     # with Reciprocal Rank Fusion; "vector" and "keyword" isolate one retriever
     # (used by eval/measure_retrieval.py to justify the default).
@@ -192,6 +195,7 @@ def get_config() -> Config:
             embed_batch_size=_int("EMBED_BATCH_SIZE", 32),
             rag_top_k=_int("RAG_TOP_K", 6),
             max_upload_mb=_int("MAX_UPLOAD_MB", 20),
+            stale_job_minutes=_int("STALE_JOB_MINUTES", 30),
             retrieval_mode=_str("RETRIEVAL_MODE", "hybrid").strip().lower(),
             rrf_k=_int("RRF_K", 60),
             hybrid_vector_weight=_float("HYBRID_VECTOR_WEIGHT", 1.0),

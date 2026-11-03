@@ -38,6 +38,9 @@ tonight, see §9).
 | 12 | `reasoning_effort` support (opt-in per call, degrades on 400) | measured 25% lower p50 for the classifier with no accuracy loss |
 | 13 | removed `DECISION_MAX_OUTPUT_TOKENS` | a per-caller token cap is not a budget; for a reasoning classifier a small cap causes truncation |
 | 14 | `OLLAMA_BASE_URL` default → `127.0.0.1` | `localhost` cost ~2s per embedding call on Windows (IPv6 fallback) |
+| 15 | stale-job reconciliation at startup (`STALE_JOB_MINUTES`) | a killed ingest left a document `ingesting` forever and the UI polling a dead job |
+| 16 | deleting a document unlinks its stored upload | the row was gone, the file was not: silent disk leak |
+| 17 | judge verdict cache (`JUDGE_CACHE`) | verdicts vary run to run at temperature 0; a repeat now replays instead of re-deciding |
 
 ## 3. Test suite
 

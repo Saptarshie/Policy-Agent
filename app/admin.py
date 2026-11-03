@@ -56,6 +56,17 @@ class AdminAPI:
             _LOG_CONFIGURED = True
         self.cfg.data_dir.mkdir(parents=True, exist_ok=True)
         self.db = db or Database(self.cfg.db_path)
+        # a job left 'running' by a killed process would keep its document
+        # 'ingesting' forever; reconcile once per process start
+        try:
+            stale = self.db.reconcile_stale_jobs(self.cfg.stale_job_minutes)
+            for item in stale:
+                log.warning("abandoned %s job #%s for doc %s (stage '%s'); "
+                            "document marked error - re-upload it",
+                            item["kind"], item["job_id"], item["doc_id"],
+                            item["stage"])
+        except Exception as e:               # never block startup on this
+            log.info("stale-job reconciliation skipped: %s", e)
         self._embedder = embedder
         self._llm = llm
         self._intent_router = intent_router
@@ -248,6 +259,14 @@ class AdminAPI:
         ok = self.db.delete_document(d["id"])
         if ok:
             log.info("deleted document '%s' (+chunks, +contradictions)", d["name"])
+            # the row is gone; leaving the upload behind leaks disk on a long run
+            stored = (d.get("filename") or "").strip()
+            if stored:
+                path = self.cfg.data_dir / "uploads" / Path(stored).name
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError as e:
+                    log.info("could not remove stored upload %s: %s", path, e)
         return ok
 
     def list_documents(self) -> List[Dict[str, Any]]:
