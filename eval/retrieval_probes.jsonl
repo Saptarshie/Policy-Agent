@@ -1,0 +1,10 @@
+{"id": "p01", "question": "What does policy CL-2025-07 change?", "expect_doc": "leave_policy_2025_amendment", "expect_pattern": "CL-2025-07", "note": "exact-token probe"}
+{"id": "p02", "question": "What is the carry-forward cap after the July 2025 amendment?", "expect_doc": "leave_policy_2025_amendment", "expect_pattern": "maximum of 15 days", "note": "exact-token probe"}
+{"id": "p03", "question": "Which policy number covers travel and expense?", "expect_doc": "expense_policy", "expect_pattern": "HR-EXP-2024-003", "note": "exact-token probe"}
+{"id": "p04", "question": "What is the insurer's policy number for the health plan?", "expect_doc": "health_plans", "expect_pattern": "MHA-2025-NR", "note": "exact-token probe"}
+{"id": "p05", "question": "Which tier has a $4,000 out-of-pocket maximum?", "expect_doc": "health_plans", "expect_pattern": "Out-of-pocket maximum \\| \\$6,000 \\| \\$5,000 \\| \\$4,000", "note": "exact-token probe"}
+{"id": "p06", "question": "What is the domestic per diem per day?", "expect_doc": "travel_reimbursement_policy", "expect_pattern": "60 USD per day", "note": "exact-token probe"}
+{"id": "p07", "question": "What is the cap for client entertainment per person per event?", "expect_doc": "expense_policy", "expect_pattern": "\\$150 per person per event", "note": "exact-token probe"}
+{"id": "p08", "question": "Within how many days must travel receipts be submitted?", "expect_doc": "travel_reimbursement_policy", "expect_pattern": "within 30 days", "note": "exact-token probe"}
+{"id": "p09", "question": "Does the Standard tier cover dental implants?", "expect_doc": "health_plans", "expect_pattern": "not covered under the Standard tier", "note": "exact-token probe"}
+{"id": "p10", "question": "When does the carry-forward increase take effect?", "expect_doc": "leave_policy_2025_amendment", "expect_pattern": "Effective July 1, 2025", "note": "exact-token probe"}

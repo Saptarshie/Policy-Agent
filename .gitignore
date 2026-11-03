@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+data/
+*.sqlite3
+.venv/
+venv/
+.pytest_cache/
+.DS_Store
+
+# evaluation churn: keep the harness + the written report, not every run row
+eval/results/intent_cache*.json

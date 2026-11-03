@@ -1,0 +1,29 @@
+ACME CORPORATION
+Remote Work Policy (v1.0)
+
+Effective date: 2024-01-01
+Owner: People Operations
+
+1. Purpose
+
+This policy defines the rules under which employees of ACME Corporation may work remotely. It applies to all full-time employees in engineering, design, and support functions. Contractors and interns are covered by separate agreements.
+
+2. Remote Work Allowance
+
+Employees may work remotely for up to 3 days per calendar week. The remaining working days must be spent at the assigned office location. A remote work arrangement must be approved in writing by the employee's direct manager before it starts.
+
+3. Notice Period
+
+Employees must give at least 15 days written notice to their manager before changing or terminating an approved remote work arrangement.
+
+4. Eligibility
+
+Employees are eligible to apply for remote work after completing 6 months of continuous employment. Employees on a performance improvement plan are not eligible.
+
+5. Equipment and Security
+
+The company provides a laptop and a security token for remote work. Employees must connect through the corporate VPN whenever they access company systems from outside the office. Personal printers may not be used for company documents.
+
+6. Core Hours
+
+Remote employees must be reachable between 10:00 and 16:00 local time on all working days. Meetings may be scheduled inside this window without special accommodation.
