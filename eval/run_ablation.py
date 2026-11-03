@@ -29,6 +29,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "eval"))
+
+from scoring import score_row  # noqa: E402
 
 from app.admin import AdminAPI  # noqa: E402
 from app.agent.intent_legacy import classify_intent_legacy  # noqa: E402
@@ -109,34 +112,16 @@ def build_api(cfg, variant: str, router_cache: Path) -> AdminAPI:
                     agent_prompt=spec["agent"], judge_prompt=spec["judge"])
 
 
-# strict: the answer IS a refusal. Keep this narrow - the escalation note for
-# sensitive cases also says "contact your HR business partner" and must not be
-# mistaken for a refusal.
-REFUSAL_RE = re.compile(
-    r"(?i)ingested policy documents do not cover|"
-    r"don'?t have enough information|do not have enough information")
-
-
 def score(case: dict, result) -> dict:
-    answer = result.answer or ""
-    is_refusal = bool(REFUSAL_RE.search(answer)) and not result.citations
-    if case.get("expect_refusal"):
-        pattern_ok = bool(REFUSAL_RE.search(answer))
-    else:
-        rx = case.get("expect_answer_regex")
-        pattern_ok = bool(re.search(rx, answer, re.I)) if rx else True
-        if pattern_ok and is_refusal and not case.get("allow_refusal"):
-            pattern_ok = False        # a refusal cannot satisfy a factual case
-    doc_ok = True
-    hints = [h.strip().lower() for h in (case.get("expect_doc") or "").split("|") if h.strip()]
-    cited = " ".join(result.citations or []).lower()
-    if hints and result.citations:
-        # "a|b" means either document is acceptable
-        doc_ok = any(h in cited for h in hints)
+    """Delegate to eval/scoring.py so run-time and re-scored rows agree."""
+    row = {"answer": result.answer or "",
+           "citations": list(result.citations or []),
+           "error": result.error or ""}
+    verdict = score_row(case, row)
     return {
-        "pattern_ok": pattern_ok,
-        "doc_ok": doc_ok,
-        "refused": is_refusal,
+        "pattern_ok": verdict["pattern_ok"],
+        "doc_ok": verdict["doc_ok"],
+        "refused": verdict["refused"],
         "citation_warnings": len(result.citation_warnings),
         "warnings": list(result.citation_warnings),
         "faithful": result.faithful,

@@ -20,6 +20,8 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from scoring import load_cases, score_row
+
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "eval" / "results"
 
@@ -74,6 +76,16 @@ def warns(row) -> int:
 
 def main() -> int:
     rows = load_rows()
+    cases = load_cases()
+    for row in rows:
+        case = cases.get(row["id"])
+        if case:
+            verdict = score_row(case, row)
+            # always reflect the CURRENT labels, not the verdict stored at run time
+            row["pattern_ok"] = verdict["pattern_ok"]
+            row["doc_ok"] = verdict["doc_ok"]
+            row["refused"] = verdict["refused"]
+            row["ok"] = verdict["ok"]
     if not rows:
         print("no ablation rows yet")
         return 2
@@ -87,7 +99,7 @@ def main() -> int:
     for var in sorted(by_var):
         rs = by_var[var]
         n = len(rs)
-        passed = sum(1 for r in rs if r.get("pattern_ok"))
+        passed = sum(1 for r in rs if r.get("ok", r.get("pattern_ok")))
         clean = sum(1 for r in rs if cit_warns(r) == 0)
         fail = sum(1 for r in rs if r.get("faithful") is False)
         judged = sum(1 for r in rs if r.get("faithful") is not None)

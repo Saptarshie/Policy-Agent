@@ -16,7 +16,12 @@ python eval/run_ablation.py --variant A,B,C,D                  # end-to-end answ
 python eval/report_ablation.py                                 # merged table
 python eval/measure_retrieval.py --k 1,3,6                     # retriever comparison
 python eval/calibrate_judge.py --samples 10                    # judge TPR/TNR
+python eval/rescore.py                                         # re-apply corrected labels
 ```
+
+All three table-producing scripts share one scoring implementation
+(`eval/scoring.py`), so the pass rule cannot drift between "as run" and
+"re-scored".
 
 ---
 

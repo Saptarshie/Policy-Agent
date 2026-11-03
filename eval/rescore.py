@@ -17,57 +17,14 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+from scoring import load_cases, load_rows, score_row
+
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "eval" / "results"
 
-REFUSAL_RE = re.compile(
-    r"(?i)ingested policy documents do not cover|"
-    r"don'?t have enough information|do not have enough information")
 
 
-def load_cases():
-    cases = {}
-    for name in ("eval_set.jsonl", "qa_extra.jsonl"):
-        for line in (ROOT / "eval" / name).read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                c = json.loads(line)
-                cases[c["id"]] = c
-    return cases
 
-
-def load_rows():
-    rows = {}
-    for path in sorted(RESULTS.glob("ablation_*.jsonl")):
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            try:
-                row = json.loads(line)
-            except ValueError:
-                continue
-            rows[(row["variant"], row["id"])] = row
-    return rows
-
-
-def score(case, row):
-    answer = row.get("answer") or ""
-    citations = row.get("citations") or []
-    is_refusal = bool(REFUSAL_RE.search(answer)) and not citations
-    if case.get("expect_refusal"):
-        pattern_ok = bool(REFUSAL_RE.search(answer))
-    else:
-        rx = case.get("expect_answer_regex")
-        pattern_ok = bool(re.search(rx, answer, re.I)) if rx else True
-        if pattern_ok and is_refusal and not case.get("allow_refusal"):
-            pattern_ok = False
-    # expect_doc may list alternatives ("travel_reimbursement|expense"): the old
-    # literal substring test made those cases impossible to pass
-    hints = [h.strip().lower() for h in (case.get("expect_doc") or "").split("|") if h.strip()]
-    cited = " ".join(citations).lower()
-    doc_ok = True
-    if hints and citations:
-        doc_ok = any(h in cited for h in hints)
-    return pattern_ok and doc_ok and not row.get("error"), pattern_ok, doc_ok
 
 
 def main() -> int:
@@ -81,7 +38,8 @@ def main() -> int:
         case = cases.get(cid)
         if not case:
             continue
-        ok, pattern_ok, doc_ok = score(case, row)
+        verdict = score_row(case, row)
+        ok, pattern_ok, doc_ok = verdict["ok"], verdict["pattern_ok"], verdict["doc_ok"]
         by_var[variant].append((case, row, ok, pattern_ok, doc_ok))
 
     print(f"{'var':4} {'n':>3} {'pass':>7} {'judgeFAIL':>10} {'p50s':>6}")
