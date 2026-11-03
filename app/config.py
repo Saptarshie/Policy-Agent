@@ -124,6 +124,9 @@ class Config:
     # "off", so it runs with reasoning disabled by default (~25% less latency).
     llm_reasoning_effort: str = ""
     intent_reasoning_effort: str = "off"
+    # verdict cache: the same (question, answer, contexts, prompt) replays
+    # its verdict from disk, which makes demos and regressions reproducible
+    judge_cache: bool = True
     max_upload_mb: int = 20
     # Retrieval: "hybrid" fuses dense (cosine) and sparse (FTS5/BM25) rankings
     # with Reciprocal Rank Fusion; "vector" and "keyword" isolate one retriever
@@ -177,6 +180,7 @@ def get_config() -> Config:
             max_output_tokens=_int("MAX_OUTPUT_TOKENS", 65536),
             llm_reasoning_effort=_str("LLM_REASONING_EFFORT", "").strip().lower(),
             intent_reasoning_effort=_str("INTENT_REASONING_EFFORT", "off").strip().lower(),
+            judge_cache=_bool("JUDGE_CACHE", True),
             temperature=_float("TEMPERATURE", 0.1),
             agent_max_steps=_int("AGENT_MAX_STEPS", 12),
             agent_max_obs_chars=_int("AGENT_MAX_OBS_CHARS", 4000),

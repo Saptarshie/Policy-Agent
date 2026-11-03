@@ -212,6 +212,7 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `INTENT_REASONING_EFFORT` | `off` | reasoning budget for the classifier; JSON extraction needs none |
 | `INTENT_CACHE_PATH` | *(empty)* | decision cache; empty = `DATA_DIR/intent_cache.json` |
 | `LLM_REASONING_EFFORT` | *(empty)* | provider reasoning budget for agent/judge; empty leaves the endpoint default |
+| `JUDGE_CACHE` | `true` | replay a verdict for an identical (question, answer, contexts, prompt) — verdicts vary run to run even at temperature 0 |
 | `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v1` / `v1` / `v1` | prompt variants; v1 and v2 tie end-to-end (see `eval/ABLATION.md`) |
 | `RAG_TOP_K` | `6` | passages per `search_policy_docs` call |
 | `RETRIEVAL_MODE` | `hybrid` | `vector` / `keyword` / `hybrid` (RRF fusion of cosine + FTS5/BM25) |

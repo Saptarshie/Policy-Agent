@@ -291,6 +291,9 @@ degrades to `unknown` instead of becoming an accusation. v1 is the default
 * **LLM-as-judge.** The faithfulness verdict is itself a model output with
   run-to-run variance (observed: the same variant scoring 4 vs 5 failures across
   two runs at temperature 0). It is used as a *signal*, never as ground truth.
+  Verdicts are now cached per (question, answer, contexts, prompt) so a repeat
+  replays instead of re-deciding, which removes the variance from demos but also
+  means a cached verdict is not an independent sample.
 * **n=29 end-to-end cases.** One flipped case moves a column by 3.4 points.
   Differences under ~10 points should be read as noise.
 * **Prompt v2 was written by the same person who wrote the cases.** The hard case

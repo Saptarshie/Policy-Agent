@@ -19,9 +19,12 @@ JSON, ``faithful`` stays ``None`` and no warning is invented.
 from __future__ import annotations
 
 import difflib
+import hashlib
+import json
 import logging
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ..db import Database
@@ -134,11 +137,47 @@ class AnswerVerifier:
 
     def __init__(self, db: Database, llm: Optional[OpenAICompatClient],
                  enabled: bool = True,
-                 system_prompt: str = FAITHFULNESS_SYSTEM) -> None:
+                 system_prompt: str = FAITHFULNESS_SYSTEM,
+                 cache_path: Optional[str] = None,
+                 prompt_version: str = "") -> None:
         self.db = db
         self.llm = llm
         self.enabled = enabled
         self.system_prompt = system_prompt
+        self.prompt_version = prompt_version
+        # Verdicts vary run to run even at temperature 0 (provider-side), which
+        # makes demos and regressions noisy. An identical (question, answer,
+        # contexts, prompt) triple therefore replays its verdict from disk.
+        self.cache_path = Path(cache_path) if cache_path else None
+        self._cache: Dict[str, dict] = {}
+        if self.cache_path and self.cache_path.exists():
+            try:
+                self._cache = json.loads(self.cache_path.read_text(encoding="utf-8"))
+            except ValueError:
+                log.warning("judge cache unreadable; starting empty")
+
+    # ---------------------------------------------------------------- cache
+
+    def _cache_key(self, question: str, answer: str, contexts: Sequence[str]) -> str:
+        raw = "".join([self.prompt_version or "", question or "", answer or "",
+                            *contexts])
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+    def _cache_get(self, key: str) -> Optional[dict]:
+        return self._cache.get(key)
+
+    def _cache_put(self, key: str, report: "FaithfulnessReport") -> None:
+        if not self.cache_path:
+            return
+        self._cache[key] = {"faithful": report.faithful,
+                            "unsupported_claims": report.unsupported_claims[:8],
+                            "reason": report.reason}
+        try:
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+            self.cache_path.write_text(json.dumps(self._cache, ensure_ascii=False),
+                                       encoding="utf-8")
+        except OSError as e:                 # a cache miss is never fatal
+            log.info("judge cache write failed: %s", e)
 
     # ------------------------------------------------------------------ check
 
@@ -271,6 +310,15 @@ class AnswerVerifier:
               contexts: Sequence[str],
               user_message: Optional[str] = None,
               partial: bool = False) -> FaithfulnessReport:
+        key = self._cache_key(question, answer, contexts)
+        hit = self._cache_get(key)
+        if hit is not None:
+            return FaithfulnessReport(
+                ran=True,
+                faithful=hit.get("faithful"),
+                unsupported_claims=list(hit.get("unsupported_claims") or []),
+                reason=str(hit.get("reason") or ""),
+            )
         ctx_block = "\n\n---\n\n".join(contexts)[:24000]
         user = (
             f"QUESTION: {question}\n\n"
@@ -332,7 +380,9 @@ class AnswerVerifier:
                 return FaithfulnessReport(ran=True, faithful=None,
                                           reason=report2.reason or report.reason,
                                           error="unsubstantiated verdict")
+            self._cache_put(key, report2)
             return report2
+        self._cache_put(key, report)
         return report
 
     @staticmethod

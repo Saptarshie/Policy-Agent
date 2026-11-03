@@ -176,11 +176,16 @@ class AdminAPI:
         if self._verifier is None:
             variant = self._judge_prompt or self.cfg.prompt_judge
             prompt = FAITHFULNESS_SYSTEM_V2 if variant == "v2" else FAITHFULNESS_SYSTEM
+            variant = self.cfg.prompt_judge or "v1"
+            cache_path = (str(self.cfg.data_dir / "judge_cache.json")
+                          if getattr(self.cfg, "judge_cache", True) else None)
             self._verifier = AnswerVerifier(
                 db=self.db,
                 llm=self.llm if self.cfg.llm_configured else None,
                 enabled=self.cfg.verify_answers,
                 system_prompt=prompt,
+                cache_path=cache_path,
+                prompt_version=variant,
             )
         return self._verifier
 

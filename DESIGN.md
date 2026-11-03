@@ -395,7 +395,11 @@ Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/docu
 * `embeddinggemma` has a ~2K-token context; the chunk budget respects it,
   but whole-section embeddings are impossible by design.
 * The faithfulness judge adds one LLM call per answered question
-  (`VERIFY_ANSWERS=false` trades the safety layer for latency).
+  (`VERIFY_ANSWERS=false` trades the safety layer for latency). Verdicts are
+  cached per (question, answer, contexts, prompt), so repeats are free and demos
+  reproducible; a cached verdict is a replay, not a second opinion.
+* The judge's precision is finite (measured TPR 10/10, TNR 8/10 on injected
+  claims): a flag is a prompt to look, not a conclusion.
 * Scanned/image PDFs are rejected with a clear error rather than OCR'd.
 * The heuristic gate is lexical (English-oriented lexicons); it will miss
   contradictions phrased with synonyms it does not know — the verifier

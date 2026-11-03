@@ -57,12 +57,13 @@ close to decorative. Either give the tool a `tables_only` filter (chunks whose
 text contains a pipe table) or delete the field — a calibration number nobody
 acts on is worse than no number.
 
-### O4 (medium) — judge verdicts are not reproducible across runs
+### O4 — FIXED — judge verdicts were not reproducible across runs
 Same variant, same case, temperature 0: variant A produced 4 vs 5 "unfaithful"
-verdicts across two runs. Provider-side non-determinism, not a bug, but it makes
-demos and regressions noisy. Fix: cache verdicts keyed by
-`sha(question + answer + contexts)` (the intent layer already does this), so a
-demo replays identically and re-runs are cheap.
+verdicts across two runs. A verdict cache keyed by
+`sha(prompt_version + question + answer + contexts)` now replays from
+`DATA_DIR/judge_cache.json` (disable with `JUDGE_CACHE=false`). `_inventory()` is
+deliberately *not* part of the key: it decorates the prompt but does not change
+which passage text was judged.
 
 ### O5 (medium) — PDF tables lose their structure
 `app/readers.py` uses pypdf's text layer, so a PDF table arrives as runs of
