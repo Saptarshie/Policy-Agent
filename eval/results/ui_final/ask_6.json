@@ -1,0 +1,230 @@
+{
+  "answer": "**Short answer: the documents state the approval requirement but do not specify any consequence for working from home after a refusal. And the remote-work entitlement itself is contradictory across three documents.**\n\n## 1. Consequences of working from home after a refusal\n\n**Not covered.** No ingested document states what happens if an employee works remotely without \u2014 or against \u2014 manager approval. There is no disciplinary, absence-coding, or leave-deduction rule for unapproved remote days in any remote-work policy.\n\nWhat the documents *do* say is that approval is a precondition:\n\n- Remote work \"requires written approval from the direct manager for each remote day,\" and employees must be in the assigned office at least 4 days per calendar week [remote_work_policy_v2 \u00a7 2. Office Attendance].\n- \"A remote work arrangement must be approved in writing by the employee's direct manager before it starts\" [remote_work_policy_v1 \u00a7 2. Remote Work Allowance].\n- Any change to the working-location pattern must be submitted at least 30 days in advance through the HR portal, and \"Verbal agreements are not valid\" [remote_work_policy_v2 \u00a7 3. Notice Period].\n\nThe only \"Violations\" clause in the corpus concerns **expense reports**, not remote work: repeated expense violations can lead to disciplinary action up to loss of reimbursement privileges, and fraudulent claims are grounds for immediate termination [expense_policy \u00a7 7. Violations]. It does not apply to remote-work non-compliance, and I am not extending it by analogy.\n\nSo: the requirement is documented; the sanction is not. That gap would need to be confirmed with People Operations.\n\n## 2. The actual remote-work entitlement \u2014 three conflicting figures\n\n| Limit | Source |\n|---|---|\n| **1 day/week** (min. 4 office days) | [remote_work_policy_v2 \u00a7 2. Office Attendance] |\n| **3 days/week** | [remote_work_policy_v1 \u00a7 2. Remote Work Allowance] |\n| **5 days/week**, no mandatory office day | [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)] |\n\nThe contradiction scanner records two verified, open conflicts on exactly this point: the 2026 Revision (5 days, no mandatory office day) against remote_work_policy_v2 (max 1 remote day, min 4 office days) [Flag 4], and the 2026 Revision against remote_work_policy_v1 (max 3 remote days) [Flag 3].\n\n**Partial precedence:** remote_work_policy_v2 is the ACME Hybrid Work Policy v2.0, effective 2025-06-01, and it supersedes v1.0 (effective 2024-01-01) by version and effective date \u2014 so between those two, the 1-day limit is the later rule. The documents do not establish whether the undated \"2026 Revision\" supersedes v2.0, so the 1-day versus 5-day question cannot be resolved from the corpus.\n\n**Eligibility conditions attached to the v2.0 limit:** hybrid arrangements require 12 months of continuous employment and a most-recent rating of \"meets expectations\" or higher [remote_work_policy_v2 \u00a7 4. Eligibility]; v1.0 required 6 months and excluded employees on a performance improvement plan [remote_work_policy_v1 \u00a7 4. Eligibility].\n\n**Sources:**\n- [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- [remote_work_policy_v2 \u00a7 3. Notice Period]\n- [remote_work_policy_v2 \u00a7 4. Eligibility]\n- [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- [remote_work_policy_v1 \u00a7 4. Eligibility]\n- [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)]\n- [expense_policy \u00a7 7. Violations]\n- Contradiction flags 3 and 4 (VERIFIED, OPEN)",
+  "steps": [
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "working from home without approval consequences non-compliance remote work",
+        "min_similarity": 0.4
+      },
+      "observation": "Found 9 passages for query \"working from home without approval consequences non-compliance remote work\" (min_similarity=0.4; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.512)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work entitlement days per week manager approval",
+        "min_similarity": 0.4
+      },
+      "observation": "Found 20 passages for query \"remote work entitlement days per week manager approval\" (min_similarity=0.4; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.644)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned office at least 4 "
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "disciplinary action violation of policy unauthorized absence failure to comply",
+        "min_similarity": 0.35
+      },
+      "observation": "Found 9 passages for query \"disciplinary action violation of policy unauthorized absence failure to comply\" (min_similarity=0.35; score in brackets):\n\n[chunk 29] Doc: expense_policy | Section: 7. Violations | (score 0.450)\n\"\"\"\n## 7. Violations\n\nManagers and Finance review expense reports for complia"
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "OPEN",
+        "limit": 10
+      },
+      "observation": "5 OPEN contradiction(s); showing up to 10:\n\nFlag 5 - VERIFIED, OPEN, confidence 0.96, gate 0.89\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 56)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely f"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work policy compliance breach sanction unapproved remote day treated as absence",
+        "min_similarity": 0.3
+      },
+      "observation": "Found 32 passages for query \"remote work policy compliance breach sanction unapproved remote day treated as absence\" (min_similarity=0.3; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.552)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from t"
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "remote_work_policy_v2"
+      },
+      "observation": "Document: remote_work_policy_v2 (status: ready, 0 chunks)\nRolling summary: ACME Hybrid Work Policy v2.0, effective 2025-06-01, owned by People Operations, applies to all full-time employees in every function. Employees must work in their assigned office at least 4 days per calendar week; remote work"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 46
+      },
+      "observation": "[chunk 46] Doc: remote_work_policy_v2 | Section: 3. Notice Period | Breadcrumb: remote_work_policy_v2 > ACME Hybrid Work Policy (v2.0) > 3. Notice Period\n\"\"\"\n## 3. Notice Period\n\nEmployees must submit any change to their working-location pattern at least 30 days in advance through the HR portal. Ver"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "unapproved remote day treated as unpaid absence or leave deduction",
+        "min_similarity": 0.3
+      },
+      "observation": "Found 25 passages for query \"unapproved remote day treated as unpaid absence or leave deduction\" (min_similarity=0.3; score in brackets):\n\n[chunk 39] Doc: remote_work_policy_v1 | Section: 2. Remote Work Allowance | (score 0.523)\n\"\"\"\n2. Remote Work Allowance\n\nEmployees may work remotely for up to 3 d"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 47
+      },
+      "observation": "[chunk 47] Doc: remote_work_policy_v2 | Section: 4. Eligibility | Breadcrumb: remote_work_policy_v2 > ACME Hybrid Work Policy (v2.0) > 4. Eligibility\n\"\"\"\n## 4. Eligibility\n\nHybrid arrangements are available only to employees who have completed 12 months of continuous employment and who hold a perfor"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 48
+      },
+      "observation": "[chunk 48] Doc: remote_work_policy_v2 | Section: 5. Equipment | Breadcrumb: remote_work_policy_v2 > ACME Hybrid Work Policy (v2.0) > 5. Equipment\n\"\"\"\n## 5. Equipment\n\nThe company provides a laptop, a security token, and a monitor for home use. All remote access must go through the corporate VPN with"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "ACME Hybrid Work Policy v2.0 section 6 section 7 non-compliance consequences",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"ACME Hybrid Work Policy v2.0 section 6 section 7 non-compliance consequences\" (top_k=8; score in brackets):\n\n[chunk 44] Doc: remote_work_policy_v2 | Section: ACME Hybrid Work Policy (v2.0) | (score 0.033)\n\"\"\"\n# ACME Hybrid Work Policy (v2.0)\n\n_Effective: 2025-06-01. Owner"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 44
+      },
+      "observation": "[chunk 44] Doc: remote_work_policy_v2 | Section: ACME Hybrid Work Policy (v2.0) | Breadcrumb: remote_work_policy_v2 > ACME Hybrid Work Policy (v2.0)\n\"\"\"\n# ACME Hybrid Work Policy (v2.0)\n\n_Effective: 2025-06-01. Owner: People Operations._\n\n## 1. Purpose\n\nThis policy defines ACME Corporation's hybrid "
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 42
+      },
+      "observation": "[chunk 42] Doc: remote_work_policy_v1 | Section: 5. Equipment and Security | Breadcrumb: remote_work_policy_v1 > 5. Equipment and Security\n\"\"\"\n5. Equipment and Security\n\nThe company provides a laptop and a security token for remote work. Employees must connect through the corporate VPN whenever they"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 43
+      },
+      "observation": "[chunk 43] Doc: remote_work_policy_v1 | Section: 6. Core Hours | Breadcrumb: remote_work_policy_v1 > 6. Core Hours\n\"\"\"\n6. Core Hours\n\nRemote employees must be reachable between 10:00 and 16:00 local time on all working days. Meetings may be scheduled inside this window without special accommodation."
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 49
+      },
+      "observation": "[chunk 49] Doc: remote_work_policy_v2 | Section: 6. Core Hours | Breadcrumb: remote_work_policy_v2 > ACME Hybrid Work Policy (v2.0) > 6. Core Hours\n\"\"\"\n## 6. Core Hours\n\nAll employees, including those working remotely on an approved day, must be reachable between 09:00 and 17:00 local time on all wo"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 56
+      },
+      "observation": "[chunk 56] Doc: sample_policy | Section: Policy Number: RW-2025-014. Effective Date: March 1, 2025. | Breadcrumb: sample_policy > Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n\"\"\"\nPolicy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely f"
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_policy_documents",
+      "arguments": {},
+      "observation": "10 document(s) ingested:\n- leave_policy [ready] (12 chunks, md, 5977 bytes) \u2014 Northwind Robotics Leave Policy HR-LVE-2024-001, effective January 1, 2024, v1.2, applies to regular full-time US employees. Probation (first 6 months) accrues standard leave but limits casual leave t\n- health_plans [ready"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "min_similarity": 0.3,
+        "query": "consequence of working remotely without written approval disciplinary"
+      },
+      "observation": "Found 22 passages for query \"consequence of working remotely without written approval disciplinary\" (min_similarity=0.3; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.533)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned off"
+    },
+    {
+      "type": "final",
+      "content": "**Short answer: the documents state the approval requirement but do not specify any consequence for working from home after a refusal. And the remote-work entitlement itself is contradictory across three documents.**\n\n## 1. Consequences of working from home after a refusal\n\n**Not covered.** No ingested document states what happens if an employee works remotely without \u2014 or against \u2014 manager approv"
+    }
+  ],
+  "citations": [
+    "remote_work_policy_v2 \u00a7 2. Office Attendance",
+    "remote_work_policy_v1 \u00a7 2. Remote Work Allowance",
+    "remote_work_policy_v2 \u00a7 3. Notice Period",
+    "expense_policy \u00a7 7. Violations",
+    "ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)",
+    "remote_work_policy_v2 \u00a7 4. Eligibility",
+    "remote_work_policy_v1 \u00a7 4. Eligibility"
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    45,
+    39,
+    54,
+    40,
+    24,
+    38,
+    41,
+    56,
+    43,
+    29,
+    10,
+    8,
+    7,
+    12,
+    4,
+    46,
+    47,
+    48,
+    44,
+    37,
+    50,
+    30,
+    42,
+    49
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 8,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 18,
+  "elapsed_s": 63.05,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "What are the policy consequences if an employee works from home after their manager has refused a remote work request, and what is the actual remote work entitlement?",
+    "search_queries": [
+      "remote work policy manager approval",
+      "unauthorized work from home consequences",
+      "remote work entitlement days per week"
+    ],
+    "entities": [
+      "5 remote days",
+      "remote work",
+      "manager refusal"
+    ],
+    "requires_table_check": false,
+    "tone_guidance": "Neutral and factual; clarify the actual remote work entitlement and the policy on non-compliance without endorsing the employee's assumption.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee is asking about the consequences of working remotely against a manager's refusal, referencing an assumed five-day remote allowance.",
+    "decided_by": "llm",
+    "prompt_version": "v1",
+    "latency_s": 4.92,
+    "notes": []
+  }
+}

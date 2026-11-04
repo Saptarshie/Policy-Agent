@@ -10,9 +10,11 @@ BASE=http://127.0.0.1:8077 python eval/verify_api.py     # 42 checks
 python eval/verify_renderer.py                           # renderer, off-browser
 ```
 
-Final state: **42/42 API checks pass**, **14 renderer cases pass**, and every UI
-control was clicked in a real browser (`/` served the real page, `window.__errs`
-empty throughout).
+Final state on the fixed tree: **42/42 API checks**, **14/14 renderer cases**,
+**0 citation warnings across all seven archived answers**, upload cleanup verified,
+and every UI control clicked in a real browser (`window.__errs` empty throughout).
+The last full pass (`eval/results/ui_final/`) ran against a fresh copy of the
+database on the committed tree, not on the intermediate state.
 
 ## What was exercised
 

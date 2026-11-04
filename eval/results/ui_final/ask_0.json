@@ -1,0 +1,99 @@
+{
+  "answer": "**There is no single answer \u2014 the ingested documents give three different limits, and they conflict.**\n\n**What each document says:**\n\n- **1 day per week** \u2014 \"Employees must work from their assigned office at least 4 days per calendar week. Remote work is limited to a maximum of 1 day per week and requires written approval from the direct manager for each remote day.\" [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- **3 days per week** \u2014 \"Employees may work remotely for up to 3 days per calendar week. The remaining working days must be spent at the assigned office location.\" [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- **5 days per week** \u2014 \"All employees are entitled to work remotely up to 5 days per week, subject to manager approval,\" and \"There is no mandatory office attendance day.\" [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)]\n\n**The conflict is flagged in the audit trail.** The contradiction scanner records two verified, open conflicts on exactly this point: the 2026 Revision (5 days, no mandatory office day) versus remote_work_policy_v2 (max 1 remote day, min 4 office days) [Flag 4], and the 2026 Revision versus remote_work_policy_v1 (max 3 remote days) [Flag 3].\n\n**What can be said about precedence:** remote_work_policy_v2 is the ACME Hybrid Work Policy v2.0, effective 2025-06-01, and it supersedes v1.0 (effective 2024-01-01) by version and effective date \u2014 so between those two, the 1-day limit is the later rule. However, the documents do not establish whether the undated \"2026 Revision\" supersedes v2.0, so I cannot resolve the 1-day versus 5-day question from the corpus. That needs confirmation from People Operations.\n\n**Sources:**\n- [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)]\n- Contradiction flags 3 and 4 (VERIFIED, OPEN)",
+  "steps": [
+    {
+      "type": "thought",
+      "content": "I'll search the policy documents for the remote work frequency rules."
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work days per week",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"remote work days per week\" (top_k=6; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.033)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned office at least 4 days per calendar week. Remote work is li"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "telework frequency work from home permitted",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"telework frequency work from home permitted\" (top_k=6; score in brackets):\n\n[chunk 54] Doc: ui_check_remote_policy | Section: Remote Work Policy (2026 Revision) | (score 0.032)\n\"\"\"\n# Remote Work Policy (2026 Revision)\n\n## 1. Entitlement\nAll employees are entitled to work "
+    },
+    {
+      "type": "thought",
+      "content": "The documents disagree, so let me check the contradiction audit trail and document status."
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 10
+      },
+      "observation": "4 all contradiction(s); showing up to 10:\n\nFlag 4 - VERIFIED, OPEN, confidence 0.99, gate 0.97\n  A: ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision) (chunk 54)\n     \"# Remote Work Policy (2026 Revision)\n\n## 1. Entitlement\nAll employees are entitled to work remotely up to 5 days per week, "
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_policy_documents",
+      "arguments": {},
+      "observation": "10 document(s) ingested:\n- leave_policy [ready] (12 chunks, md, 5977 bytes) \u2014 Northwind Robotics Leave Policy HR-LVE-2024-001, effective January 1, 2024, v1.2, applies to regular full-time US employees. Probation (first 6 months) accrues standard leave but limits casual leave t\n- health_plans [ready"
+    },
+    {
+      "type": "final",
+      "content": "**There is no single answer \u2014 the ingested documents give three different limits, and they conflict.**\n\n**What each document says:**\n\n- **1 day per week** \u2014 \"Employees must work from their assigned office at least 4 days per calendar week. Remote work is limited to a maximum of 1 day per week and requires written approval from the direct manager for each remote day.\" [remote_work_policy_v2 \u00a7 2. Of"
+    }
+  ],
+  "citations": [
+    "remote_work_policy_v2 \u00a7 2. Office Attendance",
+    "remote_work_policy_v1 \u00a7 2. Remote Work Allowance",
+    "ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)"
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    45,
+    39,
+    54,
+    56,
+    24,
+    49,
+    48
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 2,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 4,
+  "elapsed_s": 14.69,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "How many days per week is remote work permitted?",
+    "search_queries": [
+      "remote work days per week",
+      "telework frequency policy",
+      "work from home allowance"
+    ],
+    "entities": [
+      "remote work",
+      "days per week"
+    ],
+    "requires_table_check": false,
+    "tone_guidance": "Provide a clear, direct answer citing the relevant policy limit.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee is asking about the permitted frequency of remote work per week.",
+    "decided_by": "llm",
+    "prompt_version": "v1",
+    "latency_s": 4.03,
+    "notes": []
+  }
+}

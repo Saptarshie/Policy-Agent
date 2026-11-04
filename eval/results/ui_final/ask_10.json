@@ -1,0 +1,108 @@
+{
+  "answer": "**Yes \u2014 the documents contradict each other on remote work, in several places.** The contradiction scanner records three verified, open conflicts on remote-work topics, and there are further differences it did not flag.\n\n## Flagged conflicts (verified, open)\n\n**1. How many remote days are allowed \u2014 three incompatible limits**\n\n| Limit | Source |\n|---|---|\n| Max **1 day/week** remote; at least 4 office days | [remote_work_policy_v2 \u00a7 2. Office Attendance] |\n| Max **3 days/week** remote; remaining days at the office | [remote_work_policy_v1 \u00a7 2. Remote Work Allowance] |\n| Up to **5 days/week** remote; \"no mandatory office attendance day\" | [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)] |\n\nThe scanner flags the 2026 Revision against v2.0 (contradiction 4) and against v1.0 (contradiction 3), both at 0.99 confidence.\n\n**2. Home-internet reimbursement \u2014 different amounts and different receipt rules**\n\n- $50/month stipend for employees remote at least 3 days/week, \"requires no receipts\" [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.]\n- $60/month home-internet limit, with an itemized receipt required for each category [expense_policy \u00a7 2. Reimbursable Categories]\n\nThe scanner flags this as contradiction 5 (confidence 0.96).\n\n## Differences the scanner did not flag, but which the passages show\n\n- **Notice period:** 15 days' written notice to the manager before changing or ending an approved arrangement [remote_work_policy_v1 \u00a7 3. Notice Period] versus 30 days in advance through the HR portal, with verbal agreements invalid [remote_work_policy_v2 \u00a7 3. Notice Period].\n- **Core hours:** reachable 10:00\u201316:00 local time [remote_work_policy_v1 \u00a7 6. Core Hours] versus 09:00\u201317:00 local time [remote_work_policy_v2 \u00a7 6. Core Hours].\n- **Equipment:** one-time home-office allowance of INR 25,000 [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)] versus a one-time equipment budget of $600 [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.].\n- **Internal inconsistency inside sample_policy:** \u00a71 states a $50 stipend and $600 equipment budget for anyone remote at least 3 days/week, but its own tier table gives Bronze (3 days) $50/mo and $400, Silver (4 days) $60/mo and $600, Gold (5 days) $75/mo and $800 [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.].\n\n## What the documents do *not* resolve\n\nThey do not establish which remote-work document governs. remote_work_policy_v2 is ACME Hybrid Work Policy v2.0, effective 2025-06-01, and supersedes v1.0 (effective 2024-01-01) by version and effective date \u2014 so between those two, the 1-day limit is the later rule. But nothing in the corpus states whether the undated \"2026 Revision\" supersedes v2.0, so the 1-day versus 5-day question cannot be settled from the documents. That requires confirmation from People Operations.\n\n**Sources:**\n- [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- [remote_work_policy_v2 \u00a7 3. Notice Period]\n- [remote_work_policy_v2 \u00a7 6. Core Hours]\n- [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- [remote_work_policy_v1 \u00a7 3. Notice Period]\n- [remote_work_policy_v1 \u00a7 6. Core Hours]\n- [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)]\n- [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.]\n- [expense_policy \u00a7 2. Reimbursable Categories]",
+  "steps": [
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 20
+      },
+      "observation": "5 all contradiction(s); showing up to 20:\n\nFlag 5 - VERIFIED, OPEN, confidence 0.96, gate 0.89\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 56)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely fo"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work days per week office attendance requirement",
+        "min_similarity": 0.5
+      },
+      "observation": "Found 7 passages for query \"remote work days per week office attendance requirement\" (min_similarity=0.5; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.765)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned office at least 4 "
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work equipment allowance notice period changing arrangement",
+        "min_similarity": 0.5
+      },
+      "observation": "Found 5 passages for query \"remote work equipment allowance notice period changing arrangement\" (min_similarity=0.5; score in brackets):\n\n[chunk 40] Doc: remote_work_policy_v1 | Section: 3. Notice Period | (score 0.639)\n\"\"\"\n3. Notice Period\n\nEmployees must give at least 15 days written notice to the"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 54
+      },
+      "observation": "[chunk 54] Doc: ui_check_remote_policy | Section: Remote Work Policy (2026 Revision) | Breadcrumb: ui_check_remote_policy > Remote Work Policy (2026 Revision)\n\"\"\"\n# Remote Work Policy (2026 Revision)\n\n## 1. Entitlement\nAll employees are entitled to work remotely up to 5 days per week, subject to man"
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 2
+      },
+      "observation": "5 all contradiction(s); showing up to 2:\n\nFlag 5 - VERIFIED, OPEN, confidence 0.96, gate 0.89\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 56)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely for"
+    },
+    {
+      "type": "final",
+      "content": "**Yes \u2014 the documents contradict each other on remote work, in several places.** The contradiction scanner records three verified, open conflicts on remote-work topics, and there are further differences it did not flag.\n\n## Flagged conflicts (verified, open)\n\n**1. How many remote days are allowed \u2014 three incompatible limits**\n\n| Limit | Source |\n|---|---|\n| Max **1 day/week** remote; at least 4 of"
+    }
+  ],
+  "citations": [
+    "remote_work_policy_v2 \u00a7 2. Office Attendance",
+    "remote_work_policy_v1 \u00a7 2. Remote Work Allowance",
+    "ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)",
+    "sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.",
+    "expense_policy \u00a7 2. Reimbursable Categories",
+    "remote_work_policy_v1 \u00a7 3. Notice Period",
+    "remote_work_policy_v2 \u00a7 3. Notice Period",
+    "remote_work_policy_v1 \u00a7 6. Core Hours",
+    "remote_work_policy_v2 \u00a7 6. Core Hours"
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    45,
+    54,
+    39,
+    43,
+    40,
+    49,
+    56,
+    46
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 2,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 5,
+  "elapsed_s": 32.05,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "Do the policy documents contradict each other regarding remote work?",
+    "search_queries": [
+      "remote work policy consistency",
+      "remote work contradictions",
+      "remote work guidelines overlap"
+    ],
+    "entities": [
+      "remote work"
+    ],
+    "requires_table_check": false,
+    "tone_guidance": "Provide a neutral, factual answer based on the policy documents, noting any contradictions or confirming consistency.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee asks whether the policy documents contain conflicting statements about remote work.",
+    "decided_by": "llm",
+    "prompt_version": "v1",
+    "latency_s": 4.18,
+    "notes": []
+  }
+}

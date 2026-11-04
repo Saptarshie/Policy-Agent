@@ -1,0 +1,212 @@
+[
+  {
+    "check": "health returns the LLM model",
+    "ok": true,
+    "detail": "deepseek/deepseek-v4.1-flash"
+  },
+  {
+    "check": "health counts documents",
+    "ok": true,
+    "detail": "7"
+  },
+  {
+    "check": "index page served",
+    "ok": true,
+    "detail": "200, 19469 bytes"
+  },
+  {
+    "check": "index has the three columns",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "check": "document list shape",
+    "ok": true,
+    "detail": "7 docs, keys=['chunk_count', 'created_at', 'filename', 'format', 'id', 'latest_job', 'meta_json', 'name']"
+  },
+  {
+    "check": "no document is stuck in a non-ready state",
+    "ok": true,
+    "detail": "leave_policy=ready, health_plans=ready, expense_policy=ready, travel_reimbursement_policy=ready, remote_work_policy_v1=ready, remote_work_policy_v2=ready, leave_policy_2025_amendment=ready"
+  },
+  {
+    "check": "upload md accepted",
+    "ok": true,
+    "detail": "HTTP 200 {\"doc_id\":9,\"doc_name\":\"ui_check_remote_policy\"}"
+  },
+  {
+    "check": "upload returns the document id",
+    "ok": true,
+    "detail": "{\"doc_id\": 9, \"doc_name\": \"ui_check_remote_policy\"}"
+  },
+  {
+    "check": "md ingestion finished",
+    "ok": true,
+    "detail": "ready, 1 chunks"
+  },
+  {
+    "check": "upload txt accepted",
+    "ok": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "check": "txt ingestion finished",
+    "ok": true,
+    "detail": "ready"
+  },
+  {
+    "check": "upload pdf accepted",
+    "ok": true,
+    "detail": "HTTP 200 {\"doc_id\":11,\"doc_name\":\"sample_policy\"}"
+  },
+  {
+    "check": "pdf ingestion finished",
+    "ok": true,
+    "detail": "ready"
+  },
+  {
+    "check": "unsupported type rejected 400",
+    "ok": true,
+    "detail": "HTTP 400 {\"detail\":\"unsupported file type '.docx' (allowed: txt, md, pdf)\"}"
+  },
+  {
+    "check": "empty file rejected 400",
+    "ok": true,
+    "detail": "HTTP 400 {\"detail\":\"empty file\"}"
+  },
+  {
+    "check": "uploaded docs appear in the list",
+    "ok": true,
+    "detail": "10 docs: ['leave_policy', 'health_plans', 'expense_policy', 'travel_reimbursement_policy', 'remote_work_policy_v1', 'remote_work_policy_v2', 'leave_policy_2025_amendment', 'ui_check_remote_policy', 'ui_check_notice', 'sample_policy']"
+  },
+  {
+    "check": "uploaded doc is ready with chunks",
+    "ok": true,
+    "detail": "ready, 1 chunks"
+  },
+  {
+    "check": "contradiction cascade flagged the new 5-day policy",
+    "ok": true,
+    "detail": "2 flag(s) after 0s"
+  },
+  {
+    "check": "flag cites both passages",
+    "ok": true,
+    "detail": "#4 gate=0.97 conf=0.99: Passage A entitles employees to remote work up to 5 days per week and states there is no mandatory office atte"
+  },
+  {
+    "check": "ask: cites the policy text",
+    "ok": true,
+    "detail": "18.7s, 4 tools, 3 citations, 0 warnings"
+  },
+  {
+    "check": "ask: refuses out-of-corpus",
+    "ok": true,
+    "detail": "17.9s, 4 tools, 3 citations, 0 warnings"
+  },
+  {
+    "check": "ask: answers a greeting briefly",
+    "ok": true,
+    "detail": "3.8s, 0 tools, 0 citations, 0 warnings"
+  },
+  {
+    "check": "ask: handles a partial/premise question",
+    "ok": true,
+    "detail": "68.0s, 18 tools, 7 citations, 0 warnings"
+  },
+  {
+    "check": "ask: does arithmetic on the employee's numbers",
+    "ok": true,
+    "detail": "89.6s, 23 tools, 7 citations, 0 warnings"
+  },
+  {
+    "check": "ask: can discuss contradictions",
+    "ok": true,
+    "detail": "36.2s, 5 tools, 9 citations, 0 warnings"
+  },
+  {
+    "check": "a contradiction question reaches the agent (not a doc listing)",
+    "ok": true,
+    "detail": "route=REACT_LOOP intent=POLICY_DIRECT_LOOKUP tools=['list_contradictions', 'search_policy_docs', 'read_policy_chunk', 'read_policy_chunk', 'search_policy_docs', 'get_document_summary', 'get_document_summary']"
+  },
+  {
+    "check": "the agent consults the flag table",
+    "ok": true,
+    "detail": "tools=['list_contradictions', 'search_policy_docs', 'read_policy_chunk', 'read_policy_chunk', 'search_policy_docs', 'get_document_summary', 'get_document_summary']"
+  },
+  {
+    "check": "the answer names a conflict with a citation",
+    "ok": true,
+    "detail": "12 citations"
+  },
+  {
+    "check": "empty question rejected 400",
+    "ok": true,
+    "detail": "HTTP 400"
+  },
+  {
+    "check": "all-status flag list returns rows",
+    "ok": true,
+    "detail": "5 rows"
+  },
+  {
+    "check": "flag status update accepted",
+    "ok": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "check": "resolved flag left the OPEN list",
+    "ok": true,
+    "detail": "4 open"
+  },
+  {
+    "check": "invalid flag status rejected 400",
+    "ok": true,
+    "detail": "HTTP 400"
+  },
+  {
+    "check": "unknown flag rejected 404",
+    "ok": true,
+    "detail": "HTTP 404"
+  },
+  {
+    "check": "chunk lookup works",
+    "ok": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "check": "unknown chunk rejected 404",
+    "ok": true,
+    "detail": "HTTP 404"
+  },
+  {
+    "check": "manual rescan queued",
+    "ok": true,
+    "detail": "HTTP 200 {\"job_id\":26}"
+  },
+  {
+    "check": "manual rescan finished",
+    "ok": true,
+    "detail": "done done"
+  },
+  {
+    "check": "scan of unknown document rejected",
+    "ok": true,
+    "detail": "HTTP 400"
+  },
+  {
+    "check": "delete accepted",
+    "ok": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "check": "deleted document is gone",
+    "ok": true,
+    "detail": "9 docs left"
+  },
+  {
+    "check": "second delete is 404",
+    "ok": true,
+    "detail": "HTTP 404"
+  }
+]
