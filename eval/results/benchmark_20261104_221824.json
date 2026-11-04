@@ -1,0 +1,65 @@
+{
+  "benchmark": "complex_contract_reasoning_pack",
+  "workers": 10,
+  "timing_note": "10 concurrent: times include contention, not comparable",
+  "questions": 20,
+  "index_wall_s": 0.8,
+  "index_per_doc_s": {
+    "01_MASTER_SERVICES_AGREEMENT": 0.0,
+    "02_ENTERPRISE_ORDER_FORM_AND_CHANGE_ORDERS": 0.0,
+    "03_SERVICE_LEVEL_AND_SUPPORT_SCHEDULE": 0.0,
+    "04_DATA_PROCESSING_AND_SECURITY_ADDENDUM": 0.0
+  },
+  "answer_accuracy_pct": 75.0,
+  "strict_or_partial_pct": 95.0,
+  "verdicts": {
+    "correct": 15,
+    "partial": 4,
+    "incorrect": 1,
+    "unjudged": 0
+  },
+  "answerable": {
+    "n": 20,
+    "correct": 15,
+    "accuracy_pct": 75.0
+  },
+  "refusals": {
+    "n": 0,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "citation_recall": {
+    "expected": 42,
+    "doc_level_pct": 95.2,
+    "section_level_pct": 90.5
+  },
+  "citation_warnings_total": 0,
+  "rubric": {
+    "cases": 20,
+    "max_points": 10,
+    "mean_points": 9.1,
+    "mean_pct": 91.0,
+    "by_dimension": {
+      "answer_correctness": 3.55,
+      "reasoning": 2.7,
+      "citations": 1.95,
+      "uncertainty": 0.9
+    },
+    "by_dimension_max": {
+      "answer_correctness": 4,
+      "reasoning": 3,
+      "citations": 2,
+      "uncertainty": 1
+    }
+  },
+  "time_s": {
+    "total_wall": 80.1,
+    "qa_wall": 509.0,
+    "mean": 25.4,
+    "p50": 23.7,
+    "p95": 38.6,
+    "max": 41.2,
+    "min": 17.1
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261104_221824.jsonl"
+}

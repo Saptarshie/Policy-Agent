@@ -141,6 +141,11 @@ class Config:
     prompt_intent: str = "v1"           # v1 | v2
     # performance tuning only - defaults are the measured values, so a
     # fixture that does not care about scanning need not set them
+    # ingestion tuning (performance only; the stored chunks do not depend on it)
+    ingest_reasoning_effort: str = "off"   # window parser: off | low | medium | high
+    ingest_max_tokens: int = 3000          # the parser's output is small
+    ingest_parallel_windows: int = 4       # 1 = the sequential chained parse
+    ingest_heuristic_max_chars: int = 0    # >0: documents this small skip the LLM
     scan_workers: int = 4             # concurrent model/verifier requests
     decision_batch_size: int = 6      # pairs per batched request
     decision_recheck_band: float = 0.15  # re-ask pairs this near the threshold
@@ -217,6 +222,10 @@ def get_config() -> Config:
             decision_model_api_key=_str("DECISION_MODEL_API_KEY", ""),
             decision_model_name=_str("DECISION_MODEL_NAME", ""),
             decision_temperature=_float("DECISION_TEMPERATURE", 0.0),
+            ingest_reasoning_effort=_str("INGEST_REASONING_EFFORT", "off").strip().lower(),
+            ingest_max_tokens=_int("INGEST_MAX_TOKENS", 3000),
+            ingest_parallel_windows=_int("INGEST_PARALLEL_WINDOWS", 4),
+            ingest_heuristic_max_chars=_int("INGEST_HEURISTIC_MAX_CHARS", 0),
             scan_workers=_int("SCAN_WORKERS", 4),
             decision_batch_size=_int("DECISION_BATCH_SIZE", 6),
             decision_recheck_band=_float("DECISION_RECHECK_BAND", 0.15),

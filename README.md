@@ -168,11 +168,15 @@ trail instead of a fresh guess.
 
 1. **Triage before retrieval (one LLM call)** — the raw input is classified
    into one of 8 categories and the route is derived from the category:
-   greetings and document listings are answered directly, non-HR input and
-   prompt injection are refused, everything about workplace policy goes to the
-   grounded agent. The layer **fails open** and **never refuses a workplace
-   question** (it has not read the corpus), so it cannot become a coverage
-   outage. It also de-noises the question and proposes the search queries.
+   greetings and document listings are answered directly, input that is not a
+   question about the ingested documents (world knowledge, code, personal
+   advice) and prompt injection are refused, everything about the documents
+   goes to the grounded agent. The layer **fails open** and **never refuses a
+   question about document content** (it has not read the corpus), so it cannot
+   become a coverage outage. The corpus is whatever was uploaded - HR policies
+   or contracts; the classifier refuses by *shape of request*, never by topic
+   (see `eval/ABLATION.md` §11, where an HR-flavoured triage refused three
+   commercial questions before retrieval). It also de-noises the question and proposes the search queries.
 2. **Grounding prompt** — answer only from tool output; explicit
    "the documents don't cover this" escape hatch; conflicts must be surfaced,
    never silently resolved.
@@ -226,6 +230,10 @@ trail instead of a fresh guess.
 | `EMBED_QUERY_PREFIX` / `EMBED_DOC_PREFIX` | EmbeddingGemma task prefixes | keep quoted! Ollama does not add them itself |
 | `INGEST_WINDOW_CHARS` | `6000` | rolling-window size for read+parse |
 | `INGEST_LLM_ENABLED` | `true` | set `false` for heuristic-only ingestion |
+| `INGEST_HEURISTIC_MAX_CHARS` | `0` | documents at or below this size skip the LLM parse anyway (`0` = never); metadata only |
+| `INGEST_REASONING_EFFORT` | `off` | effort for the window parser — structured extraction, measured 4.2× faster at `off` with the same metadata shape |
+| `INGEST_MAX_TOKENS` | `3000` | output cap for one window-parse call |
+| `INGEST_PARALLEL_WINDOWS` | `4` | windows parsed at once; `1` restores the sequential chained parse. Stored chunks are identical either way |
 | `CHUNK_TARGET_CHARS` / `CHUNK_MAX_CHARS` | `1400` / `2200` | soft chunk bounds |
 | `JEV_GATE_THRESHOLD` | `0.5` | decision-model escalation threshold |
 | `DECISION_MODEL_NAME` | *(empty)* | stage-2 judge of the cascade. There is one judge: the decision model, or none (a scan then reports itself INCOMPLETE rather than "no contradictions") |

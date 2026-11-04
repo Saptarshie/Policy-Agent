@@ -15,6 +15,18 @@ Never feeds a whole document to the LLM. Instead:
       -> batched embedding of all chunks (Ollama embeddinggemma, document
          prefix), stored in SQLite.
 
+Two knobs trade quality for wall time, both off the synchronous answer path:
+
+    INGEST_REASONING_EFFORT   effort for the window parser (default: off - this
+                              is structured extraction, not reasoning; measured
+                              40.5s -> 9.6s per call on the same window)
+    INGEST_PARALLEL_WINDOWS   parse N windows at once (default 4). The windows
+                              are no longer chained through prev_summary, which
+                              only fed metadata; the rolling summary is built in
+                              ONE merge call afterwards.
+    INGEST_HEURISTIC_MAX_CHARS  documents at or below this size skip the LLM
+                              parse entirely (0 = never skip).
+
 After success the caller starts the background contradiction scan.
 """
 
@@ -23,6 +35,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
@@ -48,6 +61,10 @@ class IngestPipeline:
         chunk_target: int = 1400,
         chunk_max: int = 2200,
         on_progress: Optional[ProgressFn] = None,
+        reasoning_effort: str = "",
+        max_parse_tokens: int = 3000,
+        parallel_windows: int = 1,
+        heuristic_max_chars: int = 0,
     ) -> None:
         self.db = db
         self.embedder = embedder
@@ -57,6 +74,14 @@ class IngestPipeline:
         self.chunk_target = chunk_target
         self.chunk_max = chunk_max
         self.on_progress = on_progress
+        # the window parser only extracts structure; extended reasoning there
+        # costs ~4x wall time and changes nothing in the stored chunks
+        self.reasoning_effort = (reasoning_effort or "").strip()
+        self.max_parse_tokens = max(256, int(max_parse_tokens))
+        #: windows parsed concurrently (1 = the original sequential chain)
+        self.workers = max(1, int(parallel_windows))
+        #: documents at or below this size skip the LLM parse (0 = never)
+        self.heuristic_max_chars = max(0, int(heuristic_max_chars))
 
     # ------------------------------------------------------------------ public
 
@@ -86,31 +111,19 @@ class IngestPipeline:
         prev_summary = ""
 
         try:
-            for i, window in enumerate(windows):
-                parsed = False
-                if self.use_llm:
-                    obj, err = self._parse_window(name, i, len(windows), window, prev_summary)
-                    if obj is not None:
-                        parsed = True
-                        self._merge_meta(meta, obj)
-                        rs = obj.get("rolling_summary")
-                        if isinstance(rs, str) and rs.strip():
-                            prev_summary = rs.strip()[:1500]
-                    else:
-                        w = f"window {i + 1}/{len(windows)}: LLM parse failed ({err}); used heuristic fallback"
-                        warnings.append(w)
-                        meta["warnings"].append(w)
-                if not parsed:
-                    prev_summary = self._heuristic_summary(prev_summary, window)
+            if self.use_llm and self.heuristic_max_chars \
+                    and len(text) <= self.heuristic_max_chars:
+                # small document: the LLM parse buys little and costs a call
+                log.info("'%s' is %d chars <= INGEST_HEURISTIC_MAX_CHARS (%d): "
+                         "heuristic parse", name, len(text), self.heuristic_max_chars)
+                meta["parse"] = "heuristic (configured by document size)"
+                use_llm = False
+            else:
+                meta["parse"] = "llm" if self.use_llm else "heuristic (INGEST_LLM_ENABLED=false)"
+                use_llm = self.use_llm
 
-                self.db.update_job(
-                    job_id, done=i + 1,
-                    stage=f"parsed window {i + 1}/{len(windows)}",
-                    detail=json.dumps({"rolling_summary": prev_summary[:1500]},
-                                      ensure_ascii=False),
-                )
-                self._emit(doc_id, job_id, i + 1, len(windows),
-                           f"window {i + 1}/{len(windows)}")
+            prev_summary = self._parse_windows(name, windows, doc_id, job_id,
+                                               use_llm, meta, warnings)
 
             # ---- structure-aware chunking of the FULL text
             self.db.update_job(job_id, stage="chunking document")
@@ -157,6 +170,112 @@ class IngestPipeline:
 
     # ----------------------------------------------------------------- private
 
+    def _parse_windows(self, doc_name: str, windows: List[str], doc_id: int,
+                       job_id: int, use_llm: bool, meta: Dict,
+                       warnings: List[str]) -> str:
+        """Parse every window; returns the document's rolling summary.
+
+        Sequential (``workers == 1``) keeps the original behaviour: window i sees
+        the summary of windows < i. With more workers the windows are parsed
+        independently (the chain only fed METADATA, never the chunks) and the
+        rolling summary is produced afterwards in one merge call.
+        """
+        n = len(windows)
+        if not use_llm:
+            prev = ""
+            for i, window in enumerate(windows):
+                prev = self._heuristic_summary(prev, window)
+                self._progress(job_id, doc_id, i + 1, n, f"window {i + 1}/{n} (heuristic)")
+            return prev
+
+        if self.workers <= 1 or n <= 1:
+            prev = ""
+            for i, window in enumerate(windows):
+                obj, err = self._parse_window(doc_name, i, n, window, prev)
+                if obj is not None:
+                    self._merge_meta(meta, obj)
+                    rs = obj.get("rolling_summary")
+                    if isinstance(rs, str) and rs.strip():
+                        prev = rs.strip()[:1500]
+                else:
+                    w = (f"window {i + 1}/{n}: LLM parse failed ({err}); "
+                         "used heuristic fallback")
+                    warnings.append(w)
+                    meta["warnings"].append(w)
+                    prev = self._heuristic_summary(prev, window)
+                self._progress(job_id, doc_id, i + 1, n, f"parsed window {i + 1}/{n}")
+            return prev
+
+        # ---- parallel: parse independently, keep the order for the merge
+        results: List[Optional[Dict]] = [None] * n
+        errors: List[Optional[str]] = [None] * n
+        done = 0
+        with ThreadPoolExecutor(max_workers=min(self.workers, n),
+                                thread_name_prefix="ingest-window") as pool:
+            futures = {
+                pool.submit(self._parse_window, doc_name, i, n, window, ""): i
+                for i, window in enumerate(windows)
+            }
+            for fut in as_completed(futures):
+                i = futures[fut]
+                try:
+                    obj, err = fut.result()
+                except Exception as e:                  # noqa: BLE001
+                    obj, err = None, f"worker error: {e}"
+                results[i], errors[i] = obj, err
+                done += 1
+                self._progress(job_id, doc_id, done, n,
+                               f"parsed {done}/{n} windows (parallel)")
+
+        summaries: List[str] = []
+        for i, obj in enumerate(results):
+            if obj is None:
+                w = (f"window {i + 1}/{n}: LLM parse failed ({errors[i]}); "
+                     "used heuristic fallback")
+                warnings.append(w)
+                meta["warnings"].append(w)
+                summaries.append(self._heuristic_summary("", windows[i]))
+                continue
+            self._merge_meta(meta, obj)
+            rs = obj.get("rolling_summary")
+            summaries.append(rs.strip()[:1500] if isinstance(rs, str) and rs.strip()
+                             else self._heuristic_summary("", windows[i]))
+
+        self.db.update_job(job_id, stage="merging window summaries")
+        return self._merge_summaries(summaries)
+
+    def _merge_summaries(self, summaries: List[str]) -> str:
+        """One call to fold per-window summaries into a document summary."""
+        summaries = [s for s in summaries if s and s.strip()]
+        if not summaries:
+            return ""
+        if len(summaries) == 1:
+            return summaries[0][:1500]
+        numbered = "\n\n".join(f"[{i + 1}] {s}" for i, s in enumerate(summaries))
+        try:
+            resp = self.llm.chat(
+                [{"role": "system",
+                  "content": ("Merge these per-window summaries of ONE policy "
+                              "document into a single rolling summary. Keep "
+                              "decisions, amounts, thresholds and who they apply "
+                              "to. Reply with the summary text only, at most 1200 "
+                              "characters, no preamble.")},
+                 {"role": "user", "content": numbered}],
+                max_tokens=600,
+                reasoning_effort=self.reasoning_effort or None,
+            )
+            merged = (resp.content or "").strip()
+            if merged:
+                return merged[:1500]
+        except Exception as e:                          # noqa: BLE001
+            log.warning("summary merge failed (%s); concatenating instead", e)
+        return " ".join(summaries)[:1500]
+
+    def _progress(self, job_id: int, doc_id: int, done: int, total: int,
+                  stage: str) -> None:
+        self.db.update_job(job_id, done=done, stage=stage)
+        self._emit(doc_id, job_id, done, total, stage)
+
     def _parse_window(self, doc_name: str, i: int, n: int, window: str,
                       prev_summary: str):
         user = WINDOW_PARSER_USER.format(
@@ -164,7 +283,10 @@ class IngestPipeline:
             i=i + 1, n=n, doc_name=doc_name, window=window,
         )
         try:
-            return self.llm.chat_json(WINDOW_PARSER_SYSTEM, user)
+            return self.llm.chat_json(
+                WINDOW_PARSER_SYSTEM, user,
+                max_tokens=self.max_parse_tokens,
+                reasoning_effort=self.reasoning_effort or None)
         except Exception as e:  # LLM down mid-ingestion -> heuristic fallback
             return None, f"LLM error: {e}"
 

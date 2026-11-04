@@ -21,11 +21,14 @@ class FakeLLM:
 
     def __init__(self, responses: List[Any]) -> None:
         self.responses = list(responses)
-        self.received: List[Dict[str, Any]] = []
+        self.received: List[Dict[str, Any]] = []      # chat() calls
+        self.json_received: List[Dict[str, Any]] = []  # chat_json() calls
 
     def chat(self, messages, tools=None, temperature=None, max_tokens=None,
              response_format=None, reasoning_effort=None) -> LLMResponse:
-        self.received.append({"messages": [dict(m) for m in messages], "tools": tools})
+        self.received.append({"messages": [dict(m) for m in messages], "tools": tools,
+                              "reasoning_effort": reasoning_effort,
+                              "max_tokens": max_tokens})
         if not self.responses:
             raise AssertionError("FakeLLM ran out of scripted responses")
         r = self.responses.pop(0)
@@ -40,6 +43,9 @@ class FakeLLM:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
+        self.json_received.append({"messages": [dict(m) for m in messages],
+                                   "reasoning_effort": reasoning_effort,
+                                   "max_tokens": max_tokens})
         for _attempt in range(2):
             if not self.responses:
                 return None, "fake: no scripted responses left"

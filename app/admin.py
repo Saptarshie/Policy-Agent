@@ -194,6 +194,10 @@ class AdminAPI:
             chunk_target=self.cfg.chunk_target_chars,
             chunk_max=self.cfg.chunk_max_chars,
             on_progress=on_progress,
+            reasoning_effort=getattr(self.cfg, "ingest_reasoning_effort", ""),
+            max_parse_tokens=getattr(self.cfg, "ingest_max_tokens", 3000),
+            parallel_windows=getattr(self.cfg, "ingest_parallel_windows", 1),
+            heuristic_max_chars=getattr(self.cfg, "ingest_heuristic_max_chars", 0),
         )
 
     # --------------------------------------------------------------- documents

@@ -1,0 +1,47 @@
+{
+  "benchmark": "complex_contract_reasoning_pack",
+  "workers": 10,
+  "timing_note": "10 concurrent: times include contention, not comparable",
+  "questions": 20,
+  "index_wall_s": 87.1,
+  "index_per_doc_s": {
+    "01_MASTER_SERVICES_AGREEMENT": 24.6,
+    "02_ENTERPRISE_ORDER_FORM_AND_CHANGE_ORDERS": 22.0,
+    "03_SERVICE_LEVEL_AND_SUPPORT_SCHEDULE": 18.4,
+    "04_DATA_PROCESSING_AND_SECURITY_ADDENDUM": 19.0
+  },
+  "answer_accuracy_pct": 65.0,
+  "strict_or_partial_pct": 75.0,
+  "verdicts": {
+    "correct": 13,
+    "partial": 2,
+    "incorrect": 5,
+    "unjudged": 0
+  },
+  "answerable": {
+    "n": 20,
+    "correct": 13,
+    "accuracy_pct": 65.0
+  },
+  "refusals": {
+    "n": 0,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "citation_recall": {
+    "expected": 42,
+    "doc_level_pct": 83.3,
+    "section_level_pct": 78.6
+  },
+  "citation_warnings_total": 0,
+  "time_s": {
+    "total_wall": 173.1,
+    "qa_wall": 543.9,
+    "mean": 27.2,
+    "p50": 24.6,
+    "p95": 51.6,
+    "max": 62.4,
+    "min": 3.9
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261104_221246.jsonl"
+}

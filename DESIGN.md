@@ -74,8 +74,8 @@ poll. On success a second daemon thread starts the contradiction cascade
 
 **Data flow — query → answer.** One triage call classifies the raw input and
 decides the route (§3.1) — a greeting or a document listing is answered
-directly, non-HR input and prompt injection are refused, everything about
-workplace policy goes to the ReAct loop. The agent receives the *de-noised*
+directly, input that is not a question about the ingested documents and prompt
+injection are refused, everything about the documents goes to the ReAct loop. The agent receives the *de-noised*
 question plus the triage query plan as a second system message, thinks, emits
 one tool call, **reads the observation and decides the next action** (refine
 the query, open a full chunk, or answer) — up to `AGENT_MAX_STEPS`, then a
@@ -93,12 +93,24 @@ Documents can be huge; **nothing is ever fed whole** to the parser LLM.
   (image-only PDFs are rejected with a clear error).
 * **Windows**: the text is cut on *paragraph* boundaries into ~`INGEST_WINDOW_CHARS`
   windows with a ~200-char carry-over tail. Per window **one bounded LLM call**
-  does both (a) structure extraction (title, normative statements, key terms,
-  numbers+units+context) and (b) **rolling summary** — `prev_summary + window →
-  new summary (≤120 words)` — the "cascade": each window is parsed in the
-  context of everything before it, like recursive/rolling-document LLMs.
+  does (a) structure extraction (title, normative statements, key terms,
+  numbers+units+context) and (b) a summary of that window. Two shapes of that
+  loop, both keeping the chunks identical:
+  * `INGEST_PARALLEL_WINDOWS=1` — the original **cascade**: `prev_summary +
+    window → new summary (≤120 words)`, each window parsed in the context of
+    everything before it (recursive/rolling-document LLMs).
+  * `INGEST_PARALLEL_WINDOWS>1` (default) — windows are parsed **concurrently**
+    and independently (the chain only ever fed *metadata*, never the chunks),
+    then one extra call folds the per-window summaries into the rolling summary.
+    Measured 501.7s → 78.2s for the four-document benchmark pack.
+
+  The parser runs at `INGEST_REASONING_EFFORT=off` by default: it extracts, it
+  does not reason, and extended reasoning cost 4.2× wall time for the same
+  chunk text (see `eval/ABLATION.md` §9).
   If the LLM reply is unparseable even after regex repair, a heuristic
   fallback summarizes and a warning is recorded — ingestion never dies.
+  `INGEST_HEURISTIC_MAX_CHARS` skips the LLM parse entirely for documents at or
+  below that size.
 * **Progress tracking**: an `ingest` job row is updated after every window
   (`done/total/stage` + rolling-summary checkpoint in `detail`).
 * **Chunking** (after windows): structure-aware, never fixed-size —
@@ -191,9 +203,11 @@ Cheap layers first, expensive last:
    **inventory only** (which documents exist); questions about what the
    documents *say* — including whether they contradict each other — are policy
    questions and must reach the agent, because the direct reply path can only
-   list documents. **It refuses only non-HR input
-   and prompt injection — never a workplace question**, because it has not read
-   the corpus; coverage refusals belong to the grounded agent. Decisions are
+   list documents. **It refuses only input that is not a document question
+   (world knowledge, code, personal advice) and prompt injection — never a
+   question about the corpus**, whatever its subject (HR policy or contract
+   clause), because it has not read the corpus; coverage refusals belong to the
+   grounded agent. Decisions are
    cached on disk (question + prompt version + a **fingerprint of the prompt
    text** + model + reasoning effort, so editing the prompt invalidates its
    cached verdicts instead of replaying them), so

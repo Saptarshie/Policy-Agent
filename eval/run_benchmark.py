@@ -21,6 +21,7 @@ import argparse
 import json
 import math
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import shutil
 import statistics
 import sys
@@ -31,6 +32,33 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:                     # `python eval/run_benchmark.py`
     sys.path.insert(0, str(ROOT))
 DEFAULT_PACK = ROOT / "Benchmark" / "hr_rag_policy_pack_and_benchmark"
+
+
+def find_manifest(pack: Path) -> Path:
+    """manifest.json, or the pack's only *manifest*.json (packs name it freely)."""
+    exact = pack / "manifest.json"
+    if exact.exists():
+        return exact
+    found = sorted(pack.glob("*manifest*.json"))
+    if len(found) == 1:
+        return found[0]
+    raise SystemExit(f"{pack}: cannot pick a manifest from {[p.name for p in found]}")
+
+
+def find_questions(pack: Path) -> Path:
+    """The pack's single question file (benchmark_*.jsonl / *_benchmark_*.jsonl)."""
+    found = sorted(pack.glob("*.jsonl"))
+    if len(found) == 1:
+        return found[0]
+    named = [p for p in found if p.name.startswith("benchmark_")]
+    if len(named) == 1:
+        return named[0]
+    raise SystemExit(f"{pack}: cannot pick a question file from {[p.name for p in found]}")
+
+
+def is_refusal(row: dict) -> bool:
+    """expected_behavior varies by pack: 'refuse', 'answer', 'answer_with_...'."""
+    return str(row.get("expected_behavior", "")).lower().startswith("refuse")
 
 JUDGE_SYSTEM = """You grade a policy assistant's answer against a reference answer.
 
@@ -65,6 +93,42 @@ ASSISTANT ANSWER
 {answer}"""
 
 
+JUDGE_SYSTEM_RUBRIC = """You grade a contract-analysis assistant's answer against a
+reference answer, and also score it on the pack's four dimensions.
+
+Return ONE JSON object:
+{"verdict": "correct|partial|incorrect", "reason": "<one sentence>",
+ "missing": ["<key fact the answer lacks>", ...],
+ "scores": {"answer_correctness": <0-4>, "reasoning": <0-3>,
+            "citations": <0-2>, "uncertainty": <0-1>}}
+
+Rules:
+- Compare DECISIONS, AMOUNTS, CONDITIONS, DEADLINES and HIERARCHY, not wording.
+- "correct": every decisive fact in the reference is present and nothing contradicts it.
+- "partial": some key facts present, at least one missing or vague on a decisive point.
+- "incorrect": contradicts the reference, states a different amount/decision, or dodges.
+- Score honestly and independently of the verdict:
+  * answer_correctness (0-4): the substantive conclusion AND the arithmetic.
+  * reasoning (0-3): the right hierarchy/exception/condition was applied.
+  * citations (0-2): the cited document AND section are the ones that govern.
+  * uncertainty (0-1): does not overclaim where the facts are insufficient.
+- Judge only the answer text; ignore any trace."""
+
+JUDGE_USER_RUBRIC = """QUESTION
+{question}
+
+REFERENCE ANSWER
+{reference}
+
+EXPECTED BEHAVIOUR
+{behavior}
+
+ASSISTANT ANSWER
+{answer}"""
+
+RUBRIC_MAX = {"answer_correctness": 4, "reasoning": 3, "citations": 2, "uncertainty": 1}
+
+
 def log(msg: str) -> None:
     print(msg, flush=True)
 
@@ -84,7 +148,7 @@ def prepare_index(pack: Path, data_dir: Path, reuse: bool):
     api = AdminAPI()
     api.reconcile_stale_jobs() if hasattr(api, "reconcile_stale_jobs") else None
 
-    manifest = json.loads((pack / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(find_manifest(pack).read_text(encoding="utf-8"))
     already = {d["name"] for d in api.db.list_documents()}
     timings = {}
     for doc_name in manifest["documents"]:
@@ -103,12 +167,17 @@ def prepare_index(pack: Path, data_dir: Path, reuse: bool):
 
 # ------------------------------------------------------------------ judging
 def judge(api, row: dict, answer: str) -> dict:
+    """Grade one answer. Packs that ship a `scoring` block get the rubric variant,
+    which returns the same verdict plus per-dimension points."""
+    rubric = isinstance(row.get("scoring"), dict) and bool(row["scoring"])
+    system, user = ((JUDGE_SYSTEM_RUBRIC, JUDGE_USER_RUBRIC) if rubric
+                    else (JUDGE_SYSTEM, JUDGE_USER))
     obj, err = api.llm.chat_json(
-        JUDGE_SYSTEM,
-        JUDGE_USER.format(question=row["question"],
-                          reference=row["ground_truth_answer"],
-                          behavior=row["expected_behavior"],
-                          answer=answer or "(empty answer)"),
+        system,
+        user.format(question=row["question"],
+                    reference=row["ground_truth_answer"],
+                    behavior=row["expected_behavior"],
+                    answer=answer or "(empty answer)"),
         temperature=0.0,
     )
     if not obj:
@@ -116,9 +185,16 @@ def judge(api, row: dict, answer: str) -> dict:
     verdict = str(obj.get("verdict", "")).strip().lower()
     if verdict not in ("correct", "partial", "incorrect"):
         verdict = "unjudged"
+    scores = obj.get("scores") if rubric else None
+    if isinstance(scores, dict):
+        scores = {k: max(0, min(RUBRIC_MAX[k], int(scores.get(k, 0) or 0)))
+                  for k in RUBRIC_MAX}
+    else:
+        scores = None
     return {"verdict": verdict,
             "reason": str(obj.get("reason", ""))[:300],
-            "missing": obj.get("missing") or []}
+            "missing": obj.get("missing") or [],
+            "scores": scores}
 
 
 # ---------------------------------------------------------------- citations
@@ -155,11 +231,16 @@ def main() -> int:
     ap.add_argument("--only", default="", help="comma separated ids, e.g. MH-01,MH-19")
     ap.add_argument("--reuse", action="store_true", help="reuse an existing index")
     ap.add_argument("--no-judge", action="store_true")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="questions in flight at once (1 = sequential; >1 trades "
+                         "clean per-question latency for wall time)")
+    ap.add_argument("--index-only", action="store_true",
+                    help="ingest the documents and stop (timing the index)")
     args = ap.parse_args()
 
     pack = Path(args.pack)
     rows = [json.loads(line) for line in
-            (pack / "benchmark_20_multihop.jsonl").read_text(encoding="utf-8").splitlines()
+            find_questions(pack).read_text(encoding="utf-8").splitlines()
             if line.strip()]
     if args.only:
         wanted = {x.strip().upper() for x in args.only.split(",")}
@@ -174,7 +255,12 @@ def main() -> int:
     index_wall = time.time() - started
     docs = api.db.list_documents()
     log(f"  corpus: {len(docs)} document(s), "
-        f"{sum(d['chunk_count'] for d in docs)} chunks\n")
+        f"{sum(d['chunk_count'] for d in docs)} chunks")
+    if args.index_only:
+        per_doc = ", ".join(f"{n}={t:.1f}s" for n, t in index_times.items())
+        log(f"  index wall: {index_wall:.1f}s" + (f"  ({per_doc})" if per_doc else ""))
+        return 0
+    log("")
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -182,7 +268,15 @@ def main() -> int:
     jsonl_path = out_dir / f"benchmark_{stamp}.jsonl"
 
     results = []
-    for i, row in enumerate(rows, 1):
+
+    def run_one(i: int, row: dict) -> dict:
+        """Ask one question, judge it, and return the result row.
+
+        Runs in a worker thread when --workers > 1. Every shared piece is safe
+        for that: the DB serialises writes under its own lock, the intent cache
+        locks and writes atomically, the agent holds no per-question state, and
+        the LLM client opens a connection per request.
+        """
         t0 = time.time()
         try:
             res = api.ask(row["question"])
@@ -202,7 +296,7 @@ def main() -> int:
             task_total = task
 
         doc_hits, sec_hits = citation_hits(answer, row["ground_truth_citations"])
-        results.append({
+        out = {
             "id": row["id"],
             "question": row["question"],
             "expected_behavior": row["expected_behavior"],
@@ -211,6 +305,9 @@ def main() -> int:
             "verdict": grading["verdict"],
             "judge_reason": grading["reason"],
             "judge_missing": grading["missing"],
+            "rubric_scores": grading.get("scores"),
+            "rubric_points": (sum(grading["scores"].values())
+                              if grading.get("scores") else None),
             "tool_calls": payload.get("tool_calls"),
             "elapsed_s": round(payload.get("elapsed_s") or 0, 2),
             "wall_s": round(task, 1),
@@ -220,13 +317,29 @@ def main() -> int:
             "expected_citation_docs": len(row["ground_truth_citations"]),
             "citation_doc_hits": doc_hits,
             "citation_section_hits": sec_hits,
-        })
+        }
         with open(jsonl_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(results[-1], ensure_ascii=False) + "\n")
+            fh.write(json.dumps(out, ensure_ascii=False) + "\n")
         log(f"  [{i}/{len(rows)}] {row['id']}  {grading['verdict']:<9} "
             f"{task_total:5.1f}s  tools={payload.get('tool_calls')}  "
             f"cite {doc_hits}/{len(row['ground_truth_citations'])}  "
             f"{(grading['reason'] or '')[:70]}")
+        return out
+
+    if args.workers > 1:
+        log(f"  NOTE: {args.workers} questions in flight at once - per-question "
+            f"timings include contention, so compare ACCURACY, not latency.")
+        with ThreadPoolExecutor(max_workers=min(args.workers, len(rows)),
+                                thread_name_prefix="bench") as pool:
+            futures = {pool.submit(run_one, i, row): row["id"]
+                       for i, row in enumerate(rows, 1)}
+            for fut in as_completed(futures):
+                results.append(fut.result())          # errors surface here
+        order = {row["id"]: i for i, row in enumerate(rows)}
+        results.sort(key=lambda r: order.get(r["id"], 0))
+    else:
+        for i, row in enumerate(rows, 1):
+            results.append(run_one(i, row))
 
     # ------------------------------------------------------------------ scores
     total = len(results)
@@ -235,16 +348,36 @@ def main() -> int:
     incorrect = sum(1 for r in results if r["verdict"] == "incorrect")
     unjudged = sum(1 for r in results if r["verdict"] == "unjudged")
 
-    answerable = [r for r in results if r["expected_behavior"] == "answer"]
-    refusals = [r for r in results if r["expected_behavior"] == "refuse"]
+    refusals = [r for r in results if str(r["expected_behavior"]).lower().startswith("refuse")]
+    answerable = [r for r in results if r not in refusals]
     exp_cites = sum(r["expected_citation_docs"] for r in results)
     doc_hits = sum(r["citation_doc_hits"] for r in results)
     sec_hits = sum(r["citation_section_hits"] for r in results)
+
+    scored = [r for r in results if r.get("rubric_points") is not None]
+    rubric_summary = None
+    if scored:
+        max_points = sum(RUBRIC_MAX.values())
+        by_dim = {k: round(statistics.mean([r["rubric_scores"][k] for r in scored]), 2)
+                  for k in RUBRIC_MAX}
+        rubric_summary = {
+            "cases": len(scored),
+            "max_points": max_points,
+            "mean_points": round(statistics.mean([r["rubric_points"] for r in scored]), 2),
+            "mean_pct": round(100.0 * statistics.mean(
+                [r["rubric_points"] / max_points for r in scored]), 1),
+            "by_dimension": by_dim,
+            "by_dimension_max": RUBRIC_MAX,
+        }
 
     times = [r["wall_s"] for r in results]
     walls = [r["wall_with_judge_s"] for r in results]
     summary = {
         "benchmark": pack.name,
+        "workers": args.workers,
+        "timing_note": ("sequential: per-question times are single-request latency"
+                        if args.workers <= 1 else
+                        f"{args.workers} concurrent: times include contention, not comparable"),
         "questions": total,
         "index_wall_s": round(index_wall, 1),
         "index_per_doc_s": {k: round(v, 1) for k, v in index_times.items()},
@@ -266,6 +399,7 @@ def main() -> int:
                             "doc_level_pct": pct(doc_hits, exp_cites),
                             "section_level_pct": pct(sec_hits, exp_cites)},
         "citation_warnings_total": sum(len(r["citation_warnings"]) for r in results),
+        "rubric": rubric_summary,
         "time_s": {"total_wall": round(time.time() - started, 1),
                    "qa_wall": round(sum(times), 1),
                    "mean": round(statistics.mean(times), 1) if times else 0,
@@ -300,6 +434,13 @@ def main() -> int:
     log(f"  citation recall (doc + section)   {sec_hits}/{exp_cites}  "
         f"({summary['citation_recall']['section_level_pct']}%)")
     log(f"  citation warnings                 {summary['citation_warnings_total']}")
+    rubric = summary.get("rubric")
+    if rubric:
+        log(f"  rubric (judge-scored)             {rubric['mean_points']}/"
+            f"{rubric['max_points']}  ({rubric['mean_pct']}%)  over {rubric['cases']} cases")
+        dims = ", ".join(f"{k} {v}/{rubric['by_dimension_max'][k]}"
+                         for k, v in rubric["by_dimension"].items())
+        log(f"    dimensions                      {dims}")
     t = summary["time_s"]
     log(f"  time: total wall {t['total_wall']}s (index {summary['index_wall_s']}s + "
         f"QA {t['qa_wall']}s)")
