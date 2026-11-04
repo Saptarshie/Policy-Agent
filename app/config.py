@@ -95,18 +95,15 @@ class Config:
 
     # --- Contradiction tracker ---
     jev_gate_threshold: float
-    contra_top_k: int
+    scan_min_similarity: float    # candidate pairs: cosine floor, not a top-k
+    scan_max_candidates: int      # safety cap on pairs per document
     scan_cross_doc_only: bool
-    scan_max_pairs_per_chunk: int
 
     # --- Decision model (stage-2 gate: JEV heuristic / remote / hybrid) ---
-    decision_mode: str            # "heuristic" | "remote" | "hybrid"
     decision_model_base_url: str
     decision_model_api_key: str
     decision_model_name: str
     decision_temperature: float
-    decision_borderline_band: float
-    decision_fallback_heuristic: bool
 
     # --- Storage / server ---
     data_dir: Path
@@ -158,13 +155,14 @@ class Config:
 
     @property
     def decision_mode_effective(self) -> str:
-        """Resolve the effective mode: remote/hybrid silently downgrade to
-        heuristic when the decision-model endpoint is not configured (with a
-        warning at startup), so the cascade never breaks."""
-        if self.decision_mode in ("remote", "hybrid") \
-                and not self.decision_model_configured:
-            return "heuristic"
-        return self.decision_mode
+        """Report which judge the contradiction cascade will use.
+
+        There is no mode selection any more - the decision model judges or
+        nothing does - so this is a status string for logs and the CLI, not a
+        switch: "remote" when the endpoint is configured, "unconfigured" when it
+        is not (in which case the gate passes no pair rather than guessing).
+        """
+        return "remote" if self.decision_model_configured else "unconfigured"
 
 
 _CACHE: Optional[Config] = None
@@ -203,17 +201,17 @@ def get_config() -> Config:
             chunk_target_chars=_int("CHUNK_TARGET_CHARS", 1400),
             chunk_max_chars=_int("CHUNK_MAX_CHARS", 2200),
             jev_gate_threshold=_float("JEV_GATE_THRESHOLD", 0.5),
-            contra_top_k=_int("CONTRA_TOP_K", 4),
-            scan_cross_doc_only=_bool("SCAN_CROSS_DOC_ONLY", True),
-            scan_max_pairs_per_chunk=_int("SCAN_MAX_PAIRS_PER_CHUNK", 3),
-            decision_mode=_str("DECISION_MODE", "heuristic").strip().lower(),
+            # 0.65 measured on the sample corpus: the real leave-cap conflict
+            # (v1 vs the 2025 amendment) sits at 0.678, i.e. rank 3 under the old
+            # top_k=4 - inside the cut by luck, not by design
+            scan_min_similarity=_float("SCAN_MIN_SIMILARITY", 0.65),
+            scan_max_candidates=_int("SCAN_MAX_CANDIDATES", 200),
+            scan_cross_doc_only=_bool("SCAN_CROSS_DOC_ONLY", False),
             decision_model_base_url=_str(
                 "DECISION_MODEL_BASE_URL", "").rstrip("/"),
             decision_model_api_key=_str("DECISION_MODEL_API_KEY", ""),
             decision_model_name=_str("DECISION_MODEL_NAME", ""),
             decision_temperature=_float("DECISION_TEMPERATURE", 0.0),
-            decision_borderline_band=_float("DECISION_BORDERLINE_BAND", 0.15),
-            decision_fallback_heuristic=_bool("DECISION_FALLBACK_HEURISTIC", True),
             data_dir=Path(_str("DATA_DIR", str(_ROOT / "data"))).expanduser().resolve(),
             app_host=_str("APP_HOST", "127.0.0.1"),
             app_port=_int("APP_PORT", 8000),

@@ -2,14 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.contradictions.gate import JEVStyleGate
+from app.contradictions.gate import CascadeGate
 from app.contradictions.tracker import ContradictionTracker
 from app.contradictions.verify import ContradictionVerifier
 from app.db import Database
 from app.ingest import IngestPipeline
 from app.llm import LLMResponse
 from app.rag import RAGEngine
-from tests.fakes import FakeEmbedder, FakeLLM
+from tests.fakes import FakeEmbedder, FakeLLM, StubRemote
 
 DOC = (
     "ACME Remote Work Policy\n\n"
@@ -124,12 +124,16 @@ class TestTrackerCascade(unittest.TestCase):
         self.db.close()
         self.tmp.cleanup()
 
-    def _tracker(self, fake_llm) -> ContradictionTracker:
+    def _tracker(self, fake_llm, gate_score: float = 0.9,
+                 cross_doc_only: bool = True) -> ContradictionTracker:
+        # the decision model is the only judge of a candidate pair now; a lexical
+        # gate would be exactly the thing this design removed
         return ContradictionTracker(
             db=self.db, rag=self.rag,
-            gate=JEVStyleGate(threshold=0.5),
+            gate=CascadeGate(threshold=0.5, remote=StubRemote(default=gate_score)),
             verifier=ContradictionVerifier(fake_llm),
-            cross_doc_only=True, top_k=3, max_pairs_per_chunk=3)
+            cross_doc_only=cross_doc_only,
+            min_similarity=0.0, max_candidates=100)
 
     def test_cascade_flags_verified_contradiction(self):
         verdict = ('{"is_contradiction": true, "confidence": 0.9, '

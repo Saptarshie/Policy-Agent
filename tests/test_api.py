@@ -65,8 +65,13 @@ class TestAPI(unittest.TestCase):
         self.cfg = make_config(self.dir / "data")
         self.cfg.data_dir.mkdir(parents=True, exist_ok=True)
         self.db = Database(self.cfg.db_path)
+        from app.contradictions.gate import CascadeGate
+        from tests.fakes import StubRemote
         self.api = AdminAPI(config=self.cfg, db=self.db,
                             embedder=FakeEmbedder(), llm=_stub_llm(),
+                            # the cascade has one judge: supply it deterministically
+                            gate=CascadeGate(threshold=0.5,
+                                             remote=StubRemote(default=0.9)),
                             intent_router=StubIntentRouter(plans={
                                 "hello": IntentPlan(intent="GREETING",
                                                     route="DIRECT_REPLY",

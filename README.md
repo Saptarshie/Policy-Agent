@@ -45,12 +45,12 @@ admin uploads doc ──▶ rolling-window ingestion ──▶ chunks + embeddin
              │                          of the other documents   │
              │                          (embeddings only, cheap) │
              ├──────────────────────────────────────────────────┤
-             │ 2. DECISION MODEL - pluggable via DECISION_MODE  │
+             │ 2. DECISION MODEL - scores every candidate     │
              │    heuristic (default): JEV-style judge IN CODE  │
              │    topical-overlap guard, normative flips        │
              │    (must vs must-not), permission flips,         │
              │    numeric conflicts (15 vs 30 days), antonyms   │
-             │    remote: dedicated DECISION_MODEL_* endpoint   │
+             │    dedicated DECISION_MODEL_* endpoint (JEV)     │
              │    scores every pair (strict JSON, repaired)     │
              │    hybrid: heuristic first; remote refines       │
              │    only BORDERLINE pairs                         │
@@ -70,9 +70,9 @@ The **decision model runs first** so the expensive LLM verifier only ever
 sees a small, pre-filtered set of plausible conflicts. By default the
 decision model is the in-code JEV heuristic — deterministic, explainable and
 **zero LLM cost**, which is why a default `.env` has no decision-model
-endpoint vars. Prefer a served model as the judge? Set `DECISION_MODE=remote`
-(or `hybrid`) and fill in `DECISION_MODEL_BASE_URL` / `DECISION_MODEL_API_KEY`
-/ `DECISION_MODEL_NAME` — a separate, cheaper OpenAI-compatible endpoint
+endpoint vars. The judged stage requires a served model: fill in
+`DECISION_MODEL_BASE_URL` / `DECISION_MODEL_API_KEY` / `DECISION_MODEL_NAME` —
+a separate, cheaper OpenAI-compatible endpoint
 (e.g. `qwen2.5:0.5b` on Ollama) that scores each pair with a strict-JSON
 reply (repaired + retried like every other LLM call, falling back to the
 heuristic on failure). If the verifier can't run (endpoint down, unparseable
@@ -207,18 +207,16 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `INGEST_LLM_ENABLED` | `true` | set `false` for heuristic-only ingestion |
 | `CHUNK_TARGET_CHARS` / `CHUNK_MAX_CHARS` | `1400` / `2200` | soft chunk bounds |
 | `JEV_GATE_THRESHOLD` | `0.5` | decision-model escalation threshold |
-| `DECISION_MODE` | `heuristic` | stage-2 decision model: `heuristic` (in-code JEV, zero cost) / `remote` (dedicated endpoint scores every pair) / `hybrid` (heuristic first, remote refines borderline pairs) |
-| `DECISION_MODEL_BASE_URL` | *(empty)* | OpenAI-compatible base URL of the decision model (only for `remote`/`hybrid`; e.g. `http://localhost:11434/v1`) |
+| `DECISION_MODEL_NAME` | *(empty)* | stage-2 judge of the cascade. There is one judge: the decision model, or none (a scan then reports itself INCOMPLETE rather than "no contradictions") |
+| `DECISION_MODEL_BASE_URL` | *(empty)* | OpenAI-compatible base URL of the decision model (e.g. `http://localhost:11434/v1`, or the hosted `typesafe/jev`) |
 | `DECISION_MODEL_API_KEY` | *(empty)* | API key for the decision-model endpoint (e.g. `ollama`) |
 | `DECISION_MODEL_NAME` | *(empty)* | model name at the decision endpoint (e.g. `qwen2.5:0.5b`) |
 | `DECISION_TEMPERATURE` | `0.0` | keep the judge deterministic |
-| `DECISION_BORDERLINE_BAND` | `0.15` | hybrid mode: heuristic scores within ±band of the threshold are refined remotely |
 | `DECISION_FALLBACK_HEURISTIC` | `true` | fall back to the in-code heuristic when the remote decision model fails |
-| `CONTRA_TOP_K` | `4` | RAG neighbours per chunk during a scan |
-| `SCAN_MAX_PAIRS_PER_CHUNK` | `3` | max LLM verifications per chunk (cost cap) |
-| `SCAN_CROSS_DOC_ONLY` | `true` | only compare across documents |
+| `SCAN_MIN_SIMILARITY` | `0.65` | candidate pairs: every passage at or above this cosine floor (not a top-k cut — a conflict can rank 41st among 60 similar chunks) |
+| `SCAN_MAX_CANDIDATES` | `200` | safety cap on pairs examined per document (logged when it truncates) |
+| `SCAN_CROSS_DOC_ONLY` | `false` | `false` scans inside a document as well as across documents |
 | `AGENT_MAX_STEPS` | `12` | ReAct loop budget |
-| `DECISION_MODE` | `remote` | also selects the answer-shape classifier: `remote`/`hybrid` use the decision model, `heuristic` falls back to the chat model's JSON mode |
 | `INTENT_ENABLED` | `true` | LLM triage in front of the agent (one extra cheap call) |
 | `INTENT_MODEL` | *(empty)* | model for the classifier; empty = `LLM_MODEL` |
 | `INTENT_MAX_TOKENS` | `65536` | ceiling for the classifier's JSON reply (a ceiling, not a budget) |

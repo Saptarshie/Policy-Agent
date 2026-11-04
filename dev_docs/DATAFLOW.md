@@ -199,12 +199,15 @@ which is why a citation can only ever name a document that exists.
 
 ```
 new chunks
- ├─ candidate pairs: same/similar topic, capped by
- │    cfg.contra_top_k per chunk, cfg.scan_max_pairs_per_chunk, cross-doc only
- ├─ stage 2: CascadeGate (gate.py)
- │    heuristic  -> JEVStyleGate only        (lexical: jaccard + modality regex)
- │    remote     -> decision model scores each pair
- │    hybrid     -> heuristic first, remote only for borderline pairs
+ ├─ candidate pairs: EVERY passage at or above SCAN_MIN_SIMILARITY (0.65),
+ │    inside the same document and across documents, bounded only by
+ │    SCAN_MAX_CANDIDATES (200) as a cost valve. Not a top-k cut: the real
+ │    leave-cap conflict in this corpus ranks 3rd of 4 - inside the old cut by
+ │    luck, and it would be missed outright among 60 similar chunks.
+ ├─ stage 2: CascadeGate (gate.py) - the decision model is the ONLY judge.
+ │    The lexical gate still runs, but its signals are evidence handed to the
+ │    model, never a verdict. With no DECISION_MODEL_* configured the gate
+ │    reports "unavailable" and the scan says INCOMPLETE, not "clean".
  ├─ stage 3: ContradictionVerifier (LLM) for gate-passing pairs
  └─ db.add_contradiction(...)  order-agnostic (min,max) unique index,
                                INSERT OR IGNORE, dismissal survives rescans

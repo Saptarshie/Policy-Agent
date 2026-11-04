@@ -73,7 +73,7 @@ rule 11), so a reviewer can check the derivation instead of the tool pretending 
 
 ## 2. Open — semantic decisions still made lexically
 
-### 2.1 `app/contradictions/gate.py:JEVStyleGate.evaluate` — OPEN (the big one)
+### 2.1 `app/contradictions/gate.py:JEVStyleGate.evaluate` — RESOLVED (demoted to signals)
 
 Decides **whether two passages contradict**, using:
 
@@ -82,27 +82,21 @@ Decides **whether two passages contradict**, using:
 * numeric conflicts (different numbers under similar phrasing) × 0.9;
 * total ≥ `JEV_GATE_THRESHOLD` (0.5) → contradiction.
 
-This is a language judgement made by word overlap and regex lexicons. In
-`DECISION_MODE=hybrid` it is a *prefilter* and the decision model refines the
-borderline band; in `hybrid` the clearly-above/below pairs are still decided
-lexically. In `DECISION_MODE=remote` the decision model decides every pair.
+**Fixed.** The cascade now has one judge: the decision model. `JEVStyleGate`
+still runs on every pair, but only to produce the `signals` list that is passed
+to the model as evidence - it can no longer pass or drop a pair. With no
+`DECISION_MODEL_*` configured the gate answers `decided_by="unavailable"` and the
+scan reports itself INCOMPLETE, rather than deciding lexically that the corpus is
+clean. `DECISION_MODE` (heuristic/remote/hybrid) is gone from the config.
 
-Why it survives: with no endpoint configured there is nothing else to call, and
-the zero-cost default is a real requirement for a handed-out repo. Why it is a
-compromise, not a principle: a pair can be a genuine contradiction with low
-lexical overlap ("staff may work from home two days" vs "employees are expected
-on site three days a week") and be dropped before any model sees it.
+The residual risk now is different and much smaller: the *signals* can bias the
+model's score. A pair the lexical pass finds uninteresting still reaches the
+model, which is asked to judge it on the passages themselves.
 
-Recommendation: any deployment with an endpoint sets `DECISION_MODE=remote` (every
-measurement in `eval/` does). A principled version would let the heuristic only
-*rank*, never *dismiss* — i.e. below-threshold pairs are `UNVERIFIED`, not
-"not a contradiction" — at the cost of many more pairs to review.
+### 2.2 `_REQ_RE` / `_PROHIB_RE` / `_PERM_RE` (same file) — RESOLVED (same change)
 
-### 2.2 `_REQ_RE` / `_PROHIB_RE` / `_PERM_RE` (same file) — OPEN
-
-Modality detection (`must`, `shall not`, `is required to`, `may`) by regex, feeding
-the score above. Legitimate as a *signal* inside a prefilter, illegitimate as a
-decider — which is what it is in heuristic mode.
+Modality detection (`must`, `shall not`, `is required to`, `may`) by regex. It now
+feeds the signal list only; it cannot decide a pair.
 
 ### 2.3 `app/agent/intent_legacy.py` — BASELINE
 

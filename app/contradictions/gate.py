@@ -583,150 +583,91 @@ class SystemOneDecisionModel:
 class CascadeGate:
     """The stage-2 decision model the :class:`ContradictionTracker` uses.
 
-    Modes (``DECISION_MODE``):
-      * ``heuristic`` - JEVStyleGate only (default, zero cost, no endpoint);
-      * ``remote``    - RemoteDecisionModel scores every candidate pair,
-        heuristic only as fallback;
-      * ``hybrid``    - heuristic scores first; pairs CLEARLY above/below the
-        threshold are decided for free, only BORDERLINE pairs (within
-        ``borderline_band`` of the threshold) are refined remotely.
+    There is one judge: the configured decision model (``DECISION_MODEL_*``,
+    typically ``typesafe/jev``). The lexical gate is *not* a fallback verdict -
+    its signals are passed to the model as evidence, because a conflict is a
+    question about meaning and word overlap cannot answer it.
 
-    Every decision is explainable: ``decided_by`` records which judge made
-    the call and ``signals`` carries its evidence.
+    If no decision model is configured the gate refuses to decide: every pair
+    comes back ``passed=False``, ``decided_by="unavailable"`` with an explicit
+    error, so a scan reports "no model" rather than "no conflicts".
     """
 
     def __init__(
         self,
         threshold: float = 0.5,
-        mode: str = "heuristic",
         remote: Optional[RemoteDecisionModel] = None,
-        borderline_band: float = 0.15,
-        fallback_heuristic: bool = True,
     ) -> None:
         self.threshold = float(threshold)
-        self.mode = (mode or "heuristic").strip().lower()
         self.remote = remote
-        self.band = float(borderline_band)
-        self.fallback_heuristic = bool(fallback_heuristic)
         self.heuristic = JEVStyleGate(threshold=self.threshold)
-        if self.mode in ("remote", "hybrid") and self.remote is None:
-            log.warning(
-                "DECISION_MODE=%s but no remote decision model was built - "
-                "falling back to heuristic", self.mode)
-            self.mode = "heuristic"
+        if self.remote is None:
+            log.warning("no decision model configured: contradiction detection "
+                        "will pass nothing (set DECISION_MODEL_BASE_URL and "
+                        "DECISION_MODEL_NAME)")
 
     # ------------------------------------------------------------------ api
 
     def evaluate(self, text_a: str, text_b: str) -> GateDecision:
-        if self.mode == "remote":
-            return self._evaluate_remote(text_a, text_b)
-        if self.mode == "hybrid":
-            return self._evaluate_hybrid(text_a, text_b)
-        return self.heuristic.evaluate(text_a, text_b)
+        if self.remote is None:
+            return GateDecision(
+                False, 0.0, ["no decision model configured"],
+                decided_by="unavailable",
+                error="no decision model configured",
+            )
+        # the lexical pass still runs: its signals are evidence for the model
+        heur = self.heuristic.evaluate(text_a, text_b)
+        decision = self.remote.score(text_a, text_b, heur.signals)
+        if decision is None:
+            return GateDecision(
+                False, 0.0, list(heur.signals or []) + ["decision model failed"],
+                decided_by="unavailable",
+                error="decision model returned no verdict",
+            )
+        decision.passed = decision.score >= self.threshold
+        decision.decided_by = "decision_model"
+        return decision
 
     @property
     def describe(self) -> str:
-        return {
-            "heuristic": "JEV-style lexical heuristic (in-code, zero cost)",
-            "remote": f"remote decision model ({getattr(self.remote, 'model', '?')})",
-            "hybrid": ("hybrid: JEV heuristic + remote decision model for "
-                       "borderline pairs"),
-        }.get(self.mode, self.mode)
+        if self.remote is None:
+            return "no decision model configured"
+        return f"decision model ({getattr(self.remote, 'model', '?')})"
 
-    # ------------------------------------------------------------- internals
-
-    def _apply_threshold(self, decision: GateDecision) -> GateDecision:
-        decision.passed = decision.score >= self.threshold
-        return decision
-
-    def _evaluate_remote(self, text_a: str, text_b: str) -> GateDecision:
-        heur = self.heuristic.evaluate(text_a, text_b)
-        if self.remote is not None:
-            decision = self.remote.score(text_a, text_b, heur.signals)
-            if decision is not None:
-                return self._apply_threshold(decision)
-        # remote unavailable -> heuristic fallback (never break the cascade)
-        if not self.fallback_heuristic:
-            return GateDecision(
-                False, 0.0, ["remote decision model unavailable"],
-                decided_by="remote", error="remote decision model unavailable",
-            )
-        heur.error = "fell back to heuristic (remote decision model failed)"
-        heur.decided_by = "remote->heuristic"
-        return heur
-
-    def _evaluate_hybrid(self, text_a: str, text_b: str) -> GateDecision:
-        heur = self.heuristic.evaluate(text_a, text_b)
-        clear_pass = heur.score >= self.threshold + self.band
-        clear_fail = heur.score < self.threshold - self.band
-        if clear_pass or clear_fail:
-            heur.decided_by = "hybrid(heuristic)"
-            return heur  # free decision, no network round-trip
-        # borderline -> refine with the remote decision model
-        if self.remote is not None:
-            decision = self.remote.score(text_a, text_b, heur.signals)
-            if decision is not None:
-                decision.decided_by = "hybrid(remote)"
-                decision.signals = (
-                    [f"borderline heuristic score {heur.score:.2f}; refined"]
-                    + decision.signals)
-                return self._apply_threshold(decision)
-        heur.decided_by = "hybrid(heuristic)"
-        heur.error = "remote refinement unavailable; heuristic decision kept"
-        return heur
-
-
-# --------------------------------------------------------------------- factory
 
 def build_gate_from_config(cfg) -> CascadeGate:
-    """Build the stage-2 decision model exactly as configured in ``.env``.
+    """Build the decision model from ``.env``.
 
-    ``cfg`` is an ``app.config.Config`` (or any object with the same
-    decision-model attributes). When ``DECISION_MODE`` is ``remote``/``hybrid``
-    but the decision endpoint is not fully configured, the gate degrades to
-    the in-code heuristic (logged) instead of crashing.
+    No mode selection any more: either the endpoint is configured and it judges,
+    or the gate reports itself unavailable. ``cfg`` is an ``app.config.Config``
+    (or any object with the same attributes).
     """
-    mode = getattr(cfg, "decision_mode_effective", None)
-    if not mode:  # config-like object without the property -> compute it
-        mode = (cfg.decision_mode or "heuristic").strip().lower()
-        if mode in ("remote", "hybrid") and not (
-                cfg.decision_model_base_url and cfg.decision_model_name):
-            mode = "heuristic"
+    base_url = (getattr(cfg, "decision_model_base_url", "") or "").strip()
+    model_name = (getattr(cfg, "decision_model_name", "") or "").strip()
     remote = None
-    # note: `mode` can only still be remote/hybrid here when the endpoint
-    # IS fully configured (otherwise it was downgraded to heuristic above).
-    if mode in ("remote", "hybrid"):
-        model_name = (cfg.decision_model_name or "").strip().lower()
-        base_url = (cfg.decision_model_base_url or "").strip().lower()
-        if model_name == "typesafe/jev" or "systemone" in base_url or "systemone" in model_name:
+    if base_url and model_name:
+        lowered = model_name.lower()
+        if lowered == "typesafe/jev" or "systemone" in base_url.lower() \
+                or "systemone" in lowered:
             remote = SystemOneDecisionModel(
-                base_url=cfg.decision_model_base_url,
-                api_key=cfg.decision_model_api_key,
-                model=cfg.decision_model_name,
+                base_url=base_url,
+                api_key=getattr(cfg, "decision_model_api_key", "") or "",
+                model=model_name,
             )
-            log.info("decision model: %s -> SystemOne %s @ %s", mode,
-                     cfg.decision_model_name, cfg.decision_model_base_url)
         else:
-            # imported here to avoid a circular import at module load time
             from ..llm import OpenAICompatClient
             client = OpenAICompatClient(
-                base_url=cfg.decision_model_base_url,
-                api_key=cfg.decision_model_api_key,
-                model=cfg.decision_model_name,
-                max_output_tokens=cfg.max_output_tokens,
-                temperature=cfg.decision_temperature,
+                base_url=base_url,
+                api_key=getattr(cfg, "decision_model_api_key", "") or "",
+                model=model_name,
+                max_output_tokens=getattr(cfg, "max_output_tokens", 4096),
+                temperature=getattr(cfg, "decision_temperature", 0.0),
             )
             remote = RemoteDecisionModel(client)
-            log.info("decision model: %s -> OpenAI-compat %s @ %s", mode,
-                     cfg.decision_model_name, cfg.decision_model_base_url)
-    elif getattr(cfg, "decision_mode", mode) != mode:
-        log.warning(
-            "DECISION_MODE=%s but DECISION_MODEL_BASE_URL/NAME are not set; "
-            "using the in-code JEV heuristic instead", cfg.decision_mode)
-    return CascadeGate(
-        threshold=cfg.jev_gate_threshold,
-        mode=mode,
-        remote=remote,
-        borderline_band=cfg.decision_borderline_band,
-        fallback_heuristic=cfg.decision_fallback_heuristic,
-    )
+        log.info("decision model: %s @ %s", model_name, base_url)
+    else:
+        log.warning("DECISION_MODEL_BASE_URL/NAME are not set: contradiction "
+                    "detection is disabled (no lexical fallback by design)")
+    return CascadeGate(threshold=getattr(cfg, "jev_gate_threshold", 0.5),
+                       remote=remote)
+

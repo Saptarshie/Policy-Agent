@@ -44,7 +44,8 @@ class AdminAPI:
                  embedder=None, llm=None,
                  intent_router: Optional[IntentRouter] = None,
                  agent_prompt: Optional[str] = None,
-                 judge_prompt: Optional[str] = None) -> None:
+                 judge_prompt: Optional[str] = None,
+                 gate=None) -> None:
         global _LOG_CONFIGURED
         self.cfg = config or get_config()
         if not _LOG_CONFIGURED:
@@ -76,6 +77,7 @@ class AdminAPI:
         self._registry: Optional[ToolRegistry] = None
         self._agent: Optional[ReactAgent] = None
         self._tracker: Optional[ContradictionTracker] = None
+        self._injected_gate = gate
 
 
     # ------------------------------------------------------------- components
@@ -172,12 +174,12 @@ class AdminAPI:
             self._tracker = ContradictionTracker(
                 db=self.db,
                 rag=self.rag,
-                # stage-2 decision model: heuristic / remote / hybrid per .env
-                gate=build_gate_from_config(self.cfg),
+                # stage-2 decision model: the only judge of a candidate pair
+                gate=self._injected_gate or build_gate_from_config(self.cfg),
                 verifier=ContradictionVerifier(self.llm),
                 cross_doc_only=self.cfg.scan_cross_doc_only,
-                top_k=self.cfg.contra_top_k,
-                max_pairs_per_chunk=self.cfg.scan_max_pairs_per_chunk,
+                min_similarity=self.cfg.scan_min_similarity,
+                max_candidates=self.cfg.scan_max_candidates,
             )
         return self._tracker
 

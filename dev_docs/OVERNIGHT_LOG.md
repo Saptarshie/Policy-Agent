@@ -375,3 +375,50 @@ was never *used* because nothing said it was allowed. One prompt rule (plus
 reconciling "one action per turn" with it) produced 7 batched turns on the
 complex question and 1-2 on the simple ones; `parallel_turns` on `AgentResult`
 makes it observable.
+
+## 9. Contradiction detection: similarity-gated candidates, intra-document, one judge
+
+Four changes, all of them correcting a count-based or lexical shortcut.
+
+**1. Candidates are gated by similarity, not by top_k.** The scanner used to take
+the best `CONTRA_TOP_K=4` neighbours per chunk and escalate at most
+`SCAN_MAX_PAIRS_PER_CHUNK=3`. Measured on the sample corpus: the real leave-cap
+conflict (`leave_policy §3.2` vs the 2025 amendment) sits at **0.678, rank 3 of 4**
+- inside the old cut by luck. With 60 similarly-worded chunks it would rank far
+below any small k and never be seen. Now: every passage at or above
+`SCAN_MIN_SIMILARITY` is a candidate; `SCAN_MAX_CANDIDATES` (200) is a logged
+safety valve, not a relevance decision.
+
+**2. A calibration bug found while testing the above.** The first threshold I
+shipped (0.65) was measured stored-vs-stored, but the scanner was calling
+`search(chunk_text)`, which embeds the text as a QUERY. With a model that
+prefixes queries and documents differently, that is a lower number: the same pair
+measures **0.601** query-vs-stored - below my own floor, i.e. the threshold would
+have excluded exactly the conflict it was calibrated for. Fixed by adding
+`find_similar_chunks()` / `db.similar_to_chunk()`, which compare stored vectors to
+stored vectors (also one embedding call cheaper per chunk). After the fix the pair
+is a candidate at 0.678 and the scan flags it: gate score 0.94, flagged as
+contradiction #2.
+
+**3. Intra-document scanning is on by default.** `SCAN_CROSS_DOC_ONLY=false` now
+means "same document as well as across documents"; the code previously could only
+exclude same-document pairs. The sample corpus has no intra-document conflict
+beyond what the gate rejects, so this is a capability change, not a new finding -
+and the fixtures prove the path works (`tests/test_threshold_scan.py`).
+
+**4. One judge.** `DECISION_MODE` is gone. The lexical gate (`JEVStyleGate`) still
+runs, but its output is a *signal list handed to the decision model as evidence*;
+it can no longer pass or drop a pair. With no `DECISION_MODEL_*` configured the
+gate returns `decided_by="unavailable"` and the scan logs "INCOMPLETE, not clean"
+instead of reporting zero contradictions. That distinction matters: a scan that
+could not judge anything must not look like a clean corpus.
+
+**5. The agent's search tool can now do both depths.** `search_policy_docs` takes
+`top_k` OR `min_similarity`, never both (asking for both returns a tool error
+naming the conflict). Neither = `RAG_TOP_K`. The prompt explains the trade-off so
+the model can choose: a count for an ordinary lookup, a floor when it suspects
+several documents touch the question.
+
+Cost: on 52 chunks, a full scan now examines 52 pairs at the 0.65 floor instead of
+`chunks x 3`. Each candidate costs one decision-model call (~1.5s); only
+gate-passing pairs reach the verifier.

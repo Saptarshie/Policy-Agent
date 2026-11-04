@@ -8,7 +8,7 @@ from app.contradictions.gate import (
     SystemOneDecisionModel,
     build_gate_from_config,
 )
-from tests.fakes import StubLLM
+from tests.fakes import StubLLM, StubRemote
 
 
 V1 = ("Employees may work remotely for up to 3 days per calendar week. "
@@ -117,178 +117,87 @@ class TestRemoteDecisionModel(unittest.TestCase):
         self.assertTrue(isinstance(d.signals, list) and d.signals)
 
 
-class TestCascadeGateModes(unittest.TestCase):
-    """The facade the tracker uses: heuristic / remote / hybrid + fallback."""
+class TestCascadeGate(unittest.TestCase):
+    """One judge: the decision model. No lexical verdicts."""
 
-    def test_heuristic_mode_uses_no_llm(self):
-        called = []
-        stub = StubLLM(chat_json_fn=lambda s, u: called.append(1) or ({"score": 1.0}, None))
-        gate = CascadeGate(threshold=0.5, mode="heuristic", remote=RemoteDecisionModel(stub))
+    def test_decision_model_judges(self):
+        remote = StubRemote({(V1, V2): 0.9})
+        gate = CascadeGate(threshold=0.5, remote=remote)
         d = gate.evaluate(V1, V2)
         self.assertTrue(d.passed)
-        self.assertEqual(d.decided_by, "heuristic")
-        self.assertEqual(called, [])  # zero endpoint calls
+        self.assertEqual(d.decided_by, "decision_model")
 
-    def test_remote_mode_uses_endpoint_score(self):
-        stub = StubLLM(chat_json_fn=lambda s, u: ({"score": 0.9, "signals": ["conflicting numbers"]}, None))
-        gate = CascadeGate(threshold=0.5, mode="remote", remote=RemoteDecisionModel(stub))
-        d = gate.evaluate(V1, V2)
-        self.assertTrue(d.passed)
-        self.assertEqual(d.decided_by, "remote")
-        self.assertEqual(d.score, 0.9)
-
-    def test_remote_mode_threshold_applied(self):
-        # remote score below the threshold -> not escalated
-        stub = StubLLM(chat_json_fn=lambda s, u: ({"score": 0.2, "signals": []}, None))
-        gate = CascadeGate(threshold=0.5, mode="remote", remote=RemoteDecisionModel(stub))
-        self.assertFalse(gate.evaluate(V1, V2).passed)
-
-    def test_remote_failure_falls_back_to_heuristic(self):
-        def boom(s, u):
-            raise RuntimeError("endpoint down")
-        gate = CascadeGate(threshold=0.5, mode="remote",
-                           remote=RemoteDecisionModel(StubLLM(chat_json_fn=boom)))
-        d = gate.evaluate(V1, V2)  # heuristically a strong conflict
-        self.assertTrue(d.passed)
-        self.assertEqual(d.decided_by, "remote->heuristic")
-        self.assertTrue(d.error)
-
-    def test_remote_failure_without_fallback_blocks(self):
-        def boom(s, u):
-            raise RuntimeError("endpoint down")
-        gate = CascadeGate(threshold=0.5, mode="remote",
-                           remote=RemoteDecisionModel(StubLLM(chat_json_fn=boom)),
-                           fallback_heuristic=False)
+    def test_score_below_threshold_does_not_pass(self):
+        gate = CascadeGate(threshold=0.5, remote=StubRemote(default=0.2))
         d = gate.evaluate(V1, V2)
         self.assertFalse(d.passed)
-        self.assertEqual(d.decided_by, "remote")
 
-    def test_hybrid_clear_pass_never_calls_endpoint(self):
-        called = []
-        stub = StubLLM(chat_json_fn=lambda s, u: called.append(1) or ({"score": 1.0}, None))
-        gate = CascadeGate(threshold=0.5, mode="hybrid", remote=RemoteDecisionModel(stub),
-                           borderline_band=0.15)
-        d = gate.evaluate(V1, V2)  # heuristic score ~1.0 -> clear pass
-        self.assertTrue(d.passed)
-        self.assertEqual(d.decided_by, "hybrid(heuristic)")
-        self.assertEqual(called, [])
-
-    def test_hybrid_clear_fail_never_calls_endpoint(self):
-        called = []
-        stub = StubLLM(chat_json_fn=lambda s, u: called.append(1) or ({"score": 1.0}, None))
-        gate = CascadeGate(threshold=0.5, mode="hybrid", remote=RemoteDecisionModel(stub),
-                           borderline_band=0.15)
-        d = gate.evaluate(V1, TRAVEL)  # unrelated -> score 0, clear fail
+    def test_without_a_decision_model_nothing_passes_and_it_says_so(self):
+        gate = CascadeGate(threshold=0.5, remote=None)
+        d = gate.evaluate(V1, V2)
         self.assertFalse(d.passed)
-        self.assertEqual(d.decided_by, "hybrid(heuristic)")
-        self.assertEqual(called, [])
+        self.assertEqual(d.decided_by, "unavailable")
+        self.assertIn("no decision model", d.error)
+        self.assertIn("no decision model", gate.describe)
 
-    def test_hybrid_borderline_refines_remotely(self):
-        # Force a borderline heuristic score by choosing a pair whose
-        # heuristic score sits inside [threshold-band, threshold+band):
-        # SIMILAR_STANCE vs V2 gives a moderate score. Use a wide band so the
-        # pair is guaranteed borderline, then let the remote model decide.
-        heur = JEVStyleGate(threshold=0.5).evaluate(V2, SIMILAR_STANCE)
-        band = max(0.2, heur.score + 0.05)  # ensure borderline
-        stub = StubLLM(chat_json_fn=lambda s, u: ({"score": 0.85, "signals": ["1 vs 4 office days"]}, None))
-        gate = CascadeGate(threshold=0.5, mode="hybrid", remote=RemoteDecisionModel(stub),
-                           borderline_band=band)
-        d = gate.evaluate(V2, SIMILAR_STANCE)
-        self.assertTrue(d.passed)
-        self.assertEqual(d.decided_by, "hybrid(remote)")
-        self.assertTrue(any("borderline" in s for s in d.signals))
+    def test_remote_failure_is_unavailable_never_a_lexical_verdict(self):
+        class Boom:
+            model = "boom"
 
-    def test_hybrid_remote_failure_keeps_heuristic_decision(self):
-        def boom(s, u):
-            raise RuntimeError("endpoint down")
-        heur = JEVStyleGate(threshold=0.5).evaluate(V2, SIMILAR_STANCE)
-        band = max(0.2, heur.score + 0.05)
-        gate = CascadeGate(threshold=0.5, mode="hybrid",
-                           remote=RemoteDecisionModel(StubLLM(chat_json_fn=boom)),
-                           borderline_band=band)
-        d = gate.evaluate(V2, SIMILAR_STANCE)
-        self.assertEqual(d.decided_by, "hybrid(heuristic)")
-        self.assertTrue(d.error)
+            def score(self, a, b, signals=None):
+                return None
 
-    def test_mode_downgrades_without_remote(self):
-        gate = CascadeGate(threshold=0.5, mode="remote", remote=None)
-        self.assertEqual(gate.mode, "heuristic")  # graceful downgrade
-        self.assertTrue(gate.evaluate(V1, V2).passed)
+        d = CascadeGate(threshold=0.5, remote=Boom()).evaluate(V1, V2)
+        self.assertFalse(d.passed)
+        self.assertEqual(d.decided_by, "unavailable")
+        self.assertIn("no verdict", d.error)
+
+    def test_lexical_signals_are_passed_as_evidence(self):
+        remote = StubRemote(default=0.9)
+        CascadeGate(threshold=0.5, remote=remote).evaluate(
+            "Employees must give 15 days notice.",
+            "Employees may give 15 days notice.")
+        self.assertTrue(remote.calls, "the model must be asked")
+        self.assertIsInstance(remote.calls[0][2], list)
 
 
 class TestBuildGateFromConfig(unittest.TestCase):
-    """Factory wires .env vars into the cascade gate."""
+    """Factory wires .env vars into the cascade gate - endpoint or nothing."""
 
     def _cfg(self, **kw):
         from types import SimpleNamespace
         base = dict(
-            decision_mode="heuristic",
             decision_model_base_url="",
             decision_model_api_key="",
             decision_model_name="",
             decision_temperature=0.0,
-            decision_borderline_band=0.15,
-            decision_fallback_heuristic=True,
             jev_gate_threshold=0.5,
-            # one global output ceiling for every LLM caller, the decision
-            # model included: it is a ceiling, not a budget
             max_output_tokens=65536,
         )
         base.update(kw)
         return SimpleNamespace(**base)
 
-    def test_default_is_pure_heuristic(self):
+    def test_no_endpoint_means_no_judge(self):
         gate = build_gate_from_config(self._cfg())
-        self.assertEqual(gate.mode, "heuristic")
         self.assertIsNone(gate.remote)
+        self.assertIn("no decision model", gate.describe)
+        self.assertFalse(gate.evaluate(V1, V2).passed)
 
-    def test_remote_mode_without_endpoint_downgrades(self):
-        cfg = self._cfg(decision_mode="remote")
+    def test_systemone_endpoint_builds_the_decision_model(self):
+        cfg = self._cfg(decision_model_base_url="https://api.example/v1",
+                        decision_model_api_key="k",
+                        decision_model_name="typesafe/jev")
         gate = build_gate_from_config(cfg)
-        self.assertEqual(gate.mode, "heuristic")
-        self.assertIsNone(gate.remote)
+        self.assertIsNotNone(gate.remote)
+        self.assertIn("typesafe/jev", gate.describe)
 
-    def test_remote_mode_with_endpoint_builds_client(self):
-        cfg = self._cfg(decision_mode="remote",
-                        decision_model_base_url="http://localhost:11434/v1",
+    def test_openai_compatible_endpoint_builds_a_client(self):
+        cfg = self._cfg(decision_model_base_url="http://localhost:11434/v1",
                         decision_model_api_key="ollama",
                         decision_model_name="qwen2.5:0.5b")
         gate = build_gate_from_config(cfg)
-        self.assertEqual(gate.mode, "remote")
         self.assertIsNotNone(gate.remote)
         self.assertEqual(gate.remote.client.model, "qwen2.5:0.5b")
-        self.assertEqual(gate.remote.client.base_url, "http://localhost:11434/v1")
-
-    def test_hybrid_mode_with_endpoint(self):
-        cfg = self._cfg(decision_mode="hybrid",
-                        decision_model_base_url="http://x/v1",
-                        decision_model_name="m")
-        gate = build_gate_from_config(cfg)
-        self.assertEqual(gate.mode, "hybrid")
-        self.assertIsNotNone(gate.remote)
-
-    def test_config_decision_mode_effective(self):
-        from app.config import Config
-        # re-parsing via the real Config dataclass
-        fields = {f: getattr(self._cfg(), f) for f in
-                  ("decision_mode", "decision_model_base_url", "decision_model_name")}
-        ns = self._cfg(**fields)
-        # heuristic mode stays heuristic
-        self.assertEqual(build_gate_from_config(ns).mode, "heuristic")
-
-
-    def test_remote_mode_with_systemone_builds_systemone_model(self):
-        cfg = self._cfg(
-            decision_mode="remote",
-            decision_model_base_url="https://api.commandcode.ai/provider/v1",
-            decision_model_api_key="test_key",
-            decision_model_name="typesafe/jev",
-        )
-        gate = build_gate_from_config(cfg)
-        self.assertEqual(gate.mode, "remote")
-        self.assertIsInstance(gate.remote, SystemOneDecisionModel)
-        self.assertEqual(gate.remote.endpoint, "https://api.commandcode.ai/provider/v1/systemone")
-        self.assertEqual(gate.remote.model, "typesafe/jev")
 
 
 class TestSystemOneDecisionModel(unittest.TestCase):

@@ -143,3 +143,25 @@ class StubIntentRouter:
             intent="POLICY_DIRECT_LOOKUP", route="REACT_LOOP",
             de_noised_question=q, search_queries=[q], decided_by="stub",
         )
+
+
+class StubRemote:
+    """Decision-model stand-in for the contradiction cascade.
+
+    ``scores`` maps (text_a, text_b) to a verdict probability; anything not in
+    the map gets ``default``. Records every call as (a, b, signals).
+    """
+
+    model = "stub-remote"
+
+    def __init__(self, scores=None, default: float = 0.9) -> None:
+        self.scores = dict(scores or {})
+        self.default = default
+        self.calls = []
+
+    def score(self, text_a, text_b, signals=None):
+        from app.contradictions.gate import GateDecision
+        self.calls.append((text_a, text_b, list(signals or [])))
+        value = self.scores.get((text_a, text_b), self.default)
+        return GateDecision(True, float(value), ["stub decision"],
+                            decided_by="decision_model")

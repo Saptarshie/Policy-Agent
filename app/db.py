@@ -346,6 +346,46 @@ class Database:
             self._vec_cache = [ids, doc_ids, mat, norms]
         return self._vec_cache
 
+    def similar_to_chunk(self, chunk_id: int, min_score: float = 0.0,
+                         limit: int = 200,
+                         exclude_doc_ids: Optional[Iterable[int]] = None
+                         ) -> List[Dict[str, Any]]:
+        """Passages whose STORED vector is within *min_score* of *chunk_id*.
+
+        This is the chunk-to-chunk comparison the contradiction scanner needs.
+        Embedding the chunk text as a query instead would measure
+        query-vs-document similarity, which is a different (systematically
+        lower) number for models that prefix queries and documents differently.
+        """
+        ids, docs, mat, norms = self._load_matrix()
+        if mat.shape[0] == 0:
+            return []
+        try:
+            pos = ids.index(int(chunk_id))
+        except ValueError:
+            return []
+        exclude = set(exclude_doc_ids) if exclude_doc_ids is not None else None
+        vec = mat[pos]
+        vn = float(norms[pos]) or 1.0
+        sims = (mat @ vec) / (norms * vn + 1e-12)
+        out: List[Dict[str, Any]] = []
+        for i in np.argsort(-sims):
+            idx = int(i)
+            if idx == pos:
+                continue
+            doc = docs[idx]
+            if exclude is not None and doc in exclude:
+                continue
+            score = float(sims[idx])
+            if score < float(min_score):
+                # sorted descending: everything after this is below the floor
+                break
+            out.append({"chunk_id": int(ids[idx]), "doc_id": int(doc),
+                        "score": score})
+            if len(out) >= int(limit):
+                break
+        return out
+
     def vector_search(self, query_vec: Sequence[float], top_k: int = 6,
                       doc_ids: Optional[Iterable[int]] = None,
                       exclude_doc_ids: Optional[Iterable[int]] = None

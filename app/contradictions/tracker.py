@@ -49,8 +49,8 @@ class ContradictionTracker:
                # bare JEVStyleGate also works - see tests)
         verifier: ContradictionVerifier,
         cross_doc_only: bool = True,
-        top_k: int = 4,
-        max_pairs_per_chunk: int = 3,
+        min_similarity: float = 0.65,
+        max_candidates: int = 200,
         on_alert: Optional[AlertFn] = None,
     ) -> None:
         self.db = db
@@ -58,8 +58,15 @@ class ContradictionTracker:
         self.gate = gate
         self.verifier = verifier
         self.cross_doc_only = cross_doc_only
-        self.top_k = max(1, top_k)
-        self.max_pairs_per_chunk = max(1, max_pairs_per_chunk)
+        # candidate generation is similarity-gated, not count-gated: a conflict
+        # can rank 41st among 60 similar chunks, so a top-k cut is the wrong
+        # instrument. The only count left is a safety cap on total escalations.
+        self.min_similarity = float(min_similarity)
+        self.max_candidates = int(max_candidates)
+        # the retrieval pool is NOT the pair cap: a small cap on escalations must
+        # not also hide candidates from the pool (that would make the cap log
+        # unreachable and the floor meaningless)
+        self.search_pool = max(self.max_candidates, 64)
         self.on_alert = on_alert
 
     # ------------------------------------------------------------------ public
@@ -103,39 +110,58 @@ class ContradictionTracker:
         chunks = self.db.list_chunks(doc_id)
         flagged = 0
 
+        considered = 0
+        capped = False
+        unavailable = False
         for i, chunk in enumerate(chunks):
-            # ---- stage 1: RAG retrieval of candidate pairs
+            # ---- stage 1: candidate pairs by SIMILARITY, not by count.
+            # A conflict can rank 41st among 60 passages that are all similar;
+            # a top-k cut would never show it to the gate, so the floor decides
+            # and only a global cap guards total cost.
             try:
-                hits = self.rag.search(
-                    chunk["text"], top_k=self.top_k,
+                hits = self.rag.find_similar_chunks(
+                    chunk["id"],
+                    min_score=self.min_similarity,
+                    max_candidates=self.search_pool,
                     exclude_doc_ids=[doc_id] if self.cross_doc_only else None,
-                    # candidate pairs are "semantically adjacent passages";
-                    # keyword overlap would surface repeated clauses instead of
-                    # genuine conflicts, so the cascade stays on vectors
-                    mode="vector",
                 )
             except Exception as e:
                 log_fn("  [scan] embedding search failed on chunk %s: %s",
                        chunk["id"], e)
                 hits = []
 
-            escalated = 0
             for hit in hits:
-                if hit.doc_id == doc_id and self.cross_doc_only:
-                    continue
-                if escalated >= self.max_pairs_per_chunk:
+                if hit.chunk_id == chunk["id"]:
+                    continue          # a passage cannot contradict itself
+                if self.cross_doc_only and hit.doc_id == doc_id:
+                    continue          # caller restricted the scan to cross-document
+                                      # pairs; intra-document pairs are the default
+                if considered >= self.max_candidates:
+                    if not capped:
+                        capped = True
+                        log_fn("  [scan] candidate cap reached (%d pairs); raise "
+                               "SCAN_MAX_CANDIDATES to look at the tail",
+                               self.max_candidates)
                     break
+                considered += 1
                 if self.db.contradiction_pair_exists(chunk["id"], hit.chunk_id):
                     continue
 
-                # ---- stage 2: decision model gate (heuristic / remote /
-                #      hybrid per DECISION_MODE; runs BEFORE any LLM call)
+                # ---- stage 2: decision model (the ONLY judge of "is this a
+                #      conflict"; runs before the expensive verifier)
                 decision = self.gate.evaluate(chunk["text"], hit.text)
+                if decision.decided_by == "unavailable":
+                    # no judge: say so once instead of reporting "no conflicts"
+                    if not unavailable:
+                        unavailable = True
+                        log_fn("  [scan] no decision model available (%s) - "
+                               "candidate pairs cannot be judged; this scan is "
+                               "INCOMPLETE, not clean", decision.error or "?")
+                    continue
                 if not decision.passed:
                     continue
 
                 # ---- stage 3: LLM verification (ONLY for gate-passing pairs)
-                escalated += 1
                 log_fn("  [scan] gate PASSED (score %.2f) %s | %s  -> escalating "
                        "to LLM verifier", decision.score, doc_name, hit.doc_name)
                 verdict = self.verifier.verify(
@@ -206,6 +232,9 @@ class ContradictionTracker:
             self.db.update_job(job_id, done=i + 1,
                                stage=f"scanned {i + 1}/{len(chunks)} chunks")
 
+        if unavailable and not flagged:
+            log_fn("  [scan] finished without a decision model: 0 flags means "
+                   "'not examined', not 'no contradictions'")
         self.db.update_job(job_id, status="done", stage="done")
         log_fn("[scan] finished '%s': %d contradiction(s) flagged", doc_name, flagged)
         return {"flagged": flagged, "job_id": job_id}

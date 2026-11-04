@@ -16,10 +16,14 @@ TOOL_SPECS: List[Dict[str, Any]] = [
         "function": {
             "name": "search_policy_docs",
             "description": (
-                "Semantic search over the ingested policy documents. ALWAYS call "
-                "this before answering any policy question. Use a focused query "
-                "with the key terms of the question; reformulate and search again "
-                "if the results are weak."
+                "Search the ingested policy documents. ALWAYS call this before "
+                "answering any policy question. Two ways to say how deep to go, "
+                "and you may use AT MOST ONE per call: top_k (\"give me the best "
+                "6\") or min_similarity (\"give me everything that scores at least "
+                "0.55\"). Use min_similarity when the question is broad or you "
+                "suspect several documents say something about it and a small k "
+                "would hide one; use top_k for an ordinary focused lookup. "
+                "Neither given = the server default."
             ),
             "parameters": {
                 "type": "object",
@@ -30,7 +34,11 @@ TOOL_SPECS: List[Dict[str, Any]] = [
                     },
                     "top_k": {
                         "type": "integer",
-                        "description": "Number of passages to return (default: server setting)",
+                        "description": "Return at most this many passages (mutually exclusive with min_similarity)",
+                    },
+                    "min_similarity": {
+                        "type": "number",
+                        "description": "Return every passage with cosine similarity >= this (0-1; mutually exclusive with top_k)",
                     },
                 },
                 "required": ["query"],
@@ -220,11 +228,14 @@ class ToolRegistry:
     """Executes tool calls against the local store; observations are strings."""
 
     def __init__(self, db: Database, rag: RAGEngine, max_obs_chars: int = 4000,
-                 default_top_k: int = 6) -> None:
+                 default_top_k: int = 6, max_candidates: int = 200) -> None:
         self.db = db
         self.rag = rag
         self.max_obs = max(500, max_obs_chars)
         self.default_top_k = max(1, int(default_top_k))
+        # safety cap for min_similarity searches: the floor decides relevance,
+        # this only stops a pathological corpus from flooding the transcript
+        self.max_candidates = max(1, int(max_candidates))
         self._handlers = {
             "search_policy_docs": self._search,
             "read_policy_chunk": self._read_chunk,
@@ -290,20 +301,37 @@ class ToolRegistry:
 
     def _search(self, args: Dict[str, Any]) -> str:
         query = str(args.get("query", "")).strip()
-        top_k = args.get("top_k") or self.default_top_k
-        try:
-            top_k = int(top_k)
-        except (TypeError, ValueError):
-            top_k = self.default_top_k
-        hits = self.rag.search(query, top_k=max(1, min(top_k, 20)))
+        raw_k, raw_sim = args.get("top_k"), args.get("min_similarity")
+        if raw_k not in (None, "") and raw_sim not in (None, ""):
+            return ("ERROR: top_k and min_similarity are mutually exclusive - "
+                    "pick one: a count (top_k) or a relevance floor "
+                    "(min_similarity). Default with neither is top_k=server default.")
+        if raw_sim not in (None, ""):
+            try:
+                sim = float(raw_sim)
+            except (TypeError, ValueError):
+                return f"ERROR: min_similarity must be a number, got {raw_sim!r}"
+            if not 0.0 < sim <= 1.0:
+                return "ERROR: min_similarity must be in (0, 1]."
+            hits = self.rag.search(query, min_score=sim,
+                                   max_candidates=self.max_candidates,
+                                   mode="vector")
+            how = f"min_similarity={sim:g}"
+        else:
+            try:
+                top_k = int(raw_k) if raw_k not in (None, "") else self.default_top_k
+            except (TypeError, ValueError):
+                top_k = self.default_top_k
+            hits = self.rag.search(query, top_k=max(1, min(top_k, 40)))
+            how = f"top_k={max(1, min(top_k, 40))}"
         if not hits:
             return (
-                "No matching passages found in the ingested policy documents. "
-                "Try a different query, or call list_policy_documents to see "
-                "what is ingested."
+                f"No matching passages found for {how}. "
+                "Try a different query, widen it (lower min_similarity or raise "
+                "top_k), or call list_policy_documents to see what is ingested."
             )
-        lines = [f'Found {len(hits)} passages for query "{query}" '
-                 f"(cosine similarity in brackets):"]
+        lines = [f'Found {len(hits)} passages for query "{query}" ({how}; '
+                 "score in brackets):"]
         for h in hits:
             snippet = h.text if len(h.text) <= 900 else h.text[:900] + " ..."
             lines.append(
