@@ -145,6 +145,29 @@ An LLM boundary-finder would be a semantic chunker: it would have to re-emit the
 to store it, and a citation would then quote a model's paraphrase instead of the
 policy.
 
+**Where the rolling summary goes — and where it does not.** The per-window parse
+produces `window_title`, `key_terms`, `statements` and a `rolling_summary`. In the
+chained mode (`INGEST_PARALLEL_WINDOWS=1`) that summary is fed into the *next*
+window's parser prompt, so window i+1 is read in the context of window i; in the
+default parallel mode the chain is gone and one merge call folds the per-window
+summaries into `documents.summary` at the end. Either way:
+
+* it is **not** an input to chunking, and it is **not** part of a chunk's text —
+  chunk text stays verbatim, because a citation has to quote the policy rather than
+  a summary of it;
+* it is **not** embedded and **not** searched: retrieval sees chunk vectors and
+  chunk text, nothing else;
+* it surfaces in three document-level places: the `get_document_summary` tool
+  (summary + key terms + up to 15 extracted statements), `python run.py list` and the
+  UI's document cards, and the offline judge's inventory (`app/agent/verify.py`), so
+  the judge does not flag a correct statement about *which documents exist* as
+  unsupported.
+
+So the summary is orientation metadata, not retrieval context. It costs one extra
+LLM call per document (the merge) on top of roughly two window calls; whether the
+agent actually asks for it is not measured, and §9 says so rather than implying it is
+load-bearing.
+
 * **Reading**: `txt`/`md` decoded with UTF-8 → latin-1 fallback; markdown
   decoration stripped but headings kept; `pdf` via `pypdf` page-by-page
   (image-only PDFs are rejected with a clear error).
@@ -720,6 +743,12 @@ scope by the brief and by cost — not because they are wrong.
   Versioning ("this policy supersedes v2") is not implemented either — a superseded
   document stays in the corpus and can produce a contradiction flag instead of a
   replacement (§8.7). Both are stated rather than half-built.
+* The rolling summary and the extracted `statements`/`key_terms` are **only** used by
+  `get_document_summary`, `run.py list` and the offline judge's inventory — retrieval
+  never sees them and nothing measures how often the agent asks for them. So they may
+  be buying orientation for one merge call per document, or buying nothing; that is
+  an open question, not a settled design point, and dropping the merge call (one LLM
+  call per document) is the cheap experiment to settle it.
 * No auth, no multi-tenancy: one process, one corpus, one operator. The admin and
   employee surfaces are the same HTTP API with no role check (§8.5).
 * Scanned/image PDFs are rejected with a clear error rather than OCR'd.
