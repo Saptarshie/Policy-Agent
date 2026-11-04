@@ -149,7 +149,10 @@ the observation the agent actually read appears as it happens over SSE
 (`POST /api/ask/stream`), so a 20-second answer shows its work instead of a
 spinner. Each step is its own collapsible row and the whole trace is collapsible
 too; if you fold it while the agent is still working it stays folded, and it
-folds itself only when the answer arrives and **Contradiction
+folds itself only when the answer arrives. **＋ New conversation** clears the pane
+and the client-side history the agent is given (and aborts an answer still
+streaming, so it cannot land in the new conversation) - the corpus, the flags and
+the server state are untouched and **Contradiction
 tracker** (flags with both quoted passages, why they clash, the decision
 model's signals, resolve/dismiss buttons).
 

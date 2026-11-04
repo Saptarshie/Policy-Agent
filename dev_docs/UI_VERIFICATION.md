@@ -29,7 +29,7 @@ database on the committed tree, not on the intermediate state.
 | Chunks | lookup by id, unknown id -> 404 |
 | Scan | manual rescan queued + finished, unknown document -> 400 |
 | Delete | deletes doc+chunks+flags, second delete -> 404 |
-| UI controls | upload via the real file input, ask via the textarea, resolve a flag (3 -> 2 cards, badge follows), rescan, delete a document whose name contains an apostrophe |
+| UI controls | upload via the real file input, ask via the textarea, resolve a flag (3 -> 2 cards, badge follows), rescan, delete a document whose name contains an apostrophe, **＋ New conversation** (history 4 -> 0, pane 5 -> 1 bubble, focus restored, in-flight stream aborted and never lands) |
 
 ## Bugs found (all fixed in this pass)
 

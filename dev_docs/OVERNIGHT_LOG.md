@@ -526,3 +526,17 @@ with the answer still empty, folding the trace at 4.5s kept it folded as four
 more steps arrived, and the final answer landed at 16.6s with the summary
 "ReAct trace - 5 tool call(s), 15.6s, 8 step(s)". Tests: `tests/test_stream.py`
 (frame order, a listener that raises, empty question, the plain endpoint).
+
+### New conversation
+
+The chat pane had no way to drop context: `history` accumulated for the life of
+the tab, so a follow-up three questions later was still read against the first
+one. The chat header now carries **＋ New conversation**: it aborts an in-flight
+stream (`AbortController`), empties the client-side `history` the agent is given,
+restores the welcome bubble, clears the box and focuses it. It only clears the
+conversation - corpus, flags and server state are untouched.
+
+Verified in the browser: after two turns `history` was 4 and the pane held 5
+bubbles; one click gave `history` 0 and 1 bubble with focus in the textarea.
+Mid-stream, a click at 4s (2 steps rendered) dropped the pane to the welcome
+message and the aborted answer never appeared - checked again 20s later.

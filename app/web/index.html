@@ -27,7 +27,9 @@
   .col { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
         display: flex; flex-direction: column; min-height: 0; }
   .col h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
-           color: var(--muted); margin: 0; padding: 12px 14px 8px; }
+           color: var(--muted); margin: 0; padding: 12px 14px 8px;
+           display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .btn.tiny { padding: 2px 8px; font-size: 11px; letter-spacing: 0; text-transform: none; }
   .colbody { overflow-y: auto; padding: 0 12px 12px; flex: 1; }
   .doc { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
         padding: 10px; margin-bottom: 8px; font-size: 13px; }
@@ -123,7 +125,9 @@
     <div class="colbody" id="docList"><div class="empty">loading…</div></div>
   </section>
   <section class="col">
-    <h2>Ask the policy agent</h2>
+    <h2>Ask the policy agent
+      <button class="btn tiny" id="newChat" title="Clear this conversation (the agent forgets the earlier turns)">＋ New conversation</button>
+    </h2>
     <div class="colbody" id="chatlog">
       <div class="msg agent">Hi! Ask me anything about the ingested policy documents.
 I search, read and cite the actual policy text — and I'll tell you when the documents don't cover something.</div>
@@ -147,6 +151,12 @@ const citeHtml = (html) => html.replace(
     ? `<span class="cite">[${inner}]</span>` : m);
 
 const history = [];
+// the welcome bubble is also what "New conversation" restores
+const WELCOME = 'Hi! Ask me anything about the ingested policy documents.\n'
+  + "I search, read and cite the actual policy text — and I'll tell you when the "
+  + "documents don't cover something.";
+// one in-flight stream at a time; starting a new conversation aborts it
+let inflight = null;
 
 async function api(path, opts = {}) {
   const r = await fetch(path, { headers: {'Content-Type':'application/json'}, ...opts });
@@ -353,11 +363,12 @@ function addMsg(cls, text) {
 
 // POST and read the response as Server-Sent Events. Falls back to the plain
 // endpoint if the server streams nothing (older build / proxy that buffers).
-async function streamAsk(payload, onFrame) {
+async function streamAsk(payload, onFrame, signal) {
   const res = await fetch('/api/ask/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal,
   });
   if (!res.ok || !res.body) {
     let msg = res.statusText;
@@ -433,6 +444,8 @@ async function send() {
   const sumEl = holder.querySelector('.sum');
   const dot = holder.querySelector('.dot');
 
+  const ac = new AbortController();
+  inflight = ac;
   let steps = 0, tools = 0, userToggled = false, finished = false;
   // if the user folds the trace while it runs, respect that: never re-open it
   det.addEventListener('toggle', () => { if (!finished) userToggled = true; });
@@ -487,8 +500,12 @@ async function send() {
         history.push({ role: 'assistant', content: data.answer || '' });
         holder.parentElement.scrollTop = holder.parentElement.scrollHeight;
       }
-    });
+    }, ac.signal);
   } catch (e) {
+    if (e.name === 'AbortError') {          // the user started a new conversation
+      finished = true;
+      return;
+    }
     // streaming unavailable: answer the old way rather than losing the question
     try {
       const res = await api('/api/ask', {
@@ -502,16 +519,30 @@ async function send() {
       if (!userToggled) det.open = false;
       history.push({ role: 'assistant', content: res.answer || '' });
     } catch (e2) {
+      if (e2.name === 'AbortError') return;
       answerBox.innerHTML = `<span class="warnbox">⚠ ${esc(e2.message)}</span>`;
       finished = true;
       dot.className = 'dot done';
       sumEl.textContent = 'failed';
     }
+  } finally {
+    if (inflight === ac) inflight = null;
   }
   $('chatlog').scrollTop = $('chatlog').scrollHeight;
 }
 
+function newConversation() {
+  // stop a running answer first: it belongs to the conversation being discarded
+  if (inflight) { try { inflight.abort(); } catch {} inflight = null; }
+  history.length = 0;
+  $('chatlog').innerHTML = '';
+  addMsg('agent', WELCOME);
+  $('question').value = '';
+  $('question').focus();
+}
+
 $('sendBtn').addEventListener('click', send);
+$('newChat').addEventListener('click', newConversation);
 $('question').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
