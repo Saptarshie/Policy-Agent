@@ -15,7 +15,7 @@ class TestStaleJobReconciliation(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self.tmp.name)
-        self.cfg = make_config(self.dir / "data", verify_answers=False)
+        self.cfg = make_config(self.dir / "data")
 
     def tearDown(self):
         for db in getattr(self, "_dbs", []):

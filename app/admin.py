@@ -16,10 +16,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from .agent.intent import IntentPlan, IntentRouter
-from .agent.answer_shape import build_shape_classifier
 from .agent.react import AgentResult, ReactAgent
 from .agent.tools import ToolRegistry
-from .agent.verify import AnswerVerifier
 from .config import Config, get_config
 from .contradictions.gate import CascadeGate, JEVStyleGate, build_gate_from_config
 from .contradictions.tracker import ContradictionTracker
@@ -46,8 +44,7 @@ class AdminAPI:
                  embedder=None, llm=None,
                  intent_router: Optional[IntentRouter] = None,
                  agent_prompt: Optional[str] = None,
-                 judge_prompt: Optional[str] = None,
-                 shape_classifier=None) -> None:
+                 judge_prompt: Optional[str] = None) -> None:
         global _LOG_CONFIGURED
         self.cfg = config or get_config()
         if not _LOG_CONFIGURED:
@@ -79,10 +76,7 @@ class AdminAPI:
         self._registry: Optional[ToolRegistry] = None
         self._agent: Optional[ReactAgent] = None
         self._tracker: Optional[ContradictionTracker] = None
-        self._verifier: Optional[AnswerVerifier] = None
-        self._shape_classifier = shape_classifier   # None -> built on first use
-        self._decision_client = None
-        self._shape_injected = shape_classifier is not None
+
 
     # ------------------------------------------------------------- components
 
@@ -187,50 +181,6 @@ class AdminAPI:
             )
         return self._tracker
 
-    @property
-    def verifier(self) -> AnswerVerifier:
-        if self._verifier is None:
-            variant = self._judge_prompt or self.cfg.prompt_judge
-            prompt = FAITHFULNESS_SYSTEM_V2 if variant == "v2" else FAITHFULNESS_SYSTEM
-            variant = self.cfg.prompt_judge or "v1"
-            cache_path = (str(self.cfg.data_dir / "judge_cache.json")
-                          if getattr(self, "cfg").judge_cache else None)
-            self._verifier = AnswerVerifier(
-                db=self.db,
-                llm=self.llm if self.cfg.llm_configured else None,
-                enabled=self.cfg.verify_answers,
-                system_prompt=prompt,
-                cache_path=cache_path,
-                prompt_version=variant,
-                shape_classifier=self.shape_classifier,
-            )
-        return self._verifier
-
-    @property
-    def shape_classifier(self):
-        """Answer-shape classifier: the decision model when configured, else the
-        chat model's JSON mode. Never a keyword list (see answer_shape.py)."""
-        if self._shape_classifier is None and not self._shape_injected:
-            mode = getattr(self.cfg, "decision_mode_effective", None)
-            remote = None
-            if mode in ("remote", "hybrid"):
-                remote = self.decision_client
-            self._shape_classifier = build_shape_classifier(
-                decision_client=remote,
-                llm=self.llm if self.cfg.llm_configured else None,
-            )
-        return self._shape_classifier
-
-    @property
-    def decision_client(self):
-        """The stage-2 decision model client, shared with the cascade gate."""
-        if self._decision_client is None:
-            gate = self.tracker.gate
-            client = getattr(gate, "remote", None) or getattr(gate, "decision", None)
-            if client is not None and hasattr(client, "ask"):
-                self._decision_client = client
-        return self._decision_client
-
     def _pipeline(self, on_progress=None) -> IngestPipeline:
         return IngestPipeline(
             db=self.db,
@@ -328,7 +278,14 @@ class AdminAPI:
 
     def ask(self, question: str,
             history: Optional[List[Dict[str, str]]] = None) -> AgentResult:
-        """Full ask pipeline: LLM triage -> route -> (agent -> verifier).
+        """Full ask pipeline: LLM triage -> route -> agent -> answer.
+
+        There is no post-answer LLM verification in this path: at model parity
+        a same-model judge added ~6s and flagged roughly one honest answer in
+        five, so grounding is carried by the agent prompt (and by deterministic
+        citation resolution against the store) instead. The faithfulness judge
+        survives as an offline audit tool - see eval/calibrate_judge.py and
+        dev_docs/DATAFLOW.md §"why there is no verifier in the path".
 
         The triage layer is the only component allowed to refuse *before*
         retrieval, and only for non-HR input (chit-chat, injections, empty
@@ -382,14 +339,6 @@ class AdminAPI:
         result.intent = plan.intent
         result.intent_route = plan.route
         result.intent_plan = plan_dict
-
-        # verify the policy answer BEFORE adding the escalation note, which is
-        # a process instruction, not a policy claim
-        try:
-            self.verifier.check(result, plan.de_noised_question or question,
-                                user_message=question)
-        except Exception:
-            log.exception("answer verification failed (continuing)")
 
         if plan.intent == "SENSITIVE_HR_ESCALATION":
             result.answer = ESCALATION_NOTE + (result.answer or "")

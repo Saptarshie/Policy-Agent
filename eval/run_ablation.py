@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -27,6 +28,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "eval"))
@@ -89,7 +91,14 @@ def load_done() -> dict:
     return done
 
 
-def build_api(cfg, variant: str, router_cache: Path) -> AdminAPI:
+def build_api(cfg, variant: str, router_cache: Path):
+    """Return (api, offline_verifier | None).
+
+    The online answer path no longer verifies anything, so variants that want a
+    faithfulness judgement apply it here, after the answer, exactly as the old
+    pipeline did - which keeps the historical A/B/C/D numbers reproducible
+    while the shipped path stays prompt-only.
+    """
     spec = VARIANTS[variant]
     if spec["intent"] == "legacy":
         router = LegacyRouter()
@@ -104,12 +113,23 @@ def build_api(cfg, variant: str, router_cache: Path) -> AdminAPI:
             cache_path=str(router_cache), prompt=INTENT_SYSTEM,
             prompt_version="v1", max_tokens=cfg.intent_max_tokens)
 
-    # a per-variant config so verification can be toggled without mutating the
-    # process-wide cached config
-    from dataclasses import replace
-    cfg_v = replace(cfg, verify_answers=spec["verify"])
-    return AdminAPI(config=cfg_v, intent_router=router,
-                    agent_prompt=spec["agent"], judge_prompt=spec["judge"])
+    api = AdminAPI(config=cfg, intent_router=router,
+                   agent_prompt=spec["agent"], judge_prompt=spec["judge"])
+    verifier = None
+    if spec["verify"] and cfg.llm_configured:
+        from app.agent.verify import AnswerVerifier
+        from app.prompts import FAITHFULNESS_SYSTEM, FAITHFULNESS_SYSTEM_V2
+        verifier = AnswerVerifier(
+            db=api.db,
+            llm=api.llm,
+            enabled=True,
+            system_prompt=(FAITHFULNESS_SYSTEM_V2 if spec["judge"] == "v2"
+                           else FAITHFULNESS_SYSTEM),
+            cache_path=str(cfg.data_dir / "judge_cache.json"),
+            prompt_version=spec["judge"],
+            shape_classifier=None,     # no JEV gating in the offline harness
+        )
+    return api, verifier
 
 
 def score(case: dict, result) -> dict:
@@ -193,7 +213,8 @@ def main() -> int:
     for variant in [v.strip() for v in args.variant.split(",") if v.strip()]:
         if variant not in VARIANTS:
             raise SystemExit(f"unknown variant {variant}")
-        api = build_api(cfg, variant, RESULTS.parent / "intent_cache_ablation.json")
+        api, verifier = build_api(cfg, variant,
+                                  RESULTS.parent / "intent_cache_ablation.json")
         rows = []
         for case in cases:
             prev = done.get((variant, case["id"]))
@@ -203,6 +224,12 @@ def main() -> int:
             t0 = time.time()
             try:
                 result = api.ask(case["question"])
+                if verifier is not None:
+                    try:
+                        verifier.check(result, case["question"],
+                                       user_message=case["question"])
+                    except Exception as e:
+                        log.warning("offline verification failed: %s", e)
                 row = {
                     "variant": variant, "id": case["id"], "type": case.get("type", "extra"),
                     "question": case["question"], "answer": (result.answer or "")[:1500],

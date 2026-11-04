@@ -62,7 +62,7 @@ class TestAPI(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = Path(self.tmp.name)
-        self.cfg = make_config(self.dir / "data", verify_answers=False)
+        self.cfg = make_config(self.dir / "data")
         self.cfg.data_dir.mkdir(parents=True, exist_ok=True)
         self.db = Database(self.cfg.db_path)
         self.api = AdminAPI(config=self.cfg, db=self.db,
@@ -121,7 +121,7 @@ class TestAPI(unittest.TestCase):
     def test_rejects_oversized_file(self):
         """A big upload must be refused, not buffered into memory."""
         self.api.cfg = make_config(self.cfg.data_dir, max_upload_mb=1,
-                                   verify_answers=False)
+)
         # 1 MB + 1 byte of text
         payload = b"a" * (1024 * 1024 + 1)
         r = self.client.post("/api/documents",

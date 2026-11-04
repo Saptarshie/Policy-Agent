@@ -211,29 +211,17 @@ Cheap layers first, expensive last:
    `[doc #chunk_id]` in the final answer is resolved against the store
    (fuzzy doc-name match, chunk-id existence); failures surface as
    `citation_warnings`, never silently.
-5. **Answer shape** (`app/agent/answer_shape.py`) — before anything is judged,
-   the **decision model** answers four questions about the answer (does it
-   decline part of the question / does it state policy rules / is it only a
-   refusal / is it only chit-chat) and the shape is derived from those
-   probabilities: `answer`, `partial`, `refusal`, `chitchat`, `unknown`.
-   This replaced a hardcoded refusal-phrase list, which was a lexical
-   classifier for a language property and could not see a partial answer at
-   all. Ambiguous scores, a classifier outage or an unparseable verdict all
-   yield `unknown`, which the verifier treats as *judge it* — the failure mode
-   is more checking, never less.
-6. **Evidence + faithfulness check** (`app/agent/verify.py`) — the agent can
-   only have relied on passages it *saw*: chunk ids are collected from tool
-   observations during the run. An answer produced with zero retrieved
-   evidence, while stating policy, gets an explicit warning. Then (optional,
-   default on, `VERIFY_ANSWERS`) one strict-JSON **LLM judge** compares the
-   answer against only those passages and lists unsupported claims →
-   `faithful=false` + `unsupported_claims[]` + warning. Chit-chat is skipped;
-   everything else is judged, including a **partial answer**, whose two halves
-   are checked differently: the answered half against the passages, the
-   declined half as a claim *about the corpus* (a decline is unsupported if any
-   passage addresses it). The judge degrades open
-   (unavailable/unparseable ⇒ `faithful=null`), and the answer is
-   *flagged, never silently rewritten*.
+5. **Citations resolved deterministically, never guessed** (`app/naming.py`) —
+   normalised exact match, unique token subset, then fuzzy with a margin; an
+   ambiguous reference becomes a warning. The old first-match loop attributed
+   "Remote Work Policy v2" to `remote_work_policy_v1`.
+6. **No post-answer verifier** — a faithfulness judge was built, calibrated
+   (TPR 10/10, TNR 8/10 on injected claims) and measured end to end, then removed
+   from the answer path: at model parity it added ~6s p50, changed no pass rate,
+   and flagged about one honest answer in five. Grounding now rests on the prompt
+   contract plus the deterministic citation check above; the judge survives as an
+   offline audit (`eval/calibrate_judge.py`). The full measurement is in
+   `dev_docs/DATAFLOW.md` §6 and `eval/ABLATION.md`.
 7. **Endpoint hardening** (`app/llm.py`) — retries with backoff on 429/5xx;
    automatic feature downgrade when an endpoint rejects `tools`,
    `response_format` or `reasoning_effort`; automatic `max_tokens` halving when
@@ -409,7 +397,7 @@ Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/docu
 * `embeddinggemma` has a ~2K-token context; the chunk budget respects it,
   but whole-section embeddings are impossible by design.
 * The faithfulness judge adds one LLM call per answered question
-  (`VERIFY_ANSWERS=false` trades the safety layer for latency). Verdicts are
+  (offline audit only - the answer path does not call it). Verdicts are
   cached per (question, answer, contexts, prompt), so repeats are free and demos
   reproducible; a cached verdict is a replay, not a second opinion.
 * The judge's precision is finite (measured TPR 10/10, TNR 8/10 on injected

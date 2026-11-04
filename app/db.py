@@ -197,13 +197,23 @@ class Database:
         return dict(row) if row else None
 
     def find_document_fuzzy(self, name: str) -> Optional[Dict[str, Any]]:
+        """Resolve a document reference to a stored document.
+
+        Uses the same unique-candidate resolution as citations
+        (:func:`app.naming.resolve`) instead of returning the first substring
+        hit - with `remote_work_policy_v1` and `_v2` in the store, first-match
+        returned v1 for a reference to v2.
+        """
         doc = self.get_document(name)
         if doc:
             return doc
-        low = (name or "").lower().strip()
-        for d in self.list_documents():
-            nl = d["name"].lower()
-            if low and (low in nl or nl in low):
+        from .naming import resolve
+        docs = self.list_documents()
+        match = resolve(name, [d["name"] for d in docs])
+        if not match:
+            return None
+        for d in docs:
+            if d["name"] == match.name:
                 return d
         return None
 

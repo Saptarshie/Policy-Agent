@@ -11,7 +11,6 @@ whose citations are then verified against the store (anti-hallucination).
 
 from __future__ import annotations
 
-import difflib
 import json
 import logging
 import re
@@ -20,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from ..llm import LLMError, LLMResponse, OpenAICompatClient
+from ..naming import resolve_one
 from ..prompts import AGENT_SYSTEM
 from ..schema_repair import extract_tool_calls_from_text, make_tool_error_feedback, repair_json, validate_arguments
 from .tools import ToolRegistry
@@ -71,17 +71,14 @@ class AgentResult:
 
 
 def _match_doc(part: str, names: List[str]) -> Optional[str]:
-    p = part.lower().strip().strip('"“”\'')
-    if not p:
-        return None
-    for n in names:
-        nl = n.lower()
-        if p == nl or p in nl or nl in p:
-            return n
-    for n in names:
-        if difflib.SequenceMatcher(None, p, n.lower()).ratio() >= 0.72:
-            return n
-    return None
+    """The document this reference names, or None.
+
+    Delegates to :mod:`app.naming`, which requires a *unique* candidate: the old
+    first-substring-wins loop resolved "Remote Work Policy v2" to
+    `remote_work_policy_v1`, i.e. it attributed a citation of the amendment to
+    the superseded policy.
+    """
+    return resolve_one(part, names)
 
 
 def _looks_like_citation(ref: str) -> bool:

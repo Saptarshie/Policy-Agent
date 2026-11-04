@@ -31,7 +31,7 @@ def make_config(data_dir: Path, **over) -> Config:
     base = dict(
         llm_base_url="http://fake/v1", llm_api_key="k", llm_model="fake",
         max_output_tokens=65536, temperature=0.1,
-        agent_max_steps=6, agent_max_obs_chars=4000, verify_answers=False,
+        agent_max_steps=6, agent_max_obs_chars=4000,
         ollama_base_url="http://localhost:11434", embed_model="embeddinggemma",
         embed_query_prefix="", embed_doc_prefix="", embed_batch_size=32,
         rag_top_k=6, ingest_window_chars=6000, ingest_llm_enabled=False,
@@ -67,11 +67,10 @@ class AdminTestBase(unittest.TestCase):
         self.db.close()
         self.tmp.cleanup()
 
-    def _api(self, llm, router=None, shape=None, **cfg_over) -> AdminAPI:
+    def _api(self, llm, router=None, **cfg_over) -> AdminAPI:
         cfg = make_config(self.dir / "data", **cfg_over) if cfg_over else self.cfg
         return AdminAPI(config=cfg, db=self.db, embedder=self.embedder, llm=llm,
-                        intent_router=router or _router(),
-                        shape_classifier=shape or _shape("answer"))
+                        intent_router=router or _router())
 
 
 class TestIntentGateWiring(AdminTestBase):
@@ -155,43 +154,46 @@ class TestIntentGateWiring(AdminTestBase):
         self.assertIn("Report concerns", result.answer)
 
 
-class _shape:
-    """Deterministic shape classifier for wiring tests (real one is JEV-based)."""
+class TestNoVerifierInThePath(AdminTestBase):
+    """The answer path is prompt-only: no post-answer LLM judgement.
 
-    def __init__(self, kind="answer", declined=None):
-        self.kind = kind
-        self.declined = declined or []
+    This is a contract, not an accident - it is what `FakeLLM` proves. The
+    script below contains exactly the two responses the agent needs (one search,
+    one answer). `FakeLLM` raises if it is asked for a third, so a re-introduced
+    judge call would surface as result.error instead of passing silently.
+    """
 
-    def classify(self, question, answer, context_sample=None):
-        from app.agent.answer_shape import AnswerShape
-        return AnswerShape(kind=self.kind, declined_parts=list(self.declined),
-                           decided_by="stub")
-
-
-class TestVerifierWiring(AdminTestBase):
-    def test_unfaithful_answer_is_flagged_via_ask(self):
+    def test_ask_runs_no_faithfulness_judge(self):
         fake = FakeLLM([
-            # agent: search
             LLMResponse(content="", tool_calls=[ToolCall(
                 "c1", "search_policy_docs", '{"query": "remote work"}')]),
-            # agent: final answer with an INVENTED number
             LLMResponse(content=(
                 "Employees may work remotely up to 9 days per week "
                 "[remote_work_policy_v1 § 2. Remote Work Allowance].")),
-            # faithfulness judge verdict
-            LLMResponse(content=(
-                '{"faithful": false, "unsupported_claims": '
-                '["9 remote days per week"], "reason": "invented number"}')),
         ])
-        api = self._api(fake, verify_answers=True)
+        api = self._api(fake)
         result = api.ask("How many remote days are allowed?")
-        self.assertFalse(result.faithful)
-        self.assertEqual(result.unsupported_claims, ["9 remote days per week"])
-        self.assertTrue(any("faithfulness check FAILED" in w
-                            for w in result.citation_warnings))
-        # the answer is still returned - flagged, never silently rewritten
+
+        self.assertIsNone(result.error)
+        self.assertIsNone(result.faithful, "nothing judges faithfulness in the path")
+        self.assertEqual(result.unsupported_claims, [])
+        self.assertFalse(any("faithfulness" in w for w in result.citation_warnings))
+        # an unsourced number is NOT flagged any more - grounding is the prompt's job
         self.assertIn("9 days", result.answer)
+        # and the agent answered with exactly one tool call: no hidden extra turn
+        self.assertEqual(result.tool_calls, 1)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_citation_resolution_still_runs(self):
+        """Removing the verifier must not remove the deterministic citation check."""
+        fake = FakeLLM([
+            LLMResponse(content="", tool_calls=[ToolCall(
+                "c1", "search_policy_docs", '{"query": "remote work"}')]),
+            LLMResponse(content=(
+                "You get 3 days [ghost_policy § 9. Imaginary] and "
+                "[remote_work_policy_v1 § 2. Remote Work Allowance].")),
+        ])
+        result = self._api(fake).ask("How many remote days?")
+        self.assertEqual(result.citations,
+                         ["remote_work_policy_v1 § 2. Remote Work Allowance"])
+        self.assertTrue(any("does not match any ingested document" in w
+                            for w in result.citation_warnings))

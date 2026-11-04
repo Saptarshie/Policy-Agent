@@ -164,24 +164,22 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
    fabricated result.
 6. **Fallback tool calling** — endpoints without native function calling
    can emit `<tool_call>{...}</tool_call>`; same repair/validation path.
-7. **Evidence + faithfulness verification** — the judge reads the passages
-   the answer **cites**, then the rest of what the agent saw (24 chunks /
-   24k chars), plus the ingested-document inventory so statements about which
-   policy exists are checkable. It flags unsupported claims
-   (`faithful: false` + the quoted claims in `citation_warnings`); a verdict
-   that names no claim is retried once and then degraded to `unknown`, never
-   reported as a failure. Truncated evidence adds an explicit coverage note so
-   an omission can never turn into an accusation.
-7b. **Answer shape is classified, not pattern-matched** — before judging, the
-   decision model (`typesafe/jev`, the same model the contradiction gate uses)
-   answers four questions about the answer: does it decline part of the
-   question, does it state policy rules, is it only a refusal, is it only
-   chit-chat. That decides *what* gets verified — chit-chat is skipped, **a
-   partial answer is always judged**, and a refusal is judged too, because
-   "the documents do not cover this" is a claim about the corpus. A classifier
-   outage degrades to `unknown`, which means the answer is judged anyway: the
-   failure mode is more checking, never less. Nothing here is decided by
-   matching phrases.
+7. **Grounding without a second model** — the answer path has **no post-answer
+   verifier**. At model parity (the judge was the same `deepseek-v4.1-flash` as
+   the agent) it cost +6s p50, changed no pass rate on 23 labelled cases, and
+   flagged roughly one honest answer in five. Grounding is carried by the prompt
+   contract (grounding, search-first, citation format, refusal, weak evidence,
+   injection, and "show your arithmetic for any derived number") plus the
+   deterministic checks below. The measured judge is kept as an offline audit
+   tool (`eval/calibrate_judge.py`), not as a gate on answers. Numbers and the
+   reasoning: `dev_docs/DATAFLOW.md` §6.
+7b. **Citation resolution is deterministic and refuses to guess** — every
+   `[doc § section]` / `[doc #chunk_id]` in the answer is resolved against the
+   store: normalised exact match, then a *unique* token subset, then fuzzy with a
+   margin. An ambiguous reference ("Remote Work Policy" when v1 and v2 exist) is
+   reported as a warning instead of being attributed to the first match — the
+   earlier first-match loop resolved "Remote Work Policy v2" to **v1**, i.e. a
+   citation of the amended policy recorded against the superseded one.
 8. **Precision-biased verifier** — different scope / complementary rules /
    topical similarity only are explicitly *not* contradictions; uncertain →
    false. Unverifiable-but-strong gate hits are marked UNVERIFIED, not
@@ -215,7 +213,6 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `SCAN_MAX_PAIRS_PER_CHUNK` | `3` | max LLM verifications per chunk (cost cap) |
 | `SCAN_CROSS_DOC_ONLY` | `true` | only compare across documents |
 | `AGENT_MAX_STEPS` | `12` | ReAct loop budget |
-| `VERIFY_ANSWERS` | `true` | post-answer faithfulness judge (one extra LLM call) |
 | `DECISION_MODE` | `remote` | also selects the answer-shape classifier: `remote`/`hybrid` use the decision model, `heuristic` falls back to the chat model's JSON mode |
 | `INTENT_ENABLED` | `true` | LLM triage in front of the agent (one extra cheap call) |
 | `INTENT_MODEL` | *(empty)* | model for the classifier; empty = `LLM_MODEL` |

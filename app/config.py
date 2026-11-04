@@ -78,7 +78,6 @@ class Config:
     # --- Agent ---
     agent_max_steps: int
     agent_max_obs_chars: int
-    verify_answers: bool
 
     # --- Embeddings (Ollama / embeddinggemma) ---
     ollama_base_url: str
@@ -187,7 +186,6 @@ def get_config() -> Config:
             temperature=_float("TEMPERATURE", 0.1),
             agent_max_steps=_int("AGENT_MAX_STEPS", 12),
             agent_max_obs_chars=_int("AGENT_MAX_OBS_CHARS", 4000),
-            verify_answers=_bool("VERIFY_ANSWERS", True),
             ollama_base_url=_str("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/"),
             embed_model=_str("EMBED_MODEL", "embeddinggemma"),
             embed_query_prefix=_str("EMBED_QUERY_PREFIX", "task: search result | query: "),

@@ -294,3 +294,41 @@ Two things worth keeping:
 Reporting fix in the same pass: `clean citations` was counting faithfulness
 warnings, so a grounding failure was being reported as a citation-resolution
 failure. The two are now counted separately.
+
+## 7. Reversal: the verifier is out of the answer path
+
+Section 6 above describes building the answer-shape classifier so the
+faithfulness judge could run on more answers. Days later the judge is gone from
+`ask()` entirely, so the trail is worth reading in order.
+
+Why it was removed:
+
+| measurement | value |
+|---|---|
+| pass rate with the judge (C) vs without (D) | 100% vs 100% (23 labelled cases) |
+| latency | +6s p50 (18.9s vs 12.3s) |
+| precision on honest answers | TNR 8/10 - roughly one answer in five flagged |
+| flag-count stability | 0 then 3 (variant B), 3 then 1 (variant C), identical code |
+| genuine catches | one wrong chunk-id citation, one disputed transition rule |
+
+The judge was the same `deepseek-v4.1-flash` as the agent, so it was never a
+second opinion from a stronger model - only a second context. That has some value
+(it caught e01), but not six seconds and a fifth of the honest answers, and it
+made the product's most visible signal ("faithfulness check FAILED") the least
+reliable thing in it.
+
+What replaced it: the prompt contract (grounding, search-first, citation format,
+refusal, weak evidence, injection) plus two new prompt rules about derived
+numbers, and deterministic citation resolution that refuses to guess - see
+`dev_docs/HEURISTIC_AUDIT.md`.
+
+What was kept: `app/agent/verify.py`, `app/agent/answer_shape.py`,
+`eval/calibrate_judge.py`, `eval/run_shape_eval.py`, and the ablation harness,
+which now applies the judge itself for variants that ask for it. The measurement
+apparatus outlives the feature, which is the only reason the removal can be
+justified with numbers instead of taste.
+
+Also caught by the audit while doing this: citation resolution attributed
+"Remote Work Policy v2" to `remote_work_policy_v1` (first substring/fuzzy match
+wins, 0.72 threshold, the two names are 0.97 similar). Fixed with unique-candidate
+resolution; ambiguous references now warn instead of resolving. `tests/test_naming.py`.
