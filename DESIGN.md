@@ -76,13 +76,15 @@ poll. On success a second daemon thread starts the contradiction cascade
 decides the route (§3.1) — a greeting or a document listing is answered
 directly, input that is not a question about the ingested documents and prompt
 injection are refused, everything about the documents goes to the ReAct loop. The agent receives the *de-noised*
-question plus the triage query plan as a second system message, thinks, emits
-one tool call, **reads the observation and decides the next action** (refine
-the query, open a full chunk, or answer) — up to `AGENT_MAX_STEPS`, then a
-forced grounded final answer. Citations are resolved against the store
-deterministically (`citation_warnings`, never silent); there is **no
-post-answer judge in this path** — grounding is the prompt contract plus that
-check (§3.7). The judge runs offline, in the ablation harness only.
+question plus the triage query plan as a second system message, thinks, emits one
+or more tool calls (parallel when they do not depend on each other), **reads the
+observations and decides the next action** (refine the query, open a full chunk,
+or answer) — up to `AGENT_MAX_STEPS`, then a forced grounded final answer.
+Citations are resolved against the store deterministically (`citation_warnings`,
+never silent) and the same resolver is what the UI opens when a reader clicks a
+chip; there is **no post-answer judge in this path** — grounding is the prompt
+contract plus that check (§3.7). The judge runs offline, in the ablation harness
+only.
 
 ## 2. Chunking & rolling-window ingestion (big documents)
 
@@ -106,7 +108,7 @@ Documents can be huge; **nothing is ever fed whole** to the parser LLM.
 
   The parser runs at `INGEST_REASONING_EFFORT=off` by default: it extracts, it
   does not reason, and extended reasoning cost 4.2× wall time for the same
-  chunk text (see `eval/ABLATION.md` §9).
+  chunk text (see `eval/ABLATION.md` §10).
   If the LLM reply is unparseable even after regex repair, a heuristic
   fallback summarizes and a warning is recorded — ingestion never dies.
   `INGEST_HEURISTIC_MAX_CHARS` skips the LLM parse entirely for documents at or
@@ -246,10 +248,17 @@ Cheap layers first, expensive last:
    `[doc #chunk_id]` in the final answer is resolved against the store
    (fuzzy doc-name match, chunk-id existence); failures surface as
    `citation_warnings`, never silently.
-6. **Citations resolved deterministically, never guessed** (`app/naming.py`) —
+6. **Citations resolved deterministically, never guessed** (`app/citations.py`) —
    normalised exact match, unique token subset, then fuzzy with a margin; an
    ambiguous reference becomes a warning. The old first-match loop attributed
-   "Remote Work Policy v2" to `remote_work_policy_v1`.
+   "Remote Work Policy v2" to `remote_work_policy_v1`. The *same* resolver answers
+   `GET /api/citations/resolve`, so what the check believes and what a reader sees
+   cannot drift apart: the UI opens the passage behind a chip, rendered from the
+   stored markdown (raw toggle for the exact bytes) with its breadcrumb and chunk
+   id, or names the sections the document really has when the reference does not
+   exist. A section split over several chunks returns **all** its parts (`parts[]`),
+   because showing only the first chunk made a continuing table look truncated —
+   the one way a verification panel could mislead the person verifying.
 7. **No post-answer verifier** — a faithfulness judge was built, calibrated
    (TPR 10/10, TNR 8/10 on injected claims) and measured end to end, then removed
    from the answer path: at model parity it added ~6s p50, changed no pass rate,
@@ -259,13 +268,16 @@ Cheap layers first, expensive last:
    `dev_docs/DATAFLOW.md` §6 and `eval/ABLATION.md`.
 8. **The trace is streamed, not replayed** (`POST /api/ask/stream`) — the agent
    accepts an `on_event(kind, payload)` callback and emits `turn`, `step`
-   (thought / tool_call / tool_error / final) and `error` as it works; the route
-   bridges that callback to Server-Sent Events (worker thread → queue →
-   generator, 15s keep-alive comments), and the UI appends a collapsible row per
-   step. Streaming is additive: `POST /api/ask` still returns the whole result,
+   (thought / tool_call / tool_error / final), `stage` (triage) and `error` as it
+   works; the route bridges that callback to Server-Sent Events (worker thread →
+   queue → generator, 15s keep-alive comments), and the UI appends a collapsible row
+   per step. Streaming is additive: `POST /api/ask` still returns the whole result,
    and the UI falls back to it if a proxy buffers the stream. Editing a step's
    observation for the stream (1.2k chars) does not change the stored result
-   (300 chars), so the payload shape the evals read is untouched.
+   (300 chars), so the payload shape the evals read is untouched. The UI treats a
+   stream that ends without a `final` frame, an `error` frame and an unreachable
+   server as three distinct terminal states — a request can stop, and the page says
+   which way it stopped rather than spinning.
 9. **Endpoint hardening** (`app/llm.py`) — retries with backoff on 429/5xx;
    automatic feature downgrade when an endpoint rejects `tools`,
    `response_format` or `reasoning_effort`; automatic `max_tokens` halving when
@@ -372,28 +384,90 @@ document it started from — the same conflict reached from the other
 direction must not become a second flag, and a dismissed flag must stay
 dismissed after a re-scan.
 
-`POST /api/ask` returns the full structured trace:
+`POST /api/ask` returns the full structured run:
 
 ```json
 {
   "answer": "Employees may work remotely up to 3 days … [remote_work_policy_v1 § 2. Remote Work Allowance].",
   "citations": ["remote_work_policy_v1 § 2. Remote Work Allowance"],
-  "citation_warnings": [], "faithful": true, "unsupported_claims": [],
+  "citation_warnings": [], "faithful": null, "answer_shape": "answer",
   "steps": [{"type": "tool_call", "tool": "search_policy_docs", "arguments": {"query": "…"},
              "observation": "[chunk 7] Doc: …", "schema_repairs": ["converted single quotes…"]}],
-  "seen_chunk_ids": [7], "tool_calls": 1, "elapsed_s": 4.2, "intent": "policy_question"
+  "seen_chunk_ids": [7], "judge_context_ids": [],
+  "scratch_notes": 0, "parallel_turns": 0, "declined_parts": [], "unsupported_claims": [],
+  "tool_calls": 1, "elapsed_s": 4.2, "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP", "intent_route": "REACT_LOOP",
+  "intent_plan": {"question": "…", "queries": ["…"], "entities": []}
 }
 ```
 
-Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/documents`
-(status + live job progress + open-flag counts), `DELETE /api/documents/{id}`
-(purges chunks + its flags), `GET /api/jobs/{id}`, `GET /api/contradictions`,
+`faithful` is `null` on this path by design — nothing judges the answer (item 7
+above); the field is populated only when the offline audit harness runs, so a
+client must not read `null` as "unfaithful". `intent_route` is the triage
+decision, which is how an answer with zero tool calls can be legitimate
+(`DIRECT_REPLY` for a document listing, `FAST_REFUSE` for a non-document request).
+
+Endpoints: `POST /api/documents` (upload, returns immediately and ingests in the
+background), `GET /api/documents` (status + live job progress + open-flag counts),
+`DELETE /api/documents/{id}` (purges chunks, flags and the stored upload),
+`GET /api/jobs/{id}`, `POST /api/ask`, `POST /api/ask/stream` (the same run as SSE:
+`stage` / `turn` / `step` / `final` / `error`, 15 s keep-alive comments),
+`GET /api/citations/resolve?cite=…` (the passage behind a citation, or `reason` +
+`candidates`), `GET /api/chunks/{id}`, `GET /api/contradictions`,
 `POST /api/contradictions/{id}/status` (`OPEN|resolved|dismissed`),
-`POST /api/scan/{doc_id}` (re-run the cascade), `GET /api/chunks/{id}`,
-`GET /api/health`. The same operations exist in the CLI
+`POST /api/scan/{doc_id}` (re-run the cascade), `GET /api/health`. The same
+operations exist in the CLI
 (`python run.py upload|list|delete|ask|chat|scan|contradictions|resolve|status|serve|selftest`).
 
-## 6. Trade-offs (chosen ✂ rejected)
+## 6. Benchmarks — what is measured, on what, and what it misses
+
+Three external packs (two scored, one not yet), each a directory of documents plus
+questions with expected behaviour. `eval/run_benchmark.py` indexes the pack into its own `DATA_DIR`, asks
+every question through `AdminAPI.ask` (the same path the UI uses — no test-only
+route, nothing from the pack embedded in a prompt), judges each answer, resolves
+every citation it produced, and writes JSONL rows plus a summary JSON under
+`eval/results/`.
+
+| pack | docs | questions | what it exercises |
+|---|---|---|---|
+| `hr_rag_policy_pack_and_benchmark` | 4 | 20 | multi-hop HR policy: caps that bind, eligibility windows, worked examples, out-of-corpus refusals |
+| `complex_contract_reasoning_pack` | 4 | 20 | commercial contract / SLA arithmetic: credits, caps, proration, definitions that change a clause's scope |
+| `adversarial_policy_arbitrage_pack` | 4 | 20 | questions whose obvious reading is wrong once a definition elsewhere in the pack is applied — present, not yet scored |
+
+Run of record, both sequential on the same code
+(`benchmark_20261105_012006`, `…20261105_010648`):
+
+| pack | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95 | QA wall |
+|---|---|---|---|---|---|
+| HR policy | 19/20 | 20/20 | 29/29 · 29/29 | 17.0 / 14.9 / 31.5 s | 340.0 s (67.8 s at `--workers 10`) |
+| contract | 16/20 | 18/20 | 41/42 · 39/42 | 28.5 / 23.4 / 55.8 s | 570.8 s |
+
+Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
+**9.30 / 10** = 3.55 · 2.80 · 2.00 · 0.95. The rubric is reported separately from
+"correct" on purpose: four answers are right in shape and incomplete, which a binary
+verdict hides and a 3.55 shows. One contract question hit the step budget (89 s, 20
+tool calls) and still graded partial, which is the honest cost of a fixed
+`AGENT_MAX_STEPS`.
+
+What these numbers do **not** establish:
+
+* **One run is one sample.** The single miss moves between runs (MH-12, MH-19,
+  MH-01 over six repeats of the same code); `eval/repeat_question.py` reports a hit
+  rate (`MH-01`: 4/6) because the honest statement is "usually right", not "right".
+* **20 questions = 5 points per question.** A 95% and a 90% are one answer apart;
+  the packs support "there is no systematic failure", not fine-grained ranking.
+* **The judge is a model.** It reads the answer against a reference and a rubric;
+  it scores citation *format and resolution* well and truthfulness less well, so a
+  confident, well-cited, wrong answer can still pass.
+* **Latency is the endpoint's.** p50 15–28 s is dominated by 4–7 model round trips
+  on a hosted endpoint at `reasoning_effort` default — the same contract pack
+  measured p50 18.9 s concurrent and 23.4 s sequential — so the wall column
+  describes a run, not a service level.
+* **Nothing is measured on scale.** Every pack is 4 documents; retrieval
+  comparisons on this corpus saturate at k=6 (§2.1), which is stated rather than
+  papered over.
+
+## 7. Trade-offs (chosen ✂ rejected)
 
 1. **SQLite + numpy cosine ✂ Chroma/pgvector** — one inspectable file, zero
    extra services; brute-force cosine over a cached matrix is sub-ms at this
@@ -413,10 +487,12 @@ Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/docu
    rejection wastes a whole turn on trivially repairable output; pure
    leniency lets garbage flow downstream. Repair first, stay strict at the
    verification layer.
-5. **Flag, don't rewrite ✂ auto-refusal on failed faithfulness** — a failed
-   judge appends warnings and `faithful=false` instead of destroying the
-   answer; the admin sees exactly what was flagged. (A stricter
-   auto-refusal mode is a one-line change in `AdminAPI.ask`.)
+5. **Warn, don't rewrite ✂ auto-refusal on unverified output** — the answer is
+   never destroyed after the fact. What the system *can* check it does check
+   (citation resolution, chunk ids, the calculator's arithmetic), and what it
+   cannot check it says so with `citation_warnings`; a second model was measured
+   as an unreliable arbiter, so it does not get to veto an answer
+   (item 7 in §3).
 6. **Sync requests client ✂ async httpx** — the agent loop is naturally
    sequential (next call depends on the last observation); a sync client
    keeps the code simple and thread-safe for background ingestion.
@@ -440,7 +516,7 @@ Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/docu
     `MAX_OUTPUT_TOKENS` is therefore global; `reasoning_effort` is the lever
     that actually controls cost/latency per caller.
 
-## 7. If I had two more weeks
+## 8. If I had two more weeks
 
 1. **Eval harness in CI** — the sets and runners exist (`eval/run_ablation.py`,
    `measure_retrieval.py`, `run_intent_eval.py`, `calibrate_judge.py`); what is
@@ -458,20 +534,32 @@ Admin endpoints: `POST /api/documents` (upload, 202-style async), `GET /api/docu
    cell.
 5. **Auth & multi-tenancy** — real roles (admin/employee), per-company
    corpora, an `ADMIN_TOKEN` guard on the admin routes.
-6. **Streaming** — SSE token streaming + a live step ticker in the web UI.
+6. **Token-level streaming** — the *steps* already stream (§3.8) and the UI shows
+   elapsed time and silence, so the gap is only the answer text: stream deltas into
+   the bubble instead of printing it on `final`. Worth doing for perceived
+   latency, not for correctness — and it needs a per-turn SSE fan-in that the
+   current one-event-per-step bridge does not have.
 7. **Version pinning** — detect "supersedes policy vN" relationships so
    version-vs-version conflicts can be auto-classified as informational.
 
-## 8. Limitations (honest notes)
+## 9. Limitations (honest notes)
 
 * `embeddinggemma` has a ~2K-token context; the chunk budget respects it,
   but whole-section embeddings are impossible by design.
-* The faithfulness judge adds one LLM call per answered question
-  (offline audit only - the answer path does not call it). Verdicts are
-  cached per (question, answer, contexts, prompt), so repeats are free and demos
-  reproducible; a cached verdict is a replay, not a second opinion.
+* The faithfulness judge is **not on the answer path**. It runs only in the offline
+  audit (`eval/calibrate_judge.py`), one LLM call per answered question, and its
+  verdicts are cached per (question, answer, contexts, prompt) so repeats are free
+  and demos reproducible; a cached verdict is a replay, not a second opinion.
 * The judge's precision is finite (measured TPR 10/10, TNR 8/10 on injected
-  claims): a flag is a prompt to look, not a conclusion.
+  claims): a flag is a prompt to look, not a conclusion. That finite precision is
+  why it is an audit tool and not a gate.
+* Citation resolution proves a reference *exists*, not that the passage *supports*
+  the sentence. A well-cited wrong claim passes every deterministic check; the
+  clickable panel exists so a reader can settle that in one click instead of
+  trusting the system's own word for it.
+* Benchmark numbers are single samples from a sampling model: the one miss moves
+  between runs, so per-question hit rates (`eval/repeat_question.py`) are the honest
+  unit, not one run's accuracy (§6).
 * Scanned/image PDFs are rejected with a clear error rather than OCR'd.
 * The lexical signals are English-oriented and can *bias* the decision model's
   score (they no longer decide anything). A pair the heuristics find boring still

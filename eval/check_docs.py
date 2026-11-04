@@ -93,10 +93,55 @@ if README_TREE:
         check(name in README_TREE.group(1), f"project layout omits {name}")
 
 # ------------------------------------------------------- 7. stale counts/claims
-check("256 tests" in README or "256" in README,
-      "README does not state the suite size")
-check(not re.search(r"DECISION_MODE(?!_)", README),
+test_funcs = sum(
+    len(re.findall(r"^\s*def test_", f.read_text(encoding="utf-8"), re.M))
+    for f in (ROOT / "tests").glob("test_*.py"))
+m = re.search(r"(\d+)\s+tests", README)
+check(bool(m), "README does not state the suite size")
+if m:
+    check(int(m.group(1)) == test_funcs,
+          f"README says {m.group(1)} tests, tests/ defines {test_funcs}")
+notes.append(f"suite size: {test_funcs} test functions")
+check(not re.search(r"DECISION_MODE\b(?!_)", README),
       "README still has a DECISION_MODE mode table")
+
+# ------------------------------------------- 8. every endpoint is documented
+ROUTES_SRC = (ROOT / "app" / "api" / "routes.py").read_text(encoding="utf-8")
+routes = re.findall(r'@app\.(?:get|post|put|delete|patch)\("([^"]+)"', ROUTES_SRC)
+# prose may name the placeholder differently ({id} vs {doc_id}); compare shapes
+def _shape(text: str) -> str:
+    return re.sub(r"\{[^}]*\}", "{}", text)
+for r in routes:
+    if r == "/":                      # the UI page itself, documented in prose
+        continue
+    check(_shape(r) in _shape(README), f"README does not document the endpoint {r}")
+    check(_shape(r) in _shape(DESIGN), f"DESIGN does not document the endpoint {r}")
+notes.append(f"endpoints documented: {len(routes) - 1}")
+
+# --------------------------------- 9. every code path the docs name must exist
+named = set()
+for text in (README, DESIGN):
+    named |= set(re.findall(r"\b((?:app|eval|tests|scripts)/[A-Za-z0-9_/.]+\.py)", text))
+for rel in sorted(named):
+    check((ROOT / rel).exists(), f"docs name a path that does not exist: {rel}")
+notes.append(f"{len(named)} code paths named in the docs all exist")
+# README lists eval/run_benchmark.py etc.; a script renamed on disk must not
+# linger in the README as a command nobody can run
+for rel in sorted(r for r in named if r.startswith("eval/")):
+    check(f"eval/{Path(rel).name}" in README, f"README never mentions {rel}")
+
+# ------------------------- 10. every module in app/ is listed in the layout tree
+for f in sorted((ROOT / "app").rglob("*.py")):
+    if f.name == "__init__.py":
+        continue
+    check(f.name in README, f"app module never documented: {f.relative_to(ROOT)}")
+for d in ("Benchmark", "dev_docs", "eval", "tests", "scripts"):
+    check(f"{d}/" in README, f"README's layout omits the {d}/ directory")
+
+# ------------------------------------- 11. one config-table row per env key
+for key in sorted(env_keys):
+    rows = len(re.findall(rf"^\|\s*`{key}`", README, re.M))
+    check(rows <= 1, f"README has {rows} config-table rows for {key}")
 
 print("doc consistency:")
 for n in notes:

@@ -893,3 +893,36 @@ commit; this section is the record. The measured pack is 19/20 without them.
 4. **The fix for this failure class is probably not a prompt rule at all** - it is answer
    *shape* (lead with the decisive figure, then the rule), which the project deliberately
    does not enforce with a post-hoc checker. Left open, and named as open.
+
+## 13. The two packs re-run sequentially on the shipped code (2026-11-05)
+
+§9 and §11 were measured while the triage prompt was being fixed (§11's contract
+number, 15/20, came from a run at `--workers 10`). Both packs were re-run the same
+night, sequentially, on the code that is now committed, because the README quotes
+these numbers and a table that mixes worker settings is not comparable to itself.
+
+| pack | run | questions | correct | + partial | cite doc | cite doc+sec | rubric | QA wall | p50 | p95 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| HR policy | `20261105_012006` | 20 | **19 (95%)** | **20 (100%)** | 29/29 | 29/29 | — | 340.0s | 14.9s | 31.5s |
+| contract | `20261105_010648` | 20 | **16 (80%)** | 18 (90%) | 41/42 (98%) | 39/42 (93%) | **9.30/10** | 570.8s | 23.4s | 55.8s |
+
+Contract rubric dimensions: answer 3.55/4, reasoning 2.80/3, citations 2.00/2,
+uncertainty 0.95/1. HR: 17/18 answerable, 2/2 refusals, 0 citation warnings, 0
+forced finals; contract: 1 forced final (LC-15, 89s, 20 tool calls, still partial),
+0 citation warnings.
+
+Three things this pair of runs says, beyond the scores:
+
+1. **The contract pack moved 15/20 → 16/20 with no change to its code path.** The
+   difference is sampling, not the worker count: §11's run was concurrent, but
+   concurrency does not change what the model reads. This is the same warning as
+   §12 in a milder form - a 20-question pack is 5 points per question, and a single
+   question flipping is indistinguishable from a real improvement.
+2. **Latency is not stable enough to tabulate as a property of the system.** The
+   contract pack's p50 was 18.9s concurrent (§11) and 23.4s sequential (§13) on the
+   same evening, and one question spent 89s because it kept reading chunks. Report
+   wall clock with its setting; do not read p50 as a service level.
+3. **The step budget does bind, occasionally, and visibly.** One contract question
+   ran out of `AGENT_MAX_STEPS` and answered from what it had (partial, not wrong).
+   Earlier diagnosis said the agent is never cut off; that held for the HR pack, and
+   does not hold universally - `forced finals` in the summary is the counter to watch.
