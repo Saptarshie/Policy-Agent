@@ -73,6 +73,20 @@ class TestResolve(_Base):
             self.assertTrue(r["found"], (cite, r))
             self.assertIn("Rs 25,000", r["text"])
 
+    def test_a_section_split_across_chunks_returns_every_part(self):
+        # a long table can be cut across chunks; showing only the first looks like the
+        # policy stops mid-table, which is exactly what a verifier must not be shown
+        self.db.add_chunk(doc_id=self.doc_id, index=2, section="4.2 Dental implants",
+                          breadcrumb="doc > 4.2 Dental implants",
+                          text="Continuation: the second implant is not covered.",
+                          embedding=[0.0] * 8)
+        r = self.api.resolve_citation("02_HEALTH_AND_WELLBEING_BENEFITS § 4.2 Dental implants")
+        self.assertTrue(r["found"])
+        self.assertEqual(len(r["parts"]), 2, r["parts"])
+        self.assertIn("second implant", r["parts"][1]["text"])
+        self.assertLess(r["parts"][0]["chunk_id"], r["parts"][1]["chunk_id"])
+        self.assertIn("second implant", r["text"])      # text is the joined view
+
     def test_unknown_section_lists_what_the_document_has(self):
         r = self.api.resolve_citation("02_HEALTH_AND_WELLBEING_BENEFITS § 9.9 Made up")
         self.assertFalse(r["found"])

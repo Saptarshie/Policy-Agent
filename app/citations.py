@@ -39,7 +39,7 @@ class CitationResolver:
         out: Dict[str, Any] = {
             "found": False, "cite": (cite or "").strip().strip("[]"),
             "doc": None, "section": section or None, "chunk_id": None,
-            "breadcrumb": None, "text": None, "how": None,
+            "breadcrumb": None, "text": None, "how": None, "parts": [],
             "candidates": [], "reason": None,
         }
         if not (doc_part or chunk_id):
@@ -52,6 +52,7 @@ class CitationResolver:
             if chunk:
                 out.update(found=True, chunk_id=chunk["id"], section=chunk["section"],
                            breadcrumb=chunk.get("breadcrumb"), text=chunk["text"],
+                           parts=[{"chunk_id": chunk["id"], "text": chunk["text"]}],
                            how="chunk-id",
                            doc=db.get_document(chunk["doc_id"])["name"]
                            if db.get_document(chunk["doc_id"]) else doc_part)
@@ -97,8 +98,16 @@ class CitationResolver:
             ranked.sort(key=lambda p: (p[0], p[1].get("chunk_index") or 0))
             how = ["exact", "prefix", "contains", "contained-by"][ranked[0][0]]
             ch = ranked[0][1]
+            # a section can be split across chunks (a long table, say). Showing only
+            # the first would look like the policy stops mid-table, so return all
+            # chunks of the section that matched, in document order.
+            same = [c for c in chunks
+                    if _flat(c.get("section")) == _flat(ch.get("section"))]
+            same.sort(key=lambda c: c.get("chunk_index") or 0)
             out.update(found=True, chunk_id=ch["id"], section=ch.get("section"),
-                       breadcrumb=ch.get("breadcrumb"), text=ch["text"], how=how)
+                       breadcrumb=ch.get("breadcrumb"), how=how,
+                       parts=[{"chunk_id": c["id"], "text": c["text"]} for c in same],
+                       text="\n\n".join(c["text"] for c in same))
             return out
 
         # ---- no section match: never invent a passage, name what exists

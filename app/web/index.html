@@ -73,9 +73,23 @@
   .citeHead .t { font-size: 12px; color: var(--cite); word-break: break-word; }
   .citeMeta { padding: 7px 12px 0; font-size: 12px; color: var(--muted); }
   .citeMeta .ok { color: var(--ok); } .citeMeta .bad { color: var(--bad); }
+  .citeHead .acts { display: flex; gap: 6px; }
   #citeText { margin: 8px 12px 12px; overflow: auto; font-size: 12.5px; line-height: 1.5;
-              white-space: pre-wrap; color: var(--text); background: #101624;
+              color: var(--text); background: #101624;
               border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  #citeText.raw { white-space: pre-wrap; font-family: ui-monospace, Consolas, monospace; }
+  #citeText h3, #citeText h4, #citeText h5 { margin: 10px 0 6px; font-size: 13px; }
+  #citeText p { margin: 6px 0; }
+  #citeText ul, #citeText ol { margin: 6px 0 6px 18px; padding: 0; }
+  #citeText table { border-collapse: collapse; margin: 8px 0; font-size: 12px; }
+  #citeText th, #citeText td { border: 1px solid var(--line); padding: 4px 8px;
+                               vertical-align: top; text-align: left; }
+  #citeText th { background: var(--panel2); color: var(--muted); font-weight: 600; }
+  #citeText blockquote { margin: 6px 0; padding-left: 8px; border-left: 2px solid var(--line);
+                        color: var(--muted); }
+  #citeText .part + .part { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  #citeText .plabel { display: block; font-size: 10px; color: var(--muted); letter-spacing: .06em;
+                      text-transform: uppercase; margin-bottom: 4px; }
   details.trace summary .el { color: var(--muted); font-size: 10px; margin-left: 6px; }
   .warnbox { margin-top: 8px; font-size: 12px; color: var(--warn);
             background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3);
@@ -165,10 +179,13 @@ I search, read and cite the actual policy text — and I'll tell you when the do
 <aside id="citePanel" hidden>
   <div class="citeHead">
     <span class="t" id="citeTitle"></span>
-    <button class="btn tiny" id="citeClose">close</button>
+    <span class="acts">
+      <button class="btn tiny" id="citeRaw" title="show the passage exactly as stored">raw</button>
+      <button class="btn tiny" id="citeClose">close</button>
+    </span>
   </div>
   <div class="citeMeta" id="citeMeta"></div>
-  <pre id="citeText"></pre>
+  <div id="citeText"></div>
 </aside>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -182,11 +199,36 @@ const citeHtml = (html) => html.replace(
     ? `<button type="button" class="cite" data-cite="${esc(inner)}" `
       + `title="show the passage this cites">[${inner}]</button>` : m);
 
+let citeLast = null;                 // {text, parts} behind the panel, for the raw toggle
+
+// The chunk is stored markdown. Rendering it means headings and tables are readable
+// instead of showing '##' and rows of pipes; "raw" gives the exact stored bytes.
+// A section split over several chunks is shown in order, each labelled with its id,
+// so a table that continues across chunks does not look truncated.
+function paintCitation() {
+  const body = $('citeText');
+  const parts = (citeLast && citeLast.parts && citeLast.parts.length)
+    ? citeLast.parts : [{ text: (citeLast && citeLast.text) || '' }];
+  if ($('citeRaw').dataset.on === '1') {
+    body.classList.add('raw');
+    body.textContent = parts.length > 1
+      ? parts.map((p, i) => `--- chunk ${p.chunk_id ?? ''} ---\n${p.text || ''}`).join('\n\n')
+      : (parts[0].text || '');
+    return;
+  }
+  body.classList.remove('raw');
+  body.innerHTML = parts.map((p) => (parts.length > 1
+    ? `<div class="part"><span class="plabel">chunk ${esc(p.chunk_id ?? '')}</span>`
+      + citeHtml(md(p.text || '')) + '</div>'
+    : citeHtml(md(p.text || '')))).join('');
+}
+
 async function openCitation(cite, btn) {
   const panel = $('citePanel'), meta = $('citeMeta'), body = $('citeText');
   $('citeTitle').textContent = cite;
   meta.textContent = 'looking up the passage…';
   body.textContent = '';
+  $('citeRaw').dataset.on = '0';       // a fresh citation opens rendered
   panel.hidden = false;
   try {
     const r = await api('/api/citations/resolve?cite=' + encodeURIComponent(cite));
@@ -196,15 +238,18 @@ async function openCitation(cite, btn) {
         + ` · ${esc(r.doc)}${r.section ? ' § ' + esc(r.section) : ''}`
         + (r.chunk_id ? ` · chunk ${esc(r.chunk_id)}` : '')
         + (r.how && r.how !== 'exact' ? ` · ${esc(r.how)} match` : '');
-      body.textContent = (r.breadcrumb ? r.breadcrumb + '\n\n' : '') + (r.text || '');
+      citeLast = { text: r.text || '', parts: r.parts || [] };
+      paintCitation();
     } else {
       const why = r.reason === 'no-document' ? 'that document is not in the store'
         : r.reason === 'no-section' ? 'that section is not in this document'
         : 'no matching passage';
       meta.innerHTML = `<span class="bad">✗ ${esc(why)}</span>`;
-      body.textContent = (r.candidates && r.candidates.length)
+      citeLast = { text: (r.candidates && r.candidates.length)
         ? 'sections this document actually has:\n- ' + r.candidates.join('\n- ')
-        : 'the citation does not resolve to any stored text.';
+        : 'the citation does not resolve to any stored text.', parts: [] };
+      $('citeRaw').dataset.on = '1';   // nothing to format, so plain text
+      paintCitation();
     }
   } catch (e) {
     meta.innerHTML = `<span class="bad">✗ ${esc(e.message)}</span>`;
@@ -655,6 +700,11 @@ $('chatlog').addEventListener('click', (ev) => {
   if (b) openCitation(b.dataset.cite, b);
 });
 $('citeClose').addEventListener('click', () => { $('citePanel').hidden = true; });
+$('citeRaw').addEventListener('click', () => {
+  const b = $('citeRaw');
+  b.dataset.on = b.dataset.on === '1' ? '0' : '1';
+  if (citeLast !== null) paintCitation();
+});
 document.addEventListener('keydown', (ev) => {
   if (ev.key === 'Escape') $('citePanel').hidden = true;
 });

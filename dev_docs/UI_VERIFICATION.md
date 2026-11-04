@@ -156,3 +156,25 @@ Verified by killing the server mid-answer: the bubble ended at `dot done` /
 `failed` / "⚠ could not reach the server", with no spinner left running.
 `eval/verify_renderer.py` follows the new contract (chips must be clickable
 buttons; `[Q1]` and `[42]` stay literal). 276 tests pass; documentation check clean.
+
+## 2026-11-05 (b) — the citation panel was showing source, not a rendering
+
+Reported from a screenshot: clicking a citation opened a panel with `## 2. Booking
+class` and rows of `|---|---|---|`. The panel was writing the stored chunk with
+`textContent`, on the theory that a verifier wants the exact bytes — but a passage is
+stored *markdown*, so the reader got scaffolding instead of a policy (and a table
+split across lines looked like noise).
+
+Now the panel renders the passage (`citeHtml(md(text))`, so headings and tables look
+like headings and tables, and a citation inside the quote is itself clickable), with a
+**raw** toggle that shows the exact stored text for anyone who wants to compare bytes.
+A section that spans several chunks is rendered as labelled parts (`chunk 75`,
+`chunk 76` …) rather than only its first chunk, which had made a continuing table look
+truncated; `GET /api/citations/resolve` returns `parts[]` for that, and
+`tests/test_citation_resolve.py` pins the ordering.
+
+Verified on `04_TRAVEL_RELOCATION_AND_MOBILITY_POLICY § 2. Booking class`:
+rendered = 1 heading + a 6-row table with 0 literal `#` and 0 pipes; raw = the
+original `## …; |---|---|---|` source; the unknown-section path stays plain text with
+the document's real headings, and the `[doc #75]` form resolves the same passage.
+277 tests pass.
