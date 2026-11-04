@@ -120,6 +120,31 @@ only.
 
 Documents can be huge; **nothing is ever fed whole** to the parser LLM.
 
+**What runs, in order — and what is *not* an agent.** Indexing is a deterministic
+pipeline on a daemon thread (`IngestPipeline.ingest`, `app/ingest.py:88`). There is
+no tool loop and no model deciding what to do next; the only model call is one
+bounded JSON extraction per window, and it returns *metadata*:
+
+```
+read_document(path)              # txt/md/pdf -> text           readers.py
+split_into_windows(text, 6000)   # paragraph windows + 200-char carry tail
+_parse_windows(...)              # 1 chat_json call per window, N in parallel
+                                 #   -> {window_title, key_terms, statements,
+                                 #       rolling_summary}     (metadata only)
+chunk_text(text, 1400, 2200)     # <-- pure Python, on the FULL text, no model
+embed_documents(chunk_texts)     # batches of EMBED_BATCH_SIZE
+add_chunk(...) per chunk         # SQLite row + FTS5 trigger from the same INSERT
+```
+
+The arrow that matters: **`chunk_text` never sees the parser's output.** Chunk
+boundaries come from the document's own structure (headings, blank lines, sentences),
+so a chunk is a verbatim slice of the uploaded file — which is what makes a citation
+provable, and what makes re-ingestion reproducible (the parallel and sequential parse
+modes produce byte-identical chunks, `sha256 f0d72b17…`, `eval/compare_parse_modes.py`).
+An LLM boundary-finder would be a semantic chunker: it would have to re-emit the text
+to store it, and a citation would then quote a model's paraphrase instead of the
+policy.
+
 * **Reading**: `txt`/`md` decoded with UTF-8 → latin-1 fallback; markdown
   decoration stripped but headings kept; `pdf` via `pypdf` page-by-page
   (image-only PDFs are rejected with a clear error).
