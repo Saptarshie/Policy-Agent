@@ -422,3 +422,45 @@ several documents touch the question.
 Cost: on 52 chunks, a full scan now examines 52 pairs at the 0.65 floor instead of
 `chunks x 3`. Each candidate costs one decision-model call (~1.5s); only
 gate-passing pairs reach the verifier.
+
+## 10. Batching and threading the scan: 216s -> 30s, same flags
+
+Two cheaper shapes of the same work, both measured with `eval/measure_scan.py`
+(full corpus, 7 documents / 52 chunks, fresh database copies per configuration so
+no pair is skipped, real decision model + real verifier).
+
+**Batching is a questions-per-request trick, not a states-per-request one.** The
+endpoint accepts a LIST for `state` and returns HTTP 200 - but it is not a batch:
+`[A, B]` with A (same subject) and B (different subject) returns ONE answer of
+0.29, i.e. it concatenates. What it does support is many *questions* over one
+state, so a batch of passage pairs becomes one state listing `PAIR 1..n` and one
+question per pair. The passages are the shared prefix: 6 pairs cost 810 input
+tokens batched vs 2029 one at a time.
+
+**Batching alone moves verdicts.** On 6 hand-built pairs the batched scores
+differed from the per-pair scores by up to 0.24, and two decisions flipped across
+the 0.5 threshold (0.66 -> 0.42, 0.43 -> 0.62). So the batch result is a first
+pass only: every pair within `DECISION_RECHECK_BAND` (0.15) of the threshold is
+re-asked in its own request, where the context is a single pair again. Measured
+6/6 agreement with per-pair scoring after the re-check.
+
+**Both stages are I/O, so both are threaded.** `SCAN_WORKERS` (4) runs batches
+concurrently in the gate and verifications concurrently in the tracker; SQLite
+writes stay on the calling thread and in scan order, so the flags are identical.
+
+| configuration | wall | speedup | decision-model requests | verifier calls | flags |
+|---|---|---|---|---|---|
+| serial, one request per pair | 216.2s | 1.0x | 96 | 16 | 6 |
+| batched (6 pairs/request) | 52.7s | 4.1x | 20 | 7 | 6 |
+| batched + 4 threads | **29.8s** | **7.3x** | 21 | 6 | 6 |
+
+Same six flags in all three runs. Note the verifier column: batching sent the
+verifier 7 pairs instead of 16, and it still confirmed the same 6 - the nine pairs
+that stopped reaching it were ones it had rejected anyway. That is the honest
+reading of "same flags": the confirmed conflicts score far above the threshold and
+survive batching; the pairs sitting near it are the ones whose scores move, which
+is exactly what the re-check band is for.
+
+Also settled en route: `state` as a list, `states`, `batch`, `items`, `/batch` and a
+`prefix` field are all either ignored or rejected - there is no hidden batch route,
+and the re-check band is the price of the one that exists.

@@ -51,6 +51,7 @@ class ContradictionTracker:
         cross_doc_only: bool = True,
         min_similarity: float = 0.65,
         max_candidates: int = 200,
+        workers: int = 4,
         on_alert: Optional[AlertFn] = None,
     ) -> None:
         self.db = db
@@ -67,6 +68,8 @@ class ContradictionTracker:
         # not also hide candidates from the pool (that would make the cap log
         # unreachable and the floor meaningless)
         self.search_pool = max(self.max_candidates, 64)
+        #: concurrent verifier requests (each is one HTTP call)
+        self.workers = max(1, int(workers))
         self.on_alert = on_alert
 
     # ------------------------------------------------------------------ public
@@ -110,14 +113,16 @@ class ContradictionTracker:
         chunks = self.db.list_chunks(doc_id)
         flagged = 0
 
+        # ---- stage 1: candidate pairs by SIMILARITY, not by count.
+        # A conflict can rank 41st among 60 passages that are all similar; a
+        # top-k cut would never show it to the gate, so the floor decides and
+        # only a global cap guards total cost. Collected for the WHOLE document
+        # so that batches fill across chunk boundaries instead of ending every
+        # chunk with a half-empty request.
+        candidates = []            # (chunk, hit) in scan order
         considered = 0
         capped = False
-        unavailable = False
-        for i, chunk in enumerate(chunks):
-            # ---- stage 1: candidate pairs by SIMILARITY, not by count.
-            # A conflict can rank 41st among 60 passages that are all similar;
-            # a top-k cut would never show it to the gate, so the floor decides
-            # and only a global cap guards total cost.
+        for chunk in chunks:
             try:
                 hits = self.rag.find_similar_chunks(
                     chunk["id"],
@@ -146,98 +151,128 @@ class ContradictionTracker:
                 considered += 1
                 if self.db.contradiction_pair_exists(chunk["id"], hit.chunk_id):
                     continue
+                candidates.append((chunk, hit))
 
-                # ---- stage 2: decision model (the ONLY judge of "is this a
-                #      conflict"; runs before the expensive verifier)
-                decision = self.gate.evaluate(chunk["text"], hit.text)
-                if decision.decided_by == "unavailable":
-                    # no judge: say so once instead of reporting "no conflicts"
-                    if not unavailable:
-                        unavailable = True
-                        log_fn("  [scan] no decision model available (%s) - "
-                               "candidate pairs cannot be judged; this scan is "
-                               "INCOMPLETE, not clean", decision.error or "?")
-                    continue
-                if not decision.passed:
-                    continue
+        if not candidates:
+            log_fn("  [scan] no candidate pairs within %.2f of any passage in '%s'",
+                   self.min_similarity, doc_name)
+            self.db.update_job(job_id, status="done", stage="done")
+            log_fn("[scan] finished '%s': 0 contradiction(s) flagged", doc_name)
+            return {"flagged": 0, "job_id": job_id}
 
-                # ---- stage 3: LLM verification (ONLY for gate-passing pairs)
-                log_fn("  [scan] gate PASSED (score %.2f) %s | %s  -> escalating "
-                       "to LLM verifier", decision.score, doc_name, hit.doc_name)
-                verdict = self.verifier.verify(
-                    doc_a=doc_name, sec_a=chunk.get("section") or "",
-                    text_a=chunk["text"],
-                    doc_b=hit.doc_name, sec_b=hit.section or "",
-                    text_b=hit.text,
-                    gate_signals=decision.signals,
-                )
+        self.db.update_job(job_id, stage=f"{len(candidates)} candidate pair(s)")
 
-                # ---- stage 4: flag to the admin (with citations)
-                if verdict.verified and verdict.is_contradiction:
-                    cid = self.db.add_contradiction(
-                        chunk_a_id=chunk["id"], doc_a=doc_name,
-                        section_a=chunk.get("section") or "",
-                        text_a=chunk["text"],
-                        chunk_b_id=hit.chunk_id, doc_b=hit.doc_name,
-                        section_b=hit.section or "", text_b=hit.text,
-                        gate_score=decision.score, gate_signals=decision.signals,
-                        verified=True, confidence=verdict.confidence,
-                        conflict_type=verdict.conflict_type,
-                        explanation=verdict.explanation, points=verdict.points,
-                    )
-                    if cid:
-                        flagged += 1
-                        self._alert(cid, doc_name, hit.doc_name, verdict.explanation)
-                        log_fn("  [scan] CONTRADICTION #%s: %s vs %s - %s",
-                               cid, doc_name, hit.doc_name, verdict.explanation)
-                    else:
-                        # the pair is already flagged in the opposite scan
-                        # direction - do not count or re-alert it
-                        log_fn("  [scan] pair already flagged; duplicate flag "
-                               "suppressed: %s | %s", doc_name, hit.doc_name)
-                elif not verdict.verified and \
-                        decision.score >= self.gate.threshold + 0.15:
-                    # LLM unavailable/unparseable but strong heuristic signal:
-                    # record as UNVERIFIED for admin review (never drop).
-                    cid = self.db.add_contradiction(
-                        chunk_a_id=chunk["id"], doc_a=doc_name,
-                        section_a=chunk.get("section") or "",
-                        text_a=chunk["text"],
-                        chunk_b_id=hit.chunk_id, doc_b=hit.doc_name,
-                        section_b=hit.section or "", text_b=hit.text,
-                        gate_score=decision.score, gate_signals=decision.signals,
-                        verified=False, confidence=0.0, conflict_type="unverified",
-                        explanation=(
-                            "UNVERIFIED - the LLM verifier could not be run "
-                            f"({verdict.error}); flagged by the heuristic gate "
-                            "alone. Heuristic signals: "
-                            + "; ".join(decision.signals)
-                        ),
-                        points=[],
-                    )
-                    if cid:
-                        flagged += 1
-                        self._alert(cid, doc_name, hit.doc_name,
-                                    "unverified heuristic flag (LLM unavailable)")
-                        log_fn("  [scan] UNVERIFIED flag #%s: %s vs %s",
-                               cid, doc_name, hit.doc_name)
-                    else:
-                        log_fn("  [scan] pair already flagged; duplicate "
-                               "unverified flag suppressed: %s | %s",
-                               doc_name, hit.doc_name)
-                else:
-                    log_fn("  [scan] verifier rejected the pair "
-                           "(gate score %.2f)", decision.score)
+        # ---- stage 2: the decision model judges every candidate.
+        # Batched (many pairs per request: the passages are the shared prefix)
+        # and concurrent across batches; a pair near the threshold is re-asked
+        # alone, so batching cannot quietly move a verdict.
+        pairs = [(c["text"], h.text) for c, h in candidates]
+        evaluate_many = getattr(self.gate, "evaluate_many", None)
+        if evaluate_many is not None:
+            decisions = evaluate_many(pairs)
+        else:                              # custom gate without batching support
+            decisions = [self.gate.evaluate(a, b) for a, b in pairs]
 
-            self.db.update_job(job_id, done=i + 1,
-                               stage=f"scanned {i + 1}/{len(chunks)} chunks")
-
-        if unavailable and not flagged:
+        if decisions and all(d.decided_by == "unavailable" for d in decisions):
+            # no judge: say so instead of reporting "no conflicts"
+            log_fn("  [scan] no decision model available (%s) - candidate pairs "
+                   "cannot be judged; this scan is INCOMPLETE, not clean",
+                   getattr(decisions[0], "error", None) or "?")
+            self.db.update_job(job_id, status="done", stage="done")
             log_fn("  [scan] finished without a decision model: 0 flags means "
                    "'not examined', not 'no contradictions'")
-        self.db.update_job(job_id, status="done", stage="done")
+            return {"flagged": 0, "job_id": job_id}
+
+        survivors = [(c, h, d) for (c, h), d in zip(candidates, decisions)
+                     if d.passed and d.decided_by != "unavailable"]
+        for chunk, hit, decision in survivors:
+            log_fn("  [scan] gate PASSED (score %.2f) %s | %s  -> escalating "
+                   "to LLM verifier", decision.score, doc_name, hit.doc_name)
+
+        # ---- stage 3: verification, concurrently (each call is one HTTP request)
+        verdicts = self._verify_all(survivors, doc_name)
+        self.db.update_job(job_id, stage=f"verified {len(verdicts)} pair(s)")
+
+        # ---- stage 4: record, serially, in scan order (one SQLite connection)
+        for (chunk, hit, decision), verdict in zip(survivors, verdicts):
+            if verdict.verified and verdict.is_contradiction:
+                cid = self.db.add_contradiction(
+                    chunk_a_id=chunk["id"], doc_a=doc_name,
+                    section_a=chunk.get("section") or "",
+                    text_a=chunk["text"],
+                    chunk_b_id=hit.chunk_id, doc_b=hit.doc_name,
+                    section_b=hit.section or "", text_b=hit.text,
+                    gate_score=decision.score, gate_signals=decision.signals,
+                    verified=True, confidence=verdict.confidence,
+                    conflict_type=verdict.conflict_type,
+                    explanation=verdict.explanation, points=verdict.points,
+                )
+                if cid:
+                    flagged += 1
+                    self._alert(cid, doc_name, hit.doc_name, verdict.explanation)
+                    log_fn("  [scan] CONTRADICTION #%s: %s vs %s - %s",
+                           cid, doc_name, hit.doc_name, verdict.explanation)
+                else:
+                    # the pair is already flagged in the opposite scan direction
+                    log_fn("  [scan] pair already flagged; duplicate flag "
+                           "suppressed: %s | %s", doc_name, hit.doc_name)
+            elif not verdict.verified and \
+                    decision.score >= self.gate.threshold + 0.15:
+                # the verifier could not be run but the gate is emphatic: record
+                # it for review rather than dropping it silently
+                cid = self.db.add_contradiction(
+                    chunk_a_id=chunk["id"], doc_a=doc_name,
+                    section_a=chunk.get("section") or "",
+                    text_a=chunk["text"],
+                    chunk_b_id=hit.chunk_id, doc_b=hit.doc_name,
+                    section_b=hit.section or "", text_b=hit.text,
+                    gate_score=decision.score, gate_signals=decision.signals,
+                    verified=False, confidence=0.0, conflict_type="unverified",
+                    explanation=(
+                        "UNVERIFIED - the LLM verifier could not be run "
+                        f"({verdict.error}); flagged by the decision model alone. "
+                        "Signals: " + "; ".join(decision.signals)
+                    ),
+                    points=[],
+                )
+                if cid:
+                    flagged += 1
+                    self._alert(cid, doc_name, hit.doc_name,
+                                "unverified decision-model flag")
+                    log_fn("  [scan] UNVERIFIED flag #%s: %s vs %s",
+                           cid, doc_name, hit.doc_name)
+                else:
+                    log_fn("  [scan] pair already flagged; duplicate "
+                           "unverified flag suppressed: %s | %s",
+                           doc_name, hit.doc_name)
+            else:
+                log_fn("  [scan] verifier rejected the pair (gate score %.2f)",
+                       decision.score)
+
+        self.db.update_job(job_id, status="done", stage="done",
+                           done=len(chunks))
         log_fn("[scan] finished '%s': %d contradiction(s) flagged", doc_name, flagged)
         return {"flagged": flagged, "job_id": job_id}
+
+    def _verify_all(self, survivors, doc_name: str):
+        """Verify survivors concurrently; order preserved (writes stay serial)."""
+        def one(item):
+            chunk, hit, decision = item
+            return self.verifier.verify(
+                doc_a=doc_name, sec_a=chunk.get("section") or "",
+                text_a=chunk["text"],
+                doc_b=hit.doc_name, sec_b=hit.section or "",
+                text_b=hit.text,
+                gate_signals=decision.signals,
+            )
+
+        if not survivors:
+            return []
+        if self.workers <= 1 or len(survivors) == 1:
+            return [one(s) for s in survivors]
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(self.workers, len(survivors))) as pool:
+            return list(pool.map(one, survivors))
 
     def _alert(self, cid: int, doc_a: str, doc_b: str, explanation: str) -> None:
         if self.on_alert:

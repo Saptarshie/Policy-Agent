@@ -410,6 +410,41 @@ class SystemOneDecisionModel:
         self.timeout = timeout
         self.max_retries = max_retries
 
+    #: the question each pair is asked; shared by the batch and the re-check so
+    #: the only thing that changes between them is the context, never the wording
+    PAIR_QUESTION = (
+        "Do the two passages state incompatible rules on the same subject - i.e. "
+        "both cannot hold at the same time for the same person? Answer high only "
+        "for a real conflict; differing scope, wording or complementary detail is "
+        "not a conflict."
+    )
+
+    def score_many(self, pairs) -> Optional[list]:
+        """Score several passage pairs in ONE request.
+
+        Each pair becomes its own question over a shared state (all pairs listed),
+        which is the batching this endpoint actually supports. Returns a list of
+        probabilities aligned with *pairs*, or None if the request failed.
+        """
+        pairs = list(pairs)
+        if not pairs:
+            return []
+        state_parts = []
+        questions = {}
+        for k, (text_a, text_b) in enumerate(pairs, start=1):
+            state_parts.append(f"PAIR {k}:\n  PASSAGE A: {text_a}\n  PASSAGE B: {text_b}")
+            questions[f"pair_{k}"] = {
+                "type": "noul",
+                "instructions": f"Consider ONLY PAIR {k}. {self.PAIR_QUESTION}",
+            }
+        answers = self.ask("\n\n".join(state_parts), questions)
+        if not answers:
+            return None
+        try:
+            return [float(answers[f"pair_{k}"]) for k in range(1, len(pairs) + 1)]
+        except KeyError:
+            return None
+
     def ask(self, state: str, questions: dict) -> Optional[dict]:
         """Ask the decision model arbitrary yes/no questions about *state*.
 
@@ -597,9 +632,18 @@ class CascadeGate:
         self,
         threshold: float = 0.5,
         remote: Optional[RemoteDecisionModel] = None,
+        batch_size: int = 6,
+        recheck_band: float = 0.15,
+        workers: int = 4,
     ) -> None:
         self.threshold = float(threshold)
         self.remote = remote
+        #: pairs per batched request (1 disables batching)
+        self.batch_size = max(1, int(batch_size))
+        #: pairs this close to the threshold are re-asked on their own
+        self.recheck_band = max(0.0, float(recheck_band))
+        #: concurrent in-flight requests (batches, and re-checks)
+        self.workers = max(1, int(workers))
         self.heuristic = JEVStyleGate(threshold=self.threshold)
         if self.remote is None:
             log.warning("no decision model configured: contradiction detection "
@@ -627,6 +671,71 @@ class CascadeGate:
         decision.passed = decision.score >= self.threshold
         decision.decided_by = "decision_model"
         return decision
+
+    def evaluate_many(self, pairs):
+        """Gate a list of pairs, batching where that is safe.
+
+        One request per batch of ``batch_size`` pairs; any pair that lands within
+        ``recheck_band`` of the threshold is then re-asked in its own request,
+        because batching shifts scores by up to ~0.25 and the ambiguous ones are
+        exactly where that matters. Decisions therefore match per-pair scoring
+        while the clear majority cost a fraction of a request each.
+        """
+        pairs = list(pairs)
+        if not pairs:
+            return []
+        if self.remote is None:
+            return [self.evaluate(a, b) for a, b in pairs]
+        if self.batch_size <= 1 or not hasattr(self.remote, "score_many"):
+            return [self.evaluate(a, b) for a, b in pairs]
+
+        batches = [pairs[i:i + self.batch_size]
+                   for i in range(0, len(pairs), self.batch_size)]
+        scores_per_batch = self._score_batches(batches)
+
+        out = []
+        for chunk, scores in zip(batches, scores_per_batch):
+            if scores is None or len(scores) != len(chunk):
+                out.extend((a, b, self.evaluate(a, b), 0.0) for a, b in chunk)
+                continue
+            for (a, b), score in zip(chunk, scores):
+                if abs(score - self.threshold) <= self.recheck_band:
+                    # ambiguous under batching: ask it alone, same question
+                    out.append((a, b, None, float(score)))
+                else:
+                    out.append((a, b, GateDecision(
+                        score >= self.threshold, float(score),
+                        ["batched decision (clear of the threshold)"],
+                        decided_by="decision_model(batch)"), float(score)))
+
+        # the ambiguous pairs are independent requests too: run them together
+        ambiguous = [(i, item) for i, item in enumerate(out) if item[2] is None]
+        if ambiguous:
+            results = self._run(self.evaluate_alone,
+                                [(item[0], item[1]) for _, item in ambiguous])
+            for (idx, _), decision in zip(ambiguous, results):
+                out[idx] = (out[idx][0], out[idx][1], decision, decision.score)
+        return [item[2] for item in out]
+
+    def evaluate_alone(self, pair):
+        """Score one pair in its own request (the un-batched path)."""
+        return self.evaluate(pair[0], pair[1])
+
+    def _score_batches(self, batches):
+        """score_many() over batches, concurrently when workers > 1."""
+        if self.workers <= 1 or len(batches) <= 1:
+            return [self.remote.score_many(b) if b else [] for b in batches]
+        return self._run(self.remote.score_many, batches)
+
+    @staticmethod
+    def _run(fn, items):
+        """Threaded map that preserves input order (both callables are pure I/O)."""
+        from concurrent.futures import ThreadPoolExecutor
+        items = list(items)
+        if len(items) <= 1:
+            return [fn(it) for it in items]
+        with ThreadPoolExecutor(max_workers=min(8, len(items))) as pool:
+            return list(pool.map(fn, items))
 
     @property
     def describe(self) -> str:
@@ -669,5 +778,8 @@ def build_gate_from_config(cfg) -> CascadeGate:
         log.warning("DECISION_MODEL_BASE_URL/NAME are not set: contradiction "
                     "detection is disabled (no lexical fallback by design)")
     return CascadeGate(threshold=getattr(cfg, "jev_gate_threshold", 0.5),
-                       remote=remote)
+                       remote=remote,
+                       batch_size=getattr(cfg, "decision_batch_size", 6),
+                       recheck_band=getattr(cfg, "decision_recheck_band", 0.15),
+                       workers=getattr(cfg, "scan_workers", 4))
 

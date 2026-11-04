@@ -180,6 +180,7 @@ class AdminAPI:
                 cross_doc_only=self.cfg.scan_cross_doc_only,
                 min_similarity=self.cfg.scan_min_similarity,
                 max_candidates=self.cfg.scan_max_candidates,
+                workers=self.cfg.scan_workers,
             )
         return self._tracker
 

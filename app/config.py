@@ -139,6 +139,11 @@ class Config:
     prompt_agent: str = "v1"            # v1 | v2
     prompt_judge: str = "v1"            # v1 | v2
     prompt_intent: str = "v1"           # v1 | v2
+    # performance tuning only - defaults are the measured values, so a
+    # fixture that does not care about scanning need not set them
+    scan_workers: int = 4             # concurrent model/verifier requests
+    decision_batch_size: int = 6      # pairs per batched request
+    decision_recheck_band: float = 0.15  # re-ask pairs this near the threshold
 
     @property
     def db_path(self) -> Path:
@@ -212,6 +217,9 @@ def get_config() -> Config:
             decision_model_api_key=_str("DECISION_MODEL_API_KEY", ""),
             decision_model_name=_str("DECISION_MODEL_NAME", ""),
             decision_temperature=_float("DECISION_TEMPERATURE", 0.0),
+            scan_workers=_int("SCAN_WORKERS", 4),
+            decision_batch_size=_int("DECISION_BATCH_SIZE", 6),
+            decision_recheck_band=_float("DECISION_RECHECK_BAND", 0.15),
             data_dir=Path(_str("DATA_DIR", str(_ROOT / "data"))).expanduser().resolve(),
             app_host=_str("APP_HOST", "127.0.0.1"),
             app_port=_int("APP_PORT", 8000),

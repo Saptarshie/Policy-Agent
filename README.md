@@ -214,6 +214,9 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `DECISION_TEMPERATURE` | `0.0` | keep the judge deterministic |
 | `DECISION_FALLBACK_HEURISTIC` | `true` | fall back to the in-code heuristic when the remote decision model fails |
 | `SCAN_MIN_SIMILARITY` | `0.65` | candidate pairs: every passage at or above this cosine floor (not a top-k cut — a conflict can rank 41st among 60 similar chunks) |
+| `DECISION_BATCH_SIZE` | `6` | pairs judged per decision-model request (the endpoint takes many questions over one shared state; 1 disables batching) |
+| `DECISION_RECHECK_BAND` | `0.15` | a pair this close to the threshold is re-asked in its own request, because batching perturbs scores by up to ~0.25 |
+| `SCAN_WORKERS` | `4` | concurrent decision-model / verifier requests during a scan |
 | `SCAN_MAX_CANDIDATES` | `200` | safety cap on pairs examined per document (logged when it truncates) |
 | `SCAN_CROSS_DOC_ONLY` | `false` | `false` scans inside a document as well as across documents |
 | `AGENT_MAX_STEPS` | `12` | ReAct loop budget |
