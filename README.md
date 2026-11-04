@@ -3,8 +3,12 @@
 A complete, self-contained **RAG-based policy document QA agent** with:
 
 - **ReAct agent + tool_call loop** — the agent thinks step by step, calls tools
-  (`search_policy_docs`, `read_policy_chunk`, `calculate`, `scratchpad_*`, …) and
-  may batch several independent calls into one turn. It keeps a per-question
+  (`search_policy_docs`, `read_policy_chunk`, `list_policy_documents`,
+  `get_document_summary`, `list_contradictions`, `calculate`, `scratchpad_*`) and
+  may batch several independent calls into one turn. `search_policy_docs` takes
+  **`top_k` OR `min_similarity`, never both** — a count for an ordinary lookup, a
+  similarity floor when the agent suspects several documents touch the question
+  (`"everything ≥ 0.55"`), neither for the `RAG_TOP_K` default. It keeps a per-question
   scratchpad for long multi-document work (notes are working memory, never
   evidence) and does its arithmetic through `calculate`, so a derived number has
   a traceable derivation. Both are optional by prompt rule: a one-passage
@@ -39,45 +43,43 @@ endpoint** for the LLM (URL + key from `.env`), `MAX_OUTPUT_TOKENS = 65536`.
 admin uploads doc ──▶ rolling-window ingestion ──▶ chunks + embeddings
                                 │
                                 ▼  (background)
-             ┌──────────────────────────────────────────────────┐
-             │ 1. RAG RETRIEVAL        for each new chunk, pull │
-             │                          the most similar passage │
-             │                          of the other documents   │
-             │                          (embeddings only, cheap) │
-             ├──────────────────────────────────────────────────┤
-             │ 2. DECISION MODEL - scores every candidate     │
-             │    heuristic (default): JEV-style judge IN CODE  │
-             │    topical-overlap guard, normative flips        │
-             │    (must vs must-not), permission flips,         │
-             │    numeric conflicts (15 vs 30 days), antonyms   │
-             │    dedicated DECISION_MODEL_* endpoint (JEV)     │
-             │    scores every pair (strict JSON, repaired)     │
-             │    hybrid: heuristic first; remote refines       │
-             │    only BORDERLINE pairs                         │
-             │    ── score >= JEV_GATE_THRESHOLD? ──▶ NO: drop  │
-             ├──────────────────────────────────────────────────┤
-             │ 3. LLM CONTRADICTION VERIFIER (escalation)       │
-             │    runs ONLY for gate-passing pairs; strict JSON │
-             │    verdict; precision-biased prompt              │
-             ├──────────────────────────────────────────────────┤
-             │ 4. ADMIN FLAG   citation (doc § section + quote) │
-             │                + explanation of WHY they clash   │
-             │                + gate signals for auditability   │
-             └──────────────────────────────────────────────────┘
+        ┌──────────────────────────────────────────────────────────────┐
+        │ 1. CANDIDATES BY SIMILARITY, NOT BY COUNT                    │
+        │    EVERY passage within SCAN_MIN_SIMILARITY (0.65) of a      │
+        │    chunk - inside the same document as well as across        │
+        │    documents (SCAN_CROSS_DOC_ONLY=false). A top-k cut hides  │
+        │    the conflict that ranks 41st among 60 similar passages;   │
+        │    SCAN_MAX_CANDIDATES is only a logged cost valve.          │
+        ├──────────────────────────────────────────────────────────────┤
+        │ 2. DECISION MODEL — the ONLY judge (DECISION_MODEL_*)        │
+        │    batched: 6 pairs per request (DECISION_BATCH_SIZE), the   │
+        │    passages are the shared prefix; a pair within             │
+        │    DECISION_RECHECK_BAND of the threshold is re-asked alone  │
+        │    threaded: SCAN_WORKERS requests in flight                 │
+        │    ── no endpoint? the scan reports INCOMPLETE, not "clean"  │
+        ├──────────────────────────────────────────────────────────────┤
+        │ 3. LLM CONTRADICTION VERIFIER — only for gate-passing pairs  │
+        ├──────────────────────────────────────────────────────────────┤
+        │ 4. ADMIN FLAG — both passages + why they clash + gate score  │
+        └──────────────────────────────────────────────────────────────┘
 ```
 
-The **decision model runs first** so the expensive LLM verifier only ever
-sees a small, pre-filtered set of plausible conflicts. By default the
-decision model is the in-code JEV heuristic — deterministic, explainable and
-**zero LLM cost**, which is why a default `.env` has no decision-model
-endpoint vars. The judged stage requires a served model: fill in
-`DECISION_MODEL_BASE_URL` / `DECISION_MODEL_API_KEY` / `DECISION_MODEL_NAME` —
-a separate, cheaper OpenAI-compatible endpoint
-(e.g. `qwen2.5:0.5b` on Ollama) that scores each pair with a strict-JSON
-reply (repaired + retried like every other LLM call, falling back to the
-heuristic on failure). If the verifier can't run (endpoint down, unparseable
-output) but the gate score is far above threshold, the pair is still recorded
-as **UNVERIFIED** for admin review — nothing is silently dropped.
+Two properties matter more than the stages:
+
+* **The floor decides, not a count.** Candidates are every passage at or above
+  `SCAN_MIN_SIMILARITY`, measured chunk-to-chunk on stored vectors (embedding
+  the text as a *query* measures lower — 0.601 vs 0.678 on the corpus's own
+  leave-cap conflict — and silently excluded it).
+* **There is exactly one judge.** The in-code lexical gate still runs, but only
+  to hand its signals to the decision model as evidence; it can no longer pass
+  or drop a pair, and with no `DECISION_MODEL_*` configured nothing is judged
+  (the scan says so instead of reporting zero conflicts).
+
+Batching and threading were measured on the sample corpus: **216s → 30s** for a
+full scan with identical flags (`eval/measure_scan.py`). Batching alone shifts
+scores by up to ~0.25, which is why near-threshold pairs are re-asked in their
+own request. If the verifier cannot run but the gate is emphatic, the pair is
+still recorded as **UNVERIFIED** - nothing is silently dropped.
 
 ---
 
@@ -139,10 +141,17 @@ Uploading `sample_docs/amendments/leave_policy_2025_amendment.md` next to
 ## Web UI
 
 `python run.py serve` gives you a three-pane console: **Documents** (upload,
-progress bars, delete, rescan), **Chat** (grounded answers, rendered
-citations, collapsible ReAct trace, citation-check warnings) and
-**Contradiction tracker** (flags with both quoted passages, the LLM's
-explanation, the gate's heuristic signals, resolve/dismiss buttons).
+progress bars, delete, rescan), **Chat** (grounded answers rendered from the
+agent's markdown - headings, tables, lists, inline code - with citation chips,
+a collapsible ReAct trace and citation-check warnings) and **Contradiction
+tracker** (flags with both quoted passages, why they clash, the decision
+model's signals, resolve/dismiss buttons).
+
+Controls are wired through `data-*` attributes and delegated listeners rather
+than inline handlers, so a document named `Bob's "Q1" policy` cannot break the
+markup. The agent can read the flag table itself (`list_contradictions`), which
+is how "do the policies contradict each other?" gets answered from the audit
+trail instead of a fresh guess.
 
 ---
 
@@ -201,6 +210,9 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | ollama/v1 | any OpenAI-compatible endpoint |
 | `MAX_OUTPUT_TOKENS` | `65536` | output ceiling for every LLM call (agent, judge, decision model); a ceiling only - it never lengthens a reply, it prevents truncation. Auto-halved if an endpoint caps it |
 | `TEMPERATURE` | `0.1` | low temperature for grounded answers |
+| `LLM_REASONING_EFFORT` / `INTENT_REASONING_EFFORT` | *(default)* / `off` | the real cost lever: the classifier runs with reasoning off (4.1s vs 5.2s per call, same decisions) |
+| `AGENT_MAX_STEPS` / `AGENT_MAX_OBS_CHARS` | `12` / `4000` | tool-call budget per question, and the observation truncation point |
+| `EMBED_BATCH_SIZE` | `32` | passages embedded per Ollama batch |
 | `OLLAMA_BASE_URL` / `EMBED_MODEL` | `…:11434` / `embeddinggemma` | embeddings backend |
 | `EMBED_QUERY_PREFIX` / `EMBED_DOC_PREFIX` | EmbeddingGemma task prefixes | keep quoted! Ollama does not add them itself |
 | `INGEST_WINDOW_CHARS` | `6000` | rolling-window size for read+parse |
@@ -210,9 +222,7 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `DECISION_MODEL_NAME` | *(empty)* | stage-2 judge of the cascade. There is one judge: the decision model, or none (a scan then reports itself INCOMPLETE rather than "no contradictions") |
 | `DECISION_MODEL_BASE_URL` | *(empty)* | OpenAI-compatible base URL of the decision model (e.g. `http://localhost:11434/v1`, or the hosted `typesafe/jev`) |
 | `DECISION_MODEL_API_KEY` | *(empty)* | API key for the decision-model endpoint (e.g. `ollama`) |
-| `DECISION_MODEL_NAME` | *(empty)* | model name at the decision endpoint (e.g. `qwen2.5:0.5b`) |
 | `DECISION_TEMPERATURE` | `0.0` | keep the judge deterministic |
-| `DECISION_FALLBACK_HEURISTIC` | `true` | fall back to the in-code heuristic when the remote decision model fails |
 | `SCAN_MIN_SIMILARITY` | `0.65` | candidate pairs: every passage at or above this cosine floor (not a top-k cut — a conflict can rank 41st among 60 similar chunks) |
 | `DECISION_BATCH_SIZE` | `6` | pairs judged per decision-model request (the endpoint takes many questions over one shared state; 1 disables batching) |
 | `DECISION_RECHECK_BAND` | `0.15` | a pair this close to the threshold is re-asked in its own request, because batching perturbs scores by up to ~0.25 |
@@ -235,6 +245,8 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `MAX_UPLOAD_MB` | `20` | upload ceiling; larger files get HTTP 413 |
 | `STALE_JOB_MINUTES` | `30` | a job untouched this long is marked `error` at startup (killed process), so its document cannot stay `ingesting` |
 | `DATA_DIR` | `./data` | SQLite DB + uploads |
+| `APP_HOST` / `APP_PORT` | `127.0.0.1` / `8000` | `run.py serve` bind address |
+| `LOG_LEVEL` | `INFO` | python logging level |
 
 ## Project layout
 
@@ -257,8 +269,14 @@ policy-rag-agent/
 │   ├── readers.py              # txt / md / pdf readers
 │   ├── chunker.py              # heading-aware intelligent chunking + windows
 │   ├── ingest.py               # rolling-window read+parse + summary + progress
-│   ├── rag.py                  # dense + sparse retrieval, RRF fusion
-│   ├── admin.py                # admin facade: intent gate -> agent -> verifier
+│   ├── rag.py                  # dense + sparse retrieval, RRF fusion, threshold search
+│   ├── naming.py               # document-name resolution (unique match or nothing)
+│   ├── admin.py                # admin facade: triage -> agent -> citation check
+│   ├── web/index.html          # the three-pane UI (no inline handlers, md renderer)
+│   ├── contradictions/
+│   │   ├── gate.py             # stage 2: the decision model (batched, threaded)
+│   │   ├── tracker.py          # candidate scan -> gate -> verify -> flag
+│   │   └── verify.py           # stage 3: the LLM verifier
 │   ├── cli.py                  # command line interface
 │   ├── agent/
 │   │   ├── react.py            # ReAct loop + citation checking
@@ -271,7 +289,7 @@ policy-rag-agent/
 │   │   └── verify.py           # evidence check + faithfulness judge
 │   ├── contradictions/
 │   │   ├── gate.py             # ★ decision model (stage 2): JEV heuristic +
-│   │   │                       #   remote/hybrid CascadeGate (DECISION_MODE)
+│   │   │                       #   CascadeGate, one decision-model judge
 │   │   ├── verify.py           # ★ LLM contradiction verifier (stage 3)
 │   │   └── tracker.py          # ★ cascade orchestration + admin flagging
 │   ├── api/
@@ -308,17 +326,24 @@ python eval/run_ablation.py --variant A,B,C,D                  # end-to-end prom
 python eval/report_ablation.py      # merged comparison table
 python eval/measure_retrieval.py    # vector vs keyword vs hybrid (no LLM)
 python eval/calibrate_judge.py      # judge TPR/TNR on injected claims
+python eval/measure_scan.py         # serial vs batched vs threaded scan
+python eval/verify_api.py           # 42 end-to-end API checks (needs a live server)
+python eval/verify_renderer.py      # chat markdown renderer, incl. XSS inputs
+python eval/check_docs.py           # README/DESIGN vs code (env keys, tools, removed features)
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite covers: schema repair + feedback, the ReAct loop (native and
-text-based tool calling, citation verification), chunking/windows, the
-ingestion pipeline with heuristic fallback, the store, the JEV gate
-(pass/reject/determinism), the full cascade (flag / gate-blocks-LLM /
-unverified fallback), the triage layer (cache, fail-open, corrective retry,
-plan injection), retrieval (FTS5 keyword index, RRF fusion, mode fallbacks),
-the faithfulness verifier (shape classification, gating, judge context
-selection, unsubstantiated verdicts, partial answers) and the HTTP API end-to-end.
+The suite (256 tests, offline, no keys) covers: schema repair + feedback, the
+ReAct loop (native and text-based tool calling, citation verification, the
+calculator and scratchpad tools, parallel tool calls), chunking/windows, the
+ingestion pipeline, the store, the decision-model gate (batching, the
+re-threshold re-check, "unavailable" semantics), the full cascade (flag /
+gate-blocks-LLM / unverified fallback), document-name resolution (uniqueness
+required: v1 vs v2), the triage layer (cache keyed on the prompt fingerprint,
+fail-open, corrective retry, plan injection), retrieval (FTS5 keyword index, RRF
+fusion, threshold search, chunk-to-chunk similarity), the offline faithfulness
+judge (shape classification, judge context selection, partial answers) and the
+HTTP API end-to-end.
 
 ### What the measurements changed
 
@@ -331,6 +356,10 @@ selection, unsubstantiated verdicts, partial answers) and the HTTP API end-to-en
 | refusal vs non-refusal was a hardcoded phrase list (`"do not cover"`, `"couldn't find"`) — a lexical classifier for a language property, and blind to partial answers | replaced by the decision model: four questions, probabilities, five shapes; partial answers always judged, refusals judged too, chit-chat skipped; failure degrades to *judge*, not to skip |
 | keyword retrieval returned 0/17 | FTS backfill fixed (it was counting the content table); hybrid RRF is now the default |
 | dense vs sparse vs hybrid | tied at k≥3 on a 7-document corpus; sparse wins one top-1 exact-token case. Reported as a tie, not a win |
+| contradiction candidates chosen by `top_k`/per-chunk cap | the real leave-cap conflict ranks 3rd of 4 (0.678) - inside the cut by luck, and invisible among 60 similar chunks. Now: every passage above the similarity floor, intra-document included |
+| the scan compared a *query* embed of a chunk to stored vectors | it measures lower than chunk-to-chunk (0.601 vs 0.678), so the 0.65 floor excluded the conflict it was calibrated on. `db.similar_to_chunk()` compares stored vectors |
+| a full scan took 216s (96 model requests) | batched (6 pairs/request) + 4 threads: **29.8s**, 21 requests, **same six flags**; 0.15 re-check band keeps verdicts identical to per-pair scoring |
+| UI: delete/flag buttons dead for names with a quote; answers shown as raw markdown | `data-*` + delegated listeners; escape-first markdown renderer. Found by driving the real page (`dev_docs/UI_VERIFICATION.md`) |
 
 Full tables, the relabelled cases and the threat list: `eval/ABLATION.md`.
 
