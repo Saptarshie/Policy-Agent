@@ -408,6 +408,15 @@ class AdminAPI:
             "jev_gate_threshold": self.cfg.jev_gate_threshold,
         }
 
+    def resolve_citation(self, cite: str) -> Dict[str, Any]:
+        """`[doc § section]` -> the stored passage, so a reader can verify the claim.
+
+        Never invents a passage: an unmatched section comes back with the sections
+        the document really has (app/citations.py).
+        """
+        from app.citations import CitationResolver
+        return CitationResolver.resolve_citation(self, cite)
+
     def get_chunk(self, chunk_id: int) -> Optional[Dict[str, Any]]:
         chunk = self.db.get_chunk(chunk_id)
         if not chunk:

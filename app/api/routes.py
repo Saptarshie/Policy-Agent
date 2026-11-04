@@ -178,6 +178,11 @@ def create_app(api: Optional[AdminAPI] = None) -> FastAPI:
 
     # -------------------------------------------------------------- chunks
 
+    @app.get("/api/citations/resolve")
+    def resolve_citation(cite: str) -> Dict[str, Any]:
+        """What the UI calls when a citation chip is clicked."""
+        return _api.resolve_citation(cite)
+
     @app.get("/api/chunks/{chunk_id}")
     def get_chunk(chunk_id: int) -> Dict[str, Any]:
         chunk = _api.get_chunk(chunk_id)

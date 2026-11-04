@@ -143,7 +143,13 @@ Uploading `sample_docs/amendments/leave_policy_2025_amendment.md` next to
 `python run.py serve` gives you a three-pane console: **Documents** (upload,
 progress bars, delete, rescan), **Chat** (grounded answers rendered from the
 agent's markdown - headings, tables, lists, inline code - with citation chips
-and citation-check warnings). The ReAct trace is **live**: triage, each turn,
+and citation-check warnings). **Citations are clickable**: clicking
+`[doc § section]` resolves it against the store (`GET /api/citations/resolve`)
+and shows the passage it points at, with the breadcrumb and chunk id, so a
+reader can check the claim instead of trusting it; a citation that does not
+resolve says why and lists the sections the document really has, and the chip is
+marked red. The waiting state shows elapsed seconds and names a long silence, and
+a stream that ends without an answer says so rather than spinning. The ReAct trace is **live**: triage, each turn,
 each thought, every tool call with its arguments and a 1.2k-character slice of
 the observation the agent actually read appears as it happens over SSE
 (`POST /api/ask/stream`), so a 20-second answer shows its work instead of a

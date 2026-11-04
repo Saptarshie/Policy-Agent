@@ -57,7 +57,26 @@
   .msg.user { align-self: flex-end; background: linear-gradient(135deg, #2b4a86, #33507f); }
   .msg.agent { align-self: flex-start; background: var(--panel2); border: 1px solid var(--line); }
   .msg .cite { color: var(--cite); background: rgba(125,211,252,.1); border-radius: 4px;
-              padding: 0 4px; font-size: 12px; }
+              padding: 0 3px; font-size: 12px; font: inherit; font-size: 12px;
+              border: 1px solid transparent; cursor: pointer; }
+  .msg .cite:hover { border-color: var(--cite); text-decoration: underline; }
+  .msg .cite:focus-visible { outline: 2px solid var(--cite); outline-offset: 1px; }
+  .msg .cite.bad-cite { color: var(--bad); background: rgba(248,113,113,.1); }
+  /* citation verification panel: the passage a chip points at, so a reader can check it */
+  #citePanel { position: fixed; right: 12px; bottom: 12px; width: min(560px, 60vw);
+               max-height: 62vh; display: flex; flex-direction: column; z-index: 40;
+               background: var(--panel); border: 1px solid var(--accent); border-radius: 12px;
+               box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+  #citePanel[hidden] { display: none; }
+  .citeHead { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+              padding: 9px 12px; border-bottom: 1px solid var(--line); }
+  .citeHead .t { font-size: 12px; color: var(--cite); word-break: break-word; }
+  .citeMeta { padding: 7px 12px 0; font-size: 12px; color: var(--muted); }
+  .citeMeta .ok { color: var(--ok); } .citeMeta .bad { color: var(--bad); }
+  #citeText { margin: 8px 12px 12px; overflow: auto; font-size: 12.5px; line-height: 1.5;
+              white-space: pre-wrap; color: var(--text); background: #101624;
+              border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  details.trace summary .el { color: var(--muted); font-size: 10px; margin-left: 6px; }
   .warnbox { margin-top: 8px; font-size: 12px; color: var(--warn);
             background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3);
             border-radius: 8px; padding: 6px 10px; }
@@ -96,6 +115,7 @@
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
          background: var(--warn); margin-right: 6px; animation: pulse 1.1s infinite; }
   .dot.done { background: var(--ok); animation: none; }
+  .dot.stalled { background: var(--warn); }
   @keyframes pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
   .msg h3, .msg h4, .msg h5, .msg h6 { margin: 10px 0 4px; font-size: 14px; }
   .msg h3 { font-size: 15px; }
@@ -142,13 +162,54 @@ I search, read and cite the actual policy text — and I'll tell you when the do
     <div class="colbody" id="flagList"><div class="empty">loading…</div></div>
   </section>
 </main>
+<aside id="citePanel" hidden>
+  <div class="citeHead">
+    <span class="t" id="citeTitle"></span>
+    <button class="btn tiny" id="citeClose">close</button>
+  </div>
+  <div class="citeMeta" id="citeMeta"></div>
+  <pre id="citeText"></pre>
+</aside>
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// A citation chip is a BUTTON: clicking it resolves [doc § section] against the
+// store and shows the passage, so the reader can check the claim instead of
+// trusting it. A citation that does not resolve is marked, not hidden.
 const citeHtml = (html) => html.replace(
   /\[([^\[\]<]{3,120})\]/g,
-  (m, inner) => (/§/.test(inner) || /^[A-Za-z0-9_.\- ]+$/.test(inner))
-    ? `<span class="cite">[${inner}]</span>` : m);
+  (m, inner) => (/§/.test(inner) || /#[0-9]+\s*$/.test(inner) || /^[A-Za-z0-9_.\- ]+$/.test(inner))
+    ? `<button type="button" class="cite" data-cite="${esc(inner)}" `
+      + `title="show the passage this cites">[${inner}]</button>` : m);
+
+async function openCitation(cite, btn) {
+  const panel = $('citePanel'), meta = $('citeMeta'), body = $('citeText');
+  $('citeTitle').textContent = cite;
+  meta.textContent = 'looking up the passage…';
+  body.textContent = '';
+  panel.hidden = false;
+  try {
+    const r = await api('/api/citations/resolve?cite=' + encodeURIComponent(cite));
+    btn.classList.toggle('bad-cite', !r.found);
+    if (r.found) {
+      meta.innerHTML = `<span class="ok">✓ found in the ingested text</span>`
+        + ` · ${esc(r.doc)}${r.section ? ' § ' + esc(r.section) : ''}`
+        + (r.chunk_id ? ` · chunk ${esc(r.chunk_id)}` : '')
+        + (r.how && r.how !== 'exact' ? ` · ${esc(r.how)} match` : '');
+      body.textContent = (r.breadcrumb ? r.breadcrumb + '\n\n' : '') + (r.text || '');
+    } else {
+      const why = r.reason === 'no-document' ? 'that document is not in the store'
+        : r.reason === 'no-section' ? 'that section is not in this document'
+        : 'no matching passage';
+      meta.innerHTML = `<span class="bad">✗ ${esc(why)}</span>`;
+      body.textContent = (r.candidates && r.candidates.length)
+        ? 'sections this document actually has:\n- ' + r.candidates.join('\n- ')
+        : 'the citation does not resolve to any stored text.';
+    }
+  } catch (e) {
+    meta.innerHTML = `<span class="bad">✗ ${esc(e.message)}</span>`;
+  }
+}
 
 const history = [];
 // the welcome bubble is also what "New conversation" restores
@@ -433,7 +494,7 @@ async function send() {
   const holder = addMsg('agent', '');
   holder.innerHTML = `<div class="live">
       <details class="trace" open>
-        <summary><span class="dot"></span><span class="sum">working — triage…</span></summary>
+        <summary><span class="dot"></span><span class="sum">working — triage…</span><span class="el"></span></summary>
         <div class="steps"></div>
       </details>
       <div class="answer"></div>
@@ -444,9 +505,17 @@ async function send() {
   const sumEl = holder.querySelector('.sum');
   const dot = holder.querySelector('.dot');
 
+  const el = holder.querySelector('.el');
   const ac = new AbortController();
   inflight = ac;
   let steps = 0, tools = 0, userToggled = false, finished = false;
+  // A silent stream is the one failure the user cannot distinguish from "still
+  // thinking": keep the elapsed time visible, name a long silence, and give up on
+  // a stream that has produced nothing for STALL_ABORT_MS (a stalled model call used
+  // to sit on 'working — triage…' until the 10-minute read timeout).
+  const startedAt = Date.now();
+  let lastFrame = startedAt, tick = null, abandoned = false;
+  const STALL_MS = 45000, STALL_ABORT_MS = 240000;
   // if the user folds the trace while it runs, respect that: never re-open it
   det.addEventListener('toggle', () => { if (!finished) userToggled = true; });
 
@@ -475,7 +544,17 @@ async function send() {
   };
 
   try {
+    tick = setInterval(() => {
+      if (finished) return;
+      const waited = Math.round((Date.now() - startedAt) / 1000);
+      const silent = Math.round((Date.now() - lastFrame) / 1000);
+      el.textContent = ` · ${waited}s` + (silent >= 15 ? ` (no output ${silent}s)` : '');
+      if (silent >= Math.round(STALL_MS / 1000)) dot.className = 'dot stalled';
+      if (silent * 1000 >= STALL_ABORT_MS) { abandoned = true; try { ac.abort(); } catch {} }
+    }, 1000);
+
     await streamAsk({ question: q, history: history.slice(-10) }, (event, data) => {
+      lastFrame = Date.now();
       if (event === 'stage') {
         if (data.name === 'triage') addStage('triage — classifying the question');
         else if (data.name === 'routed')
@@ -488,9 +567,17 @@ async function send() {
         addStep(data);
         return;
       }
-      if (event === 'error') { addStep({ type: 'tool_error', tool: 'agent', problems: [data.error] }); return; }
+      if (event === 'error') {
+        addStep({ type: 'tool_error', tool: 'agent', problems: [data.error] });
+        finished = true;
+        dot.className = 'dot done';
+        sumEl.textContent = 'failed';
+        answerBox.innerHTML = `<span class="warnbox">⚠ the agent failed: ${esc(data.error)}</span>`;
+        return;
+      }
       if (event === 'final') {
         finished = true;
+        el.textContent = '';                 // the clock is for waiting, not for the record
         answerBox.innerHTML = answerHtml(data);
         dot.className = 'dot done';
         sumEl.textContent = `ReAct trace — ${data.tool_calls || tools} tool call(s), `
@@ -501,9 +588,23 @@ async function send() {
         holder.parentElement.scrollTop = holder.parentElement.scrollHeight;
       }
     }, ac.signal);
-  } catch (e) {
-    if (e.name === 'AbortError') {          // the user started a new conversation
+    if (!finished) {          // closed with no answer: say so instead of spinning forever
       finished = true;
+      dot.className = 'dot done';
+      sumEl.textContent = 'no answer';
+      answerBox.innerHTML = '<span class="warnbox">⚠ the stream ended before an answer '
+        + 'arrived — the model may have timed out. Ask again.</span>';
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {          // the user aborted, or the watchdog gave up
+      finished = true;
+      if (abandoned) {
+        dot.className = 'dot done';
+        sumEl.textContent = 'stopped — no response';
+        answerBox.innerHTML = '<span class="warnbox">⚠ no output for '
+          + Math.round(STALL_ABORT_MS / 1000) + 's, so the request was stopped. '
+          + 'Ask again, or check that the model endpoint is up.</span>';
+      }
       return;
     }
     // streaming unavailable: answer the old way rather than losing the question
@@ -520,12 +621,16 @@ async function send() {
       history.push({ role: 'assistant', content: res.answer || '' });
     } catch (e2) {
       if (e2.name === 'AbortError') return;
-      answerBox.innerHTML = `<span class="warnbox">⚠ ${esc(e2.message)}</span>`;
+      const why = /Failed to fetch|NetworkError/i.test(e2.message)
+        ? 'could not reach the server — it may have stopped or restarted'
+        : e2.message;
+      answerBox.innerHTML = `<span class="warnbox">⚠ ${esc(why)}</span>`;
       finished = true;
       dot.className = 'dot done';
       sumEl.textContent = 'failed';
     }
   } finally {
+    if (tick) clearInterval(tick);
     if (inflight === ac) inflight = null;
   }
   $('chatlog').scrollTop = $('chatlog').scrollHeight;
@@ -543,6 +648,16 @@ function newConversation() {
 
 $('sendBtn').addEventListener('click', send);
 $('newChat').addEventListener('click', newConversation);
+// citation chips are buttons inside rendered answers: delegate, so answers added
+// later (streamed or restored) work without re-binding
+$('chatlog').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button.cite');
+  if (b) openCitation(b.dataset.cite, b);
+});
+$('citeClose').addEventListener('click', () => { $('citePanel').hidden = true; });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') $('citePanel').hidden = true;
+});
 $('question').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });

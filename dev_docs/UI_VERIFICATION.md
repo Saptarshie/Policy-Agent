@@ -111,3 +111,48 @@ aligned.
 - `eval/results/ui_verify/ask_*.json` — full agent responses (answers, citations,
   steps, intent plan) for every question asked
 - `eval/results/ui_verify/ask_contradiction.json` — the routing fix, end to end
+
+## 2026-11-05 — citations are verifiable, and a silent stream stops spinning
+
+Two UI defects, both reported from the running console.
+
+**1. A citation chip looked like a link and did nothing.** The chip was a `<span>`;
+a reader who wanted to check "is this really in § 4.2?" had to retype the section
+into a search. Chips are now `<button class="cite" data-cite="…">`, and clicking one
+calls `GET /api/citations/resolve?cite=…` (`app/citations.py`) which returns the
+stored passage, its breadcrumb and its chunk id — or, when nothing matches, the
+reason plus the sections the document actually has. The chip turns red on a miss.
+The match is forgiving about the surface form a model produces (case, punctuation,
+"4.2" vs "42", a shortened title) and strict about never inventing text:
+`tests/test_citation_resolve.py` pins exact/prefix/contains matching, the
+`[doc #chunk_id]` form, an unknown section (candidates, `text: null`) and an
+unknown document.
+
+Verified live on the dental question: 4 chips, the first resolving to
+`02_HEALTH_AND_WELLBEING_BENEFITS § 4.2 Dental implants · chunk 33` with the tier
+table in the panel; a fabricated section gives "✗ that section is not in this
+document" plus the real headings, a fabricated document gives "✗ that document is
+not in the store", and Escape closes the panel.
+
+**2. "working — triage…" could sit there forever.** Nothing in the UI distinguished
+"the model is thinking" from "the request is dead": a stalled model call is a
+10-minute HTTP read timeout, and a stream that closed without a `final` frame (server
+restart, killed worker) left the spinner and the yellow dot up with no error. Now:
+
+* the waiting state shows elapsed seconds and, after 15s of silence, names it
+  ("· 42s (no output 27s)"), because keep-alive comments are excluded from the
+  timer — the clock measures *output*, not connection health;
+* 45s of silence turns the dot amber; 4 minutes aborts the request and says so;
+* an `error` frame ends the run in place (red dot, "failed", the error in the
+  answer area) instead of only appending a step;
+* a stream that closes with no answer renders "the stream ended before an answer
+  arrived — the model may have timed out. Ask again.";
+* a dead server reads "could not reach the server — it may have stopped or
+  restarted" rather than "Failed to fetch";
+* the elapsed timer clears when the answer lands, so the trace records the work,
+  not the waiting.
+
+Verified by killing the server mid-answer: the bubble ended at `dot done` /
+`failed` / "⚠ could not reach the server", with no spinner left running.
+`eval/verify_renderer.py` follows the new contract (chips must be clickable
+buttons; `[Q1]` and `[42]` stay literal). 276 tests pass; documentation check clean.

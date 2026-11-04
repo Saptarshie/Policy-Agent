@@ -81,7 +81,7 @@ def main() -> int:
         if name.startswith("ask_"):
             if "## " in h or "**" in h:
                 fails.append(f"{name}: raw markdown left in output")
-            if "§" in h and "class=\"cite\"" not in h:
+            if "§" in h and "class=\"cite\" data-cite=" not in h:
                 fails.append(f"{name}: citations not chipped")
         if name.startswith("xss"):
             # only real tags can hurt: the renderer is the only source of markup,
@@ -102,9 +102,11 @@ def main() -> int:
             if "<table>" not in h or h.count("<td>") != 4 or "---" in h.replace("&lt;", ""):
                 fails.append(f"table: unexpected output {h[:300]}")
         if name == "brackets":
-            if "class=\"cite\">[leave_policy § 3.2]" not in h:
-                fails.append(f"brackets: citation missing {h[:200]}")
-            if "class=\"cite\">[Q1]" in h:
+            # citations must be CLICKABLE (a button carrying the cite text), while
+            # anything that is not a citation stays literal
+            if 'data-cite="leave_policy § 3.2"' not in h:
+                fails.append(f"brackets: citation is not a clickable chip {h[:240]}")
+            if ">[Q1]</button>" in h:
                 fails.append("brackets: [Q1] should stay plain text")
         if name == "blockquote" and "<blockquote>" not in h:
             fails.append("blockquote: not rendered")
