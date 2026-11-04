@@ -577,54 +577,71 @@ What these numbers do **not** establish:
   comparisons on this corpus saturate at k=6 (§2.1), which is stated rather than
   papered over.
 
-## 7. Trade-offs (chosen ✂ rejected)
+## 7. What we rejected, and on what evidence
 
-1. **SQLite + numpy cosine ✂ Chroma/pgvector** — one inspectable file, zero
-   extra services; brute-force cosine over a cached matrix is sub-ms at this
-   scale.
-2. **Own thin ReAct loop ✂ LangChain/LlamaIndex** — ~200 lines, every failure
-   mode (malformed args → repair → feedback → forced answer) is inspectable
-   and unit-tested; a framework would hide exactly the mechanics that matter
-   here.
-3. **Decision-model gate before the LLM verifier ✂ LLM-on-every-pair** — the
-   stage-2 gate makes the cascade cheap: the verifier only sees scores the model
-   considers conflict-shaped. The judge is a *separate, cheaper* endpoint than the
-   answer model, and the in-code lexical gate survives as a signal provider
-   (explainable, unit-testable, free) rather than as a decider — a lexical
-   verdict is a language decision made by word overlap, which is exactly the
-   class of shortcut this codebase removes.
-4. **Regex repair + error-as-feedback ✂ strict schema rejection** — strict
-   rejection wastes a whole turn on trivially repairable output; pure
-   leniency lets garbage flow downstream. Repair first, stay strict at the
-   verification layer.
-5. **Warn, don't rewrite ✂ auto-refusal on unverified output** — the answer is
-   never destroyed after the fact. What the system *can* check it does check
-   (citation resolution, chunk ids, the calculator's arithmetic), and what it
-   cannot check it says so with `citation_warnings`; a second model was measured
-   as an unreliable arbiter, so it does not get to veto an answer
-   (item 7 in §3).
-6. **Sync requests client ✂ async httpx** — the agent loop is naturally
-   sequential (next call depends on the last observation); a sync client
-   keeps the code simple and thread-safe for background ingestion.
-7. **In-process background threads ✂ Celery/RQ** — no broker dependency;
-   job rows in SQLite already give resumable progress tracking.
-8. **LLM triage ✂ regex/keyword gate** — a lexical gate cannot separate "what
-   policies apply to parental leave?" from "what policy documents do you
-   have?", and it cannot see a grievance with no policy vocabulary. Measured:
-   route accuracy 74.6% (regex) vs 100% (LLM), 15 vs 1 missed refusals, at the
-   cost of one cached call (~4.1s, reasoning disabled). The regex gate stays in
-   the repo as the ablation baseline, not as a fallback.
-9. **RRF over score fusion ✂ weighted sum of cosine + BM25** — the two scores
-   live on incomparable scales and per-query normalisation flips ranking when
-   one retriever returns a single strong hit. RRF needs ranks only, so it
-   cannot be dominated by whichever retriever produces bigger numbers; the
-   weights stay available for tuning (`HYBRID_*_WEIGHT`).
-10. **One global output ceiling ✂ per-caller `max_tokens` budgets** — a cap is
-    not a budget: billing follows actual output, so a 64k ceiling on a 40-token
-    verdict costs nothing, while a small cap truncates a reasoning model's JSON
-    (this happened: the classifier's verdict was cut mid-object at 700 tokens).
-    `MAX_OUTPUT_TOKENS` is therefore global; `reasoning_effort` is the lever
-    that actually controls cost/latency per caller.
+Two kinds of decision live in this repo and they are kept apart: ones a measurement
+settled, and ones argued from structure. A number appears only where a run exists —
+"argued" below means there is no run, not that a run agreed.
+
+### 7.1 Rejected because the numbers said so
+
+| rejected | what the code does instead | the measurement that decided it | where |
+|---|---|---|---|
+| regex/keyword intent gate | one LLM triage call, route derived from the category | route accuracy **74.6% → 100%**, missed refusals **15 → 1**, false refusals 0 — for one *cached* call (4.1s, reasoning off) | §3.1, `eval/ABLATION.md` |
+| a post-answer faithfulness judge | prompt contract + deterministic citation resolution | **+6s p50, no pass-rate change** on 23 labelled cases, and ~**1 honest answer in 5** flagged at model parity | §3.7, `dev_docs/DATAFLOW.md` §6 |
+| contradiction candidates by `top_k` | every passage above a similarity floor | the real leave-cap conflict ranks **3rd of 4** there and would rank **41st among 60** similar chunks | §4.1 |
+| embedding a chunk *as a query* to find its neighbours | stored-vector vs stored-vector | the same pair scores **0.601 query-vs-stored** vs **0.678 stored-vs-stored**, so the 0.65 floor excluded the conflict it was calibrated on | §4.1 |
+| the lexical gate as the decider | the decision model decides; lexical signals are evidence | word overlap cannot see "may work from home two days" vs "expected on site three days"; with no endpoint the scan now says INCOMPLETE instead of "clean" | §4.2 |
+| one decision-model request per pair | batches of 6 + 4 threads, near-threshold pairs re-asked alone | **216.2s → 29.8s**, same 6 flags; batching alone shifted scores ≤0.24 and flipped 2 of 6, which is why the 0.15 re-check band exists | §4.3 |
+| sequential window parsing at default reasoning | parallel windows, `INGEST_REASONING_EFFORT=off` | **501.7s → 78.2s** per four-document pack, chunks identical (`sha256`) | §2, `eval/compare_parse_modes.py` |
+| benchmark questions in parallel by default | `--workers` is opt-in and stamps a `timing_note` | 373.9s → **67.8s** wall, but per-question times then include contention — comparable only within the same setting | §6 |
+| a general "background is part of the question" prompt rule | reverted | MH-01 **4/6 → 3/6** with the rule, 4/6 with a worked example, whole pack **19/20 → 18/20**; the model learned to *notice* the condition and still led with the wrong figure | `eval/ABLATION.md` §12 |
+
+The last row is the one we would most want a reviewer to read: a plausible prompt
+improvement that was implemented, measured, and thrown away. It stays in the
+document because the negative result is the thing that stopped it shipping.
+
+Two of these deserve a paragraph rather than a cell.
+
+**The judge.** A faithfulness judge was built (and calibrated: TPR 10/10, TNR 8/10 on
+injected claims) because "verify the answer with a second model" looks obviously
+right. Measured at model parity it added ~6s to p50, changed no pass rate, and
+flagged about one honest answer in five — the cost was paid on every question and the
+benefit was not measurable. It is not deleted: it runs offline as an audit tool
+(`eval/calibrate_judge.py`), which is where a finite-precision second opinion is
+worth having.
+
+**The gate.** The contradiction scan started with a lexical gate that decided, was
+inverted to "heuristic signals handed to a decision model", and then made batched +
+threaded. The reversal is the interesting part: a lexical verdict is a language
+decision made by word overlap, so the corpus could look clean simply because a
+conflict used different words. Words are still useful — as evidence for a model that
+reads the passages.
+
+### 7.2 Rejected on structure, with no number behind it
+
+| rejected | why | what would change our mind |
+|---|---|---|
+| LangChain / LlamaIndex | hides exactly the failure modes this repo is about (malformed args → repair → feedback → forced answer) behind a framework API | multi-agent graphs or tracing we do not have |
+| Chroma / pgvector / a vector service | brute-force cosine over a cached matrix is sub-millisecond at 10³–10⁴ chunks; a service adds an install step to a ten-minute README | ~10⁵ chunks, or more than one writer process |
+| `eval()` for `calculate` | the expression is model output whose context contains ingested documents; `eval` there reads files and environment variables. The AST whitelist rejects `__import__(...)`, attribute access, `exec` and comprehensions — each attempt is a test case | never |
+| strict schema rejection without repair | burns a whole turn on trivially repairable JSON | an endpoint that never emits malformed arguments |
+| a similarity threshold that auto-refuses | it would refuse an answer that sits just under the cut; "is this covered?" is a judgement made with the passages in front of the model | never — it is the same shortcut class as a regex intent gate |
+| async httpx client | the agent loop is sequential by construction (next call depends on the last observation); sync keeps it thread-safe beside background ingestion and scanning | token-level streaming inside a turn |
+| Celery / RQ | the `jobs` table already gives resumable progress for a single-node process | more than one worker host |
+| per-caller `max_tokens` budgets | billing follows actual output; a small cap truncated the classifier's JSON mid-object at 700 tokens | an endpoint that bills reserved tokens |
+| weighted sum of cosine + BM25 | the scales are incomparable and per-query normalisation flips ranking; RRF needs ranks only. Measured: a **tie** at k≥3, sparse wins one exact-token case, hybrid loses one paraphrase case | a corpus where the k=1 gap matters (§2.1 says how to check) |
+| markdown links or footnotes in answers | a URL can be fabricated; `[doc § section]` resolves deterministically and is clickable | a citation syntax that can be validated as cheaply |
+| hosted embeddings | policy text stays local, no key, no per-query bill; only the chat call leaves the machine | a corpus where local embedding is the bottleneck |
+| fixed-size token chunks | a citation must name a section, and a fixed cut lands mid-clause; heading boundaries are what make `[doc § 4.2 Dental implants]` possible | a corpus with no headings at all |
+| table-aware PDF extraction | not built: the reader flattens tables, so a wide benefits table survives as word order rather than cells | it is §8.4 — the first thing to build next |
+
+### 7.3 Refused on scope, not on merit
+
+Auth/roles, multi-tenant corpora, OCR for scanned PDFs, a version/supersede graph,
+per-answer feedback capture, token-level streaming, a cross-encoder reranker and a
+CI eval gate are each named in §8 or §9 with what it would take. They are out of
+scope by the brief and by cost — not because they are wrong.
 
 ## 8. If I had two more weeks
 
