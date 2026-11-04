@@ -332,3 +332,46 @@ Also caught by the audit while doing this: citation resolution attributed
 "Remote Work Policy v2" to `remote_work_policy_v1` (first substring/fuzzy match
 wins, 0.72 threshold, the two names are 0.97 similar). Fixed with unique-candidate
 resolution; ambiguous references now warn instead of resolving. `tests/test_naming.py`.
+
+## 8. Working memory and arithmetic for the agent
+
+Added two capabilities to the ReAct toolset, both *optional by prompt rule* - no
+complexity detector decides anything:
+
+* `calculate` - arithmetic over named variables, AST-whitelisted (no `eval`, no
+  attributes, no imports), returning the value and the resolved expression. This
+  is also what makes a derived number auditable: the prompt requires computed
+  figures to name their inputs and the calculation, so a reviewer can re-check
+  12 x 7 / 12 instead of trusting prose.
+* `scratchpad_write / read / edit / delete / list` - per-question working memory,
+  in memory, bounded (12 notes, 4k chars each, 12k total), never persisted and
+  never treated as evidence. It exists for long, multi-document questions where
+  the failure mode is reconstructing a number read twenty turns ago.
+
+Measured on the live stack (deepseek-v4.1-flash, 7-document corpus):
+
+| question | calls | notes | parallel turns | latency |
+|---|---|---|---|---|
+| "How many casual leave days do I get per year?" | 2 | 0 | 1 | 9.7s |
+| "What is the notice period to change my remote arrangement?" | 4 | 0 | 2 | 16s |
+| compare v1/v2 carry-forward + pro-rate a resignation | 18 | 2 written, 1 read back | 7 | 60s |
+
+The first prompt version produced **zero** notes on the complex question: the
+model judged itself able to hold six passages. Two wording changes fixed it, and
+both are prompt-only: (1) name the trigger the model already sees in its own
+INTENT PLAN ("if the intent is MULTI_HOP_COMPARISON ..."), and (2) put the
+read-back step in the final-answer section ("if you wrote notes, read them before
+answering"), because otherwise it writes notes and never reads them - the first
+tuned run wrote two notes and read none.
+
+Cost, stated plainly: the complex question went from 34s / 8 calls to 60s / 18
+calls. That is the price of the notes-plus-arithmetic path, and it is paid only
+on multi-hop questions; the simple cases did not get slower (9.7s vs 14.7s before
+the change, because batching cut a round trip).
+
+Parallel tool calling needed no code: the loop already executed every
+`tool_calls` entry in a turn and answered with one tool message per call id. It
+was never *used* because nothing said it was allowed. One prompt rule (plus
+reconciling "one action per turn" with it) produced 7 batched turns on the
+complex question and 1-2 on the simple ones; `parallel_turns` on `AgentResult`
+makes it observable.

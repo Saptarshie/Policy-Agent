@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 
 from ..db import Database
 from ..rag import RAGEngine
+from .calc import calculate
+from .scratchpad import Scratchpad
 
 TOOL_SPECS: List[Dict[str, Any]] = [
     {
@@ -94,6 +96,123 @@ TOOL_SPECS: List[Dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "calculate",
+            "description": (
+                "Evaluate arithmetic exactly. Use this for ANY computed figure - "
+                "pro-rated entitlements, totals, per-night or per-day costs, tax on "
+                "a stated salary, percentage changes - instead of doing the maths in "
+                "your head. Supply the numbers you read or were given as named "
+                "variables, and state the calculation in the answer. "
+                "Allowed: + - * / // % **, parentheses, abs, round, min, max."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "Arithmetic over the variable names, e.g. days * months / 12",
+                    },
+                    "variables": {
+                        "type": "object",
+                        "description": "Numbers the expression refers to, e.g. {days: 12, months: 7}",
+                        "additionalProperties": True,
+                    },
+                },
+                "required": ["expression"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "scratchpad_write",
+            "description": (
+                "Save a finding to your working notes for this question. Use it when "
+                "the work spans several documents or many steps: park the exact "
+                "number/rule plus its citation, then keep reading. It is NOT evidence "
+                "and NOT visible to the employee - write what a passage actually says, "
+                "and re-read the notes with scratchpad_read before composing a long "
+                "answer. For a single-fact question you do not need it."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "Short note name, e.g. leave_cap"},
+                    "text": {"type": "string", "description": "The finding, with its citation"},
+                    "append": {"type": "boolean",
+                               "description": "Append to the note instead of replacing it (default false)"},
+                },
+                "required": ["key", "text"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "scratchpad_read",
+            "description": (
+                "Read your working notes back - one note by key, or all of them when "
+                "key is omitted. Read before writing a long or multi-part answer so "
+                "you use what you already found instead of re-deriving or guessing it."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "description": "Note to read; omit for all notes"},
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "scratchpad_edit",
+            "description": (
+                "Correct one note in place: replace the first occurrence of find with "
+                "replace. Use it when a later passage supersedes an earlier finding, "
+                "e.g. an amendment changed the cap you wrote down."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "find": {"type": "string", "description": "Exact text to replace"},
+                    "replace": {"type": "string", "description": "New text (may be empty)"},
+                },
+                "required": ["key", "find", "replace"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "scratchpad_delete",
+            "description": "Delete a note that is wrong or no longer relevant.",
+            "parameters": {
+                "type": "object",
+                "properties": {"key": {"type": "string"}},
+                "required": ["key"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "scratchpad_list",
+            "description": "List your notes and their sizes (cheaper than reading them all).",
+            "parameters": {"type": "object", "properties": {},
+                           "required": [], "additionalProperties": False},
+        },
+    },
 ]
 
 
@@ -111,7 +230,16 @@ class ToolRegistry:
             "read_policy_chunk": self._read_chunk,
             "list_policy_documents": self._list_docs,
             "get_document_summary": self._doc_summary,
+            "calculate": self._calculate,
+            "scratchpad_write": self._scratch_write,
+            "scratchpad_read": self._scratch_read,
+            "scratchpad_edit": self._scratch_edit,
+            "scratchpad_delete": self._scratch_delete,
+            "scratchpad_list": self._scratch_list,
         }
+        # set per ask() call: working notes belong to one question, so two
+        # concurrent questions can never read each other's notes
+        self.scratch: Optional[Scratchpad] = None
 
     # ------------------------------------------------------------- properties
 
@@ -140,7 +268,9 @@ class ToolRegistry:
 
     # ---------------------------------------------------------------- execute
 
-    def execute(self, name: str, args: Dict[str, Any]) -> str:
+    def execute(self, name: str, args: Dict[str, Any],
+                scratch: Optional[Scratchpad] = None) -> str:
+        self.scratch = scratch
         handler = self._handlers.get(name)
         if handler is None:
             return f"ERROR: unknown tool '{name}' (available: {', '.join(self.names)})"
@@ -235,3 +365,35 @@ class ToolRegistry:
             parts.append("Main statements (extracted during ingestion):")
             parts += [f"  - {s[:300]}" for s in statements[:15]]
         return "\n".join(parts)
+
+    # ------------------------------------------------- working memory + maths
+
+    def _need_scratch(self) -> Scratchpad:
+        if self.scratch is None:
+            raise RuntimeError("the scratchpad is not available in this context")
+        return self.scratch
+
+    def _calculate(self, args: Dict[str, Any]) -> str:
+        result = calculate(str(args.get("expression", "")),
+                           args.get("variables") or {})
+        return (f"{result['value']}   (expression: {result['resolved']})\n"
+                "State this figure with its inputs in the answer: a computed number "
+                "must be traceable, and the documents do not state it.")
+
+    def _scratch_write(self, args: Dict[str, Any]) -> str:
+        pad = self._need_scratch()
+        key, text = args.get("key", ""), args.get("text", "")
+        return pad.append(key, text) if args.get("append") else pad.write(key, text)
+
+    def _scratch_read(self, args: Dict[str, Any]) -> str:
+        return self._need_scratch().read(str(args.get("key", "") or ""))
+
+    def _scratch_edit(self, args: Dict[str, Any]) -> str:
+        return self._need_scratch().edit(args.get("key", ""), args.get("find", ""),
+                                         args.get("replace", ""))
+
+    def _scratch_delete(self, args: Dict[str, Any]) -> str:
+        return self._need_scratch().delete(args.get("key", ""))
+
+    def _scratch_list(self, args: Dict[str, Any]) -> str:
+        return self._need_scratch().list_keys()

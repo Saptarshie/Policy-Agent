@@ -30,6 +30,8 @@ app/
     intent.py        triage: one LLM call -> IntentPlan (category, route, queries)
     intent_legacy.py regex triage, ablation baseline only — never wired in
     tools.py         the four retrieval tools + observation formatting
+    calc.py          safe arithmetic: AST whitelist, variables, no eval
+    scratchpad.py    per-question working memory (12 notes, 12k chars, in memory)
     react.py         the ReAct loop, answer extraction, citation resolution
     verify.py        faithfulness judge — OFFLINE AUDIT ONLY (see §6)
     answer_shape.py  answer-shape classifier — OFFLINE AUDIT ONLY
@@ -120,9 +122,14 @@ question
   │        c. schema_repair: validate arguments; on failure send a
   │           TOOL_CALL_ERROR observation and let the model correct it -
   │           never a fabricated tool result
-  │        d. tools.execute(name, args) -> observation string (capped)
-  │           search_policy_docs | read_policy_chunk |
-  │           list_policy_documents | get_document_summary
+  │        d. tools.execute(name, args, scratch) -> observation string (capped)
+  │           retrieval : search_policy_docs | read_policy_chunk |
+  │                       list_policy_documents | get_document_summary
+  │           thinking  : calculate | scratchpad_write | scratchpad_read |
+  │                       scratchpad_edit | scratchpad_delete | scratchpad_list
+  │           several tool_calls in ONE assistant message are all executed and
+  │           answered with one tool message per call id (parallel calling);
+  │           `parallel_turns` records how often the model batched
   │        e. append observation, record seen_chunk_ids (provenance of what the
   │           agent actually read)
   │
@@ -250,6 +257,8 @@ The measurement apparatus is kept, not deleted:
 | document name ambiguous ("Remote Work Policy") | warning, citation excluded — never guessed |
 | embedding model changed | `RuntimeError` naming the model and dimension |
 | process killed mid-ingest | next start reconciles the job to error, document flagged |
+| scratchpad full | the write fails with the current note list; the agent must delete one |
+| unsafe arithmetic (`__import__`, attribute, `10**99`) | `CalcError`, reported to the agent as a tool error |
 | upload too large | rejected before anything is stored |
 
 ---

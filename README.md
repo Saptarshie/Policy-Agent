@@ -3,7 +3,12 @@
 A complete, self-contained **RAG-based policy document QA agent** with:
 
 - **ReAct agent + tool_call loop** — the agent thinks step by step, calls tools
-  (`search_policy_docs`, `read_policy_chunk`, …), uses the result of the last
+  (`search_policy_docs`, `read_policy_chunk`, `calculate`, `scratchpad_*`, …) and
+  may batch several independent calls into one turn. It keeps a per-question
+  scratchpad for long multi-document work (notes are working memory, never
+  evidence) and does its arithmetic through `calculate`, so a derived number has
+  a traceable derivation. Both are optional by prompt rule: a one-passage
+  question is answered directly, without notes. It uses the last
   call to decide the next one, then synthesises a final answer.
 - **Citation-grounded answering** — every policy claim must cite
   `[doc_name § Section]` / `[doc_name #chunk_id]`; citations are verified
@@ -256,7 +261,9 @@ policy-rag-agent/
 │   ├── cli.py                  # command line interface
 │   ├── agent/
 │   │   ├── react.py            # ReAct loop + citation checking
-│   │   ├── tools.py            # agent tool registry
+│   │   ├── tools.py            # agent tool registry (10 tools)
+│   │   ├── calc.py             # safe arithmetic (AST whitelist, no eval)
+│   │   ├── scratchpad.py       # per-question working memory (bounded, in memory)
 │   │   ├── intent.py           # LLM intent & triage layer (cache, fail-open)
 │   │   ├── intent_legacy.py    # the old regex gate - ablation baseline only
 │   │   ├── answer_shape.py     # answer|partial|refusal|chitchat via the decision model

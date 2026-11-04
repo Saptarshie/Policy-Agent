@@ -22,6 +22,7 @@ from ..llm import LLMError, LLMResponse, OpenAICompatClient
 from ..naming import resolve_one
 from ..prompts import AGENT_SYSTEM
 from ..schema_repair import extract_tool_calls_from_text, make_tool_error_feedback, repair_json, validate_arguments
+from .scratchpad import Scratchpad
 from .tools import ToolRegistry
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,8 @@ class AgentResult:
     faithful: Optional[bool] = None
     answer_shape: str = ""                   # answer|partial|refusal|chitchat|unknown
     declined_parts: List[str] = field(default_factory=list)
+    scratch_notes: int = 0                   # notes the agent kept while working
+    parallel_turns: int = 0                  # turns that carried more than one tool call
     unsupported_claims: List[str] = field(default_factory=list)
     tool_calls: int = 0
     elapsed_s: float = 0.0
@@ -59,6 +62,8 @@ class AgentResult:
             "judge_context_ids": self.judge_context_ids,
             "faithful": self.faithful,
             "answer_shape": self.answer_shape,
+            "scratch_notes": self.scratch_notes,
+            "parallel_turns": self.parallel_turns,
             "declined_parts": self.declined_parts,
             "unsupported_claims": self.unsupported_claims,
             "tool_calls": self.tool_calls,
@@ -173,6 +178,9 @@ class ReactAgent:
 
         steps: List[Dict[str, Any]] = []
         n_tool_calls = 0
+        parallel_turns = 0
+        # working memory for THIS question only (in memory, never persisted)
+        scratch = Scratchpad()
         error: Optional[str] = None
         answer = ""
         seen_chunk_ids: List[int] = []
@@ -195,8 +203,10 @@ class ReactAgent:
                 if resp.content and resp.content.strip():
                     steps.append({"type": "thought", "content": resp.content.strip()})
                 messages.append(self._native_assistant_msg(resp))
+                if len(resp.tool_calls) > 1:
+                    parallel_turns += 1
                 for tc in resp.tool_calls:
-                    obs, step = self._run_tool(tc.name, tc.arguments)
+                    obs, step = self._run_tool(tc.name, tc.arguments, scratch)
                     _remember_chunks(obs)
                     steps.append(step)
                     if step["type"] == "tool_call":
@@ -210,9 +220,11 @@ class ReactAgent:
                 resp.content or "", self.registry.names)
             if text_calls:
                 messages.append(self._text_assistant_msg(resp, text_calls))
+                if len(text_calls) > 1:
+                    parallel_turns += 1
                 for k, c in enumerate(text_calls):
                     raw = json.dumps(c.get("arguments") or {})
-                    obs, step = self._run_tool(c.get("name", ""), raw)
+                    obs, step = self._run_tool(c.get("name", ""), raw, scratch)
                     _remember_chunks(obs)
                     steps.append(step)
                     if step["type"] == "tool_call":
@@ -254,6 +266,8 @@ class ReactAgent:
             citation_warnings=warnings,
             seen_chunk_ids=seen_chunk_ids,
             tool_calls=n_tool_calls,
+            scratch_notes=len(scratch.notes),
+            parallel_turns=parallel_turns,
             elapsed_s=time.time() - t0,
             error=error,
         )
@@ -291,7 +305,7 @@ class ReactAgent:
             ],
         }
 
-    def _run_tool(self, name: str, raw_args: str):
+    def _run_tool(self, name: str, raw_args: str, scratch=None):
         """Repair -> validate -> execute. Returns (observation, step)."""
         spec = self.registry.get_spec(name)
         if spec is None:
@@ -319,7 +333,7 @@ class ReactAgent:
             return obs, {"type": "tool_error", "tool": name,
                          "problems": errors, "observation": obs[:300]}
 
-        obs = self.registry.execute(name, cleaned)
+        obs = self.registry.execute(name, cleaned, scratch=scratch)
         step = {
             "type": "tool_call",
             "tool": name,
