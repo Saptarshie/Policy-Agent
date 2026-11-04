@@ -1,0 +1,21 @@
+{
+  "dataset_name": "Northstar Dynamics Synthetic HR RAG Benchmark",
+  "version": "1.0",
+  "documents": [
+    "01_LEAVE_AND_ATTENDANCE_POLICY.md",
+    "02_HEALTH_AND_WELLBEING_BENEFITS.md",
+    "03_WORKPLACE_EXPENSE_AND_REMOTE_WORK_POLICY.md",
+    "04_TRAVEL_RELOCATION_AND_MOBILITY_POLICY.md"
+  ],
+  "benchmark_files": [
+    "benchmark_20_multihop.jsonl",
+    "BENCHMARK.md"
+  ],
+  "counts": {
+    "documents": 4,
+    "queries": 20,
+    "answerable": 18,
+    "refusal": 2
+  },
+  "note": "All policies, entities, amounts, and scenarios are synthetic."
+}

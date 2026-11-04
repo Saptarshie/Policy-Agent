@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 data/
+data_bench/            # benchmark index (rebuildable: eval/run_benchmark.py)
 *.sqlite3
 .venv/
 venv/

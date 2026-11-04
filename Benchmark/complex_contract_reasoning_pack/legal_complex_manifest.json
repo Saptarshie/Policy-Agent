@@ -1,0 +1,35 @@
+{
+  "dataset_name": "Alderstone-BlueHarbor Complex Contract Reasoning Benchmark",
+  "version": "2.0",
+  "synthetic": true,
+  "documents": [
+    "01_MASTER_SERVICES_AGREEMENT.md",
+    "02_ENTERPRISE_ORDER_FORM_AND_CHANGE_ORDERS.md",
+    "03_SERVICE_LEVEL_AND_SUPPORT_SCHEDULE.md",
+    "04_DATA_PROCESSING_AND_SECURITY_ADDENDUM.md"
+  ],
+  "benchmark_files": [
+    "LEGAL_COMPLEX_BENCHMARK.md",
+    "legal_complex_benchmark_20.jsonl"
+  ],
+  "query_count": 20,
+  "capabilities": [
+    "multi-document retrieval",
+    "contract hierarchy",
+    "temporal reasoning",
+    "arithmetic",
+    "exceptions and carve-outs",
+    "remedy chaining",
+    "formalities",
+    "anti-loophole analysis",
+    "calibrated uncertainty"
+  ],
+  "recommended_metrics": [
+    "exact/semantic answer correctness",
+    "citation precision",
+    "citation recall",
+    "reasoning-condition coverage",
+    "unsupported-claim rate",
+    "calibration on insufficient facts"
+  ]
+}
