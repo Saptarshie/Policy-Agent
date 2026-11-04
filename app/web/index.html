@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Policy RAG Agent</title>
+<title>PolicyPilot — RAG policy QA</title>
 <style>
   :root {
     --bg: #0f1420; --panel: #171e2e; --panel2: #1d2740; --line: #2a3652;
@@ -78,6 +78,17 @@
   .flag .sig { color: var(--muted); font-size: 11px; }
   .empty { color: var(--muted); font-size: 12.5px; padding: 8px; }
   .thinking { color: var(--muted); font-style: italic; font-size: 12px; }
+  .msg h3, .msg h4, .msg h5, .msg h6 { margin: 10px 0 4px; font-size: 14px; }
+  .msg h3 { font-size: 15px; }
+  .msg ul, .msg ol { margin: 4px 0 4px 18px; padding: 0; }
+  .msg li { margin: 2px 0; }
+  .msg code { background: #101624; border-radius: 4px; padding: 1px 4px; font-size: 12.5px; }
+  .msg blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--line);
+                    background: #101624; border-radius: 0 8px 8px 0; color: var(--muted); }
+  .msg table { border-collapse: collapse; margin: 8px 0; font-size: 12.5px; display: block; overflow-x: auto; }
+  .msg th, .msg td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+  .msg th { background: #101624; }
+  .msg hr { border: none; border-top: 1px solid var(--line); margin: 8px 0; }
 </style>
 </head>
 <body>
@@ -113,7 +124,10 @@ I search, read and cite the actual policy text — and I'll tell you when the do
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cite = (s) => esc(s).replace(/\[([^\[\]]+)\]/g, '<span class="cite">[$1]</span>');
+const citeHtml = (html) => html.replace(
+  /\[([^\[\]<]{3,120})\]/g,
+  (m, inner) => (/§/.test(inner) || /^[A-Za-z0-9_.\- ]+$/.test(inner))
+    ? `<span class="cite">[${inner}]</span>` : m);
 
 const history = [];
 
@@ -163,8 +177,8 @@ async function refreshDocs() {
         ${d.summary ? `<details><summary style="color:var(--muted);font-size:11px;cursor:pointer">rolling summary</summary>
           <div class="meta">${esc(d.summary)}</div></details>` : ''}
         <div style="margin-top:6px">
-          ${d.status === 'ready' ? `<button class="btn" onclick="rescan(${d.id})">rescan conflicts</button>` : ''}
-          <button class="btn danger" onclick="delDoc(${d.id}, '${esc(d.name).replace(/'/g,"\\'")}')">delete</button>
+          ${d.status === 'ready' ? `<button class="btn" data-rescan="${d.id}">rescan conflicts</button>` : ''}
+          <button class="btn danger" data-del="${d.id}" data-name="${esc(d.name)}">delete</button>
         </div>
       </div>`;
     }).join('');
@@ -192,8 +206,8 @@ async function refreshFlags() {
         <details class="trace"><summary>gate signals (JEV decision model)</summary>
           <div class="sig">${(f.gate_signals||[]).map(esc).join('<br>')}</div></details>
         <div style="margin-top:8px">
-          <button class="btn" onclick="setFlag(${f.id},'resolved')">✔ resolved</button>
-          <button class="btn" onclick="setFlag(${f.id},'dismissed')">✕ dismiss</button>
+          <button class="btn" data-flag="${f.id}" data-status="resolved">✔ resolved</button>
+          <button class="btn" data-flag="${f.id}" data-status="dismissed">✕ dismiss</button>
         </div>
       </div>`).join('');
   } catch (e) { $('flagList').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
@@ -229,16 +243,89 @@ async function rescan(id) {
   poll();
 }
 
+// one listener per list: ids and names live in data attributes, never in a
+// script context, so a name like Bob's "Q1" policy cannot break the markup
+$('docList').addEventListener('click', (ev) => {
+  const rescanBtn = ev.target.closest('[data-rescan]');
+  if (rescanBtn) { rescan(Number(rescanBtn.dataset.rescan)); return; }
+  const delBtn = ev.target.closest('[data-del]');
+  if (delBtn) { delDoc(Number(delBtn.dataset.del), delBtn.dataset.name || ''); }
+});
+
+$('flagList').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-flag]');
+  if (btn) setFlag(Number(btn.dataset.flag), btn.dataset.status);
+});
+
 async function setFlag(id, status) {
   try { await api(`/api/contradictions/${id}/status`, { method: 'POST', body: JSON.stringify({ status }) }); }
   catch (e) { alert(e.message); }
   poll();
 }
 
+// Markdown the agent actually emits, rendered AFTER escaping: headings, bold,
+// italics, inline code, bullet and numbered lists, blockquotes, tables, rules.
+// Anything not matched stays as text, so an odd answer degrades to plain text
+// rather than to broken HTML.
+function md(raw) {
+  const lines = esc(raw).split('\n');
+  const out = [];
+  let list = null, table = null;
+  const flushList = () => {
+    if (list) { out.push(`<${list.tag}>${list.items.join('')}</${list.tag}>`); list = null; }
+  };
+  const flushTable = () => {
+    if (!table || !table.length) { table = null; return; }
+    const [head, ...body] = table;
+    out.push('<table><thead><tr>' + head.map(c => `<th>${c}</th>`).join('') + '</tr></thead>'
+      + (body.length ? '<tbody>' + body.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('') + '</tbody>' : '')
+      + '</table>');
+    table = null;
+  };
+  const inline = (t) => t
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { flushList(); flushTable(); out.push(null); continue; }   // null = paragraph break
+    if (/^\|.*\|$/.test(t)) {                        // markdown table row
+      if (/^\|[\s:|-]+\|$/.test(t)) { continue; }    // |---|---| separator
+      flushList();
+      (table = table || []).push(t.replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim())));
+      continue;
+    }
+    flushTable();
+    const h = t.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { flushList(); const n = Math.min(h[1].length + 2, 6); out.push(`<h${n}>${inline(h[2])}</h${n}>`); continue; }
+    if (/^([-*_])\1{2,}$/.test(t)) { flushList(); out.push('<hr>'); continue; }
+    const b = t.match(/^[-*+]\s+(.*)$/);
+    if (b) { if (!list || list.tag !== 'ul') { flushList(); list = { tag: 'ul', items: [] }; }
+             list.items.push(`<li>${inline(b[1])}</li>`); continue; }
+    const o = t.match(/^(\d+)[.)]\s+(.*)$/);
+    if (o) { if (!list || list.tag !== 'ol') { flushList(); list = { tag: 'ol', items: [] }; }
+             list.items.push(`<li>${inline(o[2])}</li>`); continue; }
+    const q = t.match(/^&gt;\s?(.*)$/);
+    if (q) { flushList(); out.push(`<blockquote>${inline(q[1])}</blockquote>`); continue; }
+    flushList();
+    out.push(inline(t) + '<br>');
+  }
+  flushList(); flushTable();
+  // one blank line at most between blocks, none at the edges
+  const kept = [];
+  for (const item of out) {
+    if (item === null) { if (kept.length && kept[kept.length - 1] !== '') kept.push(''); continue; }
+    kept.push(item);
+  }
+  while (kept.length && kept[kept.length - 1] === '') kept.pop();
+  return kept.join("\n");
+}
+
 function addMsg(cls, text) {
   const div = document.createElement('div');
   div.className = 'msg ' + cls;
-  div.innerHTML = cls === 'agent' ? cite(text) : esc(text);
+  div.innerHTML = cls === 'agent' ? citeHtml(md(text)) : esc(text);
   $('chatlog').appendChild(div);
   $('chatlog').scrollTop = $('chatlog').scrollHeight;
   return div;
@@ -255,7 +342,7 @@ async function send() {
   try {
     const res = await api('/api/ask', { method: 'POST', body: JSON.stringify({ question: q, history: history.slice(-10) }) });
     history.push({ role: 'assistant', content: res.answer });
-    let html = cite(res.answer || '(no answer)');
+    let html = citeHtml(md(res.answer || '(no answer)'));
     if (res.error) html += `<div class="warnbox">agent error: ${esc(res.error)}</div>`;
     if (res.citation_warnings && res.citation_warnings.length)
       html += `<div class="warnbox">⚠ citation check: ${res.citation_warnings.map(esc).join('<br>')}</div>`;

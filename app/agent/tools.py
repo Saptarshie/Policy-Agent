@@ -107,6 +107,37 @@ TOOL_SPECS: List[Dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "list_contradictions",
+            "description": (
+                "List the contradictions the scanner found between passages "
+                "(verified ones include what each side says and why they "
+                "conflict). Use this when the user asks whether the documents "
+                "disagree, contradict, conflict or are inconsistent - it is the "
+                "audit trail of exactly those pairs, so prefer it to guessing "
+                "from search results. Returns nothing for a corpus with no "
+                "flags, which means no conflict was found, not that none exists."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": "OPEN (default), resolved, dismissed, or all",
+                        "enum": ["OPEN", "resolved", "dismissed", "all"],
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "maximum flags to return (default 10)",
+                    },
+                },
+                "required": [],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "calculate",
             "description": (
                 "Evaluate arithmetic exactly. Use this for ANY computed figure - "
@@ -241,6 +272,7 @@ class ToolRegistry:
             "read_policy_chunk": self._read_chunk,
             "list_policy_documents": self._list_docs,
             "get_document_summary": self._doc_summary,
+            "list_contradictions": self._contradictions,
             "calculate": self._calculate,
             "scratchpad_write": self._scratch_write,
             "scratchpad_read": self._scratch_read,
@@ -395,6 +427,34 @@ class ToolRegistry:
         return "\n".join(parts)
 
     # ------------------------------------------------- working memory + maths
+
+    def _contradictions(self, args: Dict[str, Any]) -> str:
+        status = str(args.get("status") or "OPEN").strip()
+        limit = max(1, min(int(args.get("limit") or 10), 25))
+        rows = self.db.list_contradictions(None if status.lower() == "all" else status)
+        if not rows:
+            return (f"No {status} contradictions are recorded. Treat this as "
+                    "\"none found so far\", not as proof the documents agree: "
+                    "the scanner only compares passages it can see, and flags "
+                    "can also have been dismissed by an admin.")
+        lines = [f"{len(rows)} {status} contradiction(s); showing up to {limit}:"]
+        for f in rows[:limit]:
+            tag = "VERIFIED" if f.get("verified") else "UNVERIFIED"
+            lines.append(
+                f"\n#{f['id']} [{tag}, {f.get('status')}, confidence {float(f.get('confidence') or 0):.2f}, "
+                f"gate {float(f.get('gate_score') or 0):.2f}]")
+            lines.append(f"  A: {f.get('doc_a')} § {f.get('section_a')} "
+                         f"(chunk {f.get('chunk_a_id')})")
+            lines.append(f"     \"{(f.get('text_a') or '')[:300]}\"")
+            lines.append(f"  B: {f.get('doc_b')} § {f.get('section_b')} "
+                         f"(chunk {f.get('chunk_b_id')})")
+            lines.append(f"     \"{(f.get('text_b') or '')[:300]}\"")
+            lines.append(f"  Why: {f.get('explanation') or '(no explanation)'}")
+        if len(rows) > limit:
+            lines.append(f"\n...{len(rows) - limit} more not shown")
+        lines.append("\nCite these as you would any other passage, e.g. "
+                     "[doc_name § section].")
+        return "\n".join(lines)
 
     def _need_scratch(self) -> Scratchpad:
         if self.scratch is None:

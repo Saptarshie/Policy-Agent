@@ -1,0 +1,131 @@
+{
+  "answer": "## Direct answer\n\n**Casual leave cannot be encashed at all**, so the \"encash 2 days\" step in your question is not permitted by the policy. Taking 3 days from a 14-day balance leaves **11 days** (14 \u2212 3 = 11).\n\n## How the balance is calculated\n\n**Accrual and usage** [leave_policy \u00a7 3.1 Accrual and Usage]:\n- Casual leave accrues at **1 day per completed month of service, up to 12 days per calendar year**.\n- The balance is visible in the HRMS at the start of each month.\n- You may use leave as soon as it has accrued; **advancing usage against future accrual is not permitted** \u2014 so the balance can never go negative.\n- Probationary employees are limited to 1 casual leave day per month [leave_policy \u00a7 1. Overview].\n\n**Deduction:** each approved casual leave day simply reduces the accrued balance by one day. The policy states no other formula, multiplier or deduction rule for casual leave.\n\n**Your 14-day starting figure:** the annual entitlement is 12 days [leave_policy \u00a7 2. Leave Types and Annual Entitlements], so a 14-day balance must include carried-forward days \u2014 14 \u2212 12 = 2 days carried in from the prior year. That is consistent with the carry-forward rules below.\n\n## Encashment \u2014 the part that does not apply to casual leave\n\n- **Casual leave:** any unused balance above the carry-forward cap \"lapses permanently on December 31 and **cannot be recovered, encashed, or transferred to another leave type**\" [leave_policy \u00a7 3.2 Carry-Forward].\n- **Encashment exists only for Earned/Privilege Leave:** \"Up to 5 unused days may be encashed at year end\" [leave_policy \u00a7 2. Leave Types and Annual Entitlements].\n\nSo if you want to encash 2 days, that has to come out of your Earned/Privilege Leave balance (18 days/year, 1.5 days per month, max 5 encashed at year end) \u2014 it cannot be taken from casual leave, and it does not reduce your casual leave balance.\n\n## Carry-forward cap (relevant to the 14-day balance)\n\n- The base policy caps carry-forward at **6 days**, with anything above lapsing on December 31 [leave_policy \u00a7 3.2 Carry-Forward].\n- **The 2025 amendment supersedes this:** effective July 1, 2025, the cap is increased from 6 to **15 days**; any balance above 15 lapses on December 31, and carry-forward is applied automatically in the first payroll cycle of January [leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)].\n\nUnder the amended 15-day cap, a 14-day balance would carry forward in full.\n\n## Summary of the arithmetic\n\n| Step | Days |\n|---|---|\n| Starting balance (given) | 14 |\n| Less 3 days taken | \u22123 |\n| **Remaining casual leave** | **11** (14 \u2212 3) |\n| Encash 2 days from casual leave | **Not permitted** \u2014 casual leave cannot be encashed |\n\nSources:\n- [leave_policy \u00a7 3.1 Accrual and Usage]\n- [leave_policy \u00a7 3.2 Carry-Forward]\n- [leave_policy \u00a7 2. Leave Types and Annual Entitlements]\n- [leave_policy \u00a7 1. Overview]\n- [leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)]",
+  "steps": [
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave balance calculation encashment",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"casual leave balance calculation encashment\" (top_k=8; score in brackets):\n\n[chunk 5] Doc: leave_policy | Section: 3.1 Accrual and Usage | (score 0.033)\n\"\"\"\n## 3.1 Accrual and Usage\n\nCasual Leave accrues at 1 day per completed month of service, up to the annual entitlemen"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave entitlement days per year deduction",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"casual leave entitlement days per year deduction\" (top_k=8; score in brackets):\n\n[chunk 5] Doc: leave_policy | Section: 3.1 Accrual and Usage | (score 0.033)\n\"\"\"\n## 3.1 Accrual and Usage\n\nCasual Leave accrues at 1 day per completed month of service, up to the annual entit"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "encashment of leave at year end which leave types eligible",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"encashment of leave at year end which leave types eligible\" (top_k=8; score in brackets):\n\n[chunk 3] Doc: leave_policy | Section: 2. Leave Types and Annual Entitlements | (score 0.033)\n\"\"\"\n## 2. Leave Types and Annual Entitlements\n\nThe table below summarizes the leave typ"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "leave encashment rules casual leave cannot be encashed",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"leave encashment rules casual leave cannot be encashed\" (top_k=8; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.033)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 da"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "encash",
+        "min_similarity": 0.25
+      },
+      "observation": "Found 3 passages for query \"encash\" (min_similarity=0.25; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.270)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 days. Any unused balance above 6 days "
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave 14 days balance carried forward 15 days",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"casual leave 14 days balance carried forward 15 days\" (top_k=6; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.033)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 days"
+    },
+    {
+      "type": "tool_call",
+      "tool": "calculate",
+      "arguments": {
+        "expression": "start - taken",
+        "variables": {
+          "start": 14,
+          "taken": 3
+        }
+      },
+      "observation": "11   (expression: 14 - 3)\nState this figure with its inputs in the answer: a computed number must be traceable, and the documents do not state it."
+    },
+    {
+      "type": "final",
+      "content": "## Direct answer\n\n**Casual leave cannot be encashed at all**, so the \"encash 2 days\" step in your question is not permitted by the policy. Taking 3 days from a 14-day balance leaves **11 days** (14 \u2212 3 = 11).\n\n## How the balance is calculated\n\n**Accrual and usage** [leave_policy \u00a7 3.1 Accrual and Usage]:\n- Casual leave accrues at **1 day per completed month of service, up to 12 days per calendar y"
+    }
+  ],
+  "citations": [
+    "leave_policy \u00a7 3.1 Accrual and Usage",
+    "leave_policy \u00a7 1. Overview",
+    "leave_policy \u00a7 2. Leave Types and Annual Entitlements",
+    "leave_policy \u00a7 3.2 Carry-Forward",
+    "leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)"
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    5,
+    6,
+    3,
+    4,
+    50,
+    2,
+    9,
+    7,
+    8,
+    28
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 3,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 7,
+  "elapsed_s": 35.78,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "How is casual leave balance calculated when leave is taken and encashed, and what is the remaining balance after taking 3 days and encashing 2 days from 14 days?",
+    "search_queries": [
+      "casual leave balance calculation",
+      "casual leave encashment rules",
+      "leave deduction and encashment policy"
+    ],
+    "entities": [
+      "casual leave",
+      "14 days",
+      "3 days",
+      "2 days encashment"
+    ],
+    "requires_table_check": false,
+    "tone_guidance": "Provide a clear, step-by-step calculation based on the policy rules for casual leave deduction and encashment.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee wants to calculate their remaining casual leave balance after taking 3 days and encashing 2 days from an initial 14-day balance.",
+    "decided_by": "llm",
+    "prompt_version": "v1",
+    "latency_s": 4.14,
+    "notes": []
+  }
+}

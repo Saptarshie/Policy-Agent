@@ -141,7 +141,8 @@ class TestToolsWiring(unittest.TestCase):
         for name in ("calculate", "scratchpad_write", "scratchpad_read",
                      "scratchpad_edit", "scratchpad_delete", "scratchpad_list"):
             self.assertIn(name, names)
-        self.assertEqual(len(names), 10)
+        self.assertIn("list_contradictions", names)
+        self.assertEqual(len(names), 11)
 
     def test_calculate_through_the_registry(self):
         out = self.registry.execute("calculate",

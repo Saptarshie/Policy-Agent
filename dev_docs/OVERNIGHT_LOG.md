@@ -464,3 +464,30 @@ is exactly what the re-check band is for.
 Also settled en route: `state` as a list, `states`, `batch`, `items`, `/batch` and a
 `prefix` field are all either ignored or rejected - there is no hidden batch route,
 and the re-check band is the price of the one that exists.
+
+## 11. UI verification: five defects found by using it
+
+Ran the real server (real LLM, real decision model) on a copy of the corpus and
+clicked through the page. 42/42 API checks, 14/14 renderer cases, no console
+errors - after five fixes. Full detail in `dev_docs/UI_VERIFICATION.md`.
+
+1. **Dead buttons.** Document cards built inline handlers with user data
+   (`onclick="delDoc(11, 'Bob's travel policy')"`). `esc()` writes `&#39;`, the
+   HTML parser decodes it back to `'` before the JS parser sees the attribute, so
+   the handler is a syntax error and Delete silently does nothing. Now
+   `data-*` attributes plus delegated listeners; no user data reaches a script
+   context.
+2. **Raw markdown.** `## headings`, `**bold**` and `|---|` tables were shown
+   literally in the chat. Added an escape-then-format renderer.
+3. **Inventory answered instead of content.** "Do the policy documents contradict
+   each other about remote work?" went to META_DOCUMENTS / DIRECT_REPLY and got
+   the document list in 0.0s. META_DOCUMENTS is now inventory-only in both intent
+   prompts; content questions about the corpus (conflicts, staleness, gaps) must
+   reach the agent.
+4. **The agent could not see the flags.** It had no way to read what the cascade
+   had already verified. New tool `list_contradictions`; on that question the
+   agent now calls it first and answers from the audit trail with citations.
+5. **Stale intent cache.** The cache key was `version|model|question`, so editing
+   a prompt under the same "v1" label replayed pre-edit verdicts - which is why
+   bug 3 looked unfixed right after the patch. The key now carries a fingerprint
+   of the prompt text.

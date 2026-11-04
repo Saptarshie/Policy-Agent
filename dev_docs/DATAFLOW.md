@@ -127,6 +127,7 @@ question
   │                       list_policy_documents | get_document_summary
   │           thinking  : calculate | scratchpad_write | scratchpad_read |
   │                       scratchpad_edit | scratchpad_delete | scratchpad_list
+  │                       list_contradictions (the tracker's flags)
   │           several tool_calls in ONE assistant message are all executed and
   │           answered with one tool message per call id (parallel calling);
   │           `parallel_turns` records how often the model batched

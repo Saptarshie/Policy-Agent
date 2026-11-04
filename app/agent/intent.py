@@ -236,8 +236,13 @@ class IntentCache:
                 log.warning("intent cache unreadable; starting empty: %s", path)
 
     @staticmethod
-    def key(model: str, prompt_version: str, question: str) -> str:
-        raw = f"{prompt_version}|{model}|{' '.join((question or '').split())}"
+    def key(model: str, prompt_version: str, question: str,
+            prompt_fingerprint: str = "") -> str:
+        """Cache key. The prompt FINGERPRINT is part of it on purpose: editing the
+        routing prompt under the same version label used to replay the old
+        verdict forever, which is exactly the situation during prompt tuning."""
+        raw = (f"{prompt_version}|{prompt_fingerprint}|{model}|"
+               f"{' '.join((question or '').split())}")
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
     def get(self, key: str) -> Optional[Dict[str, Any]]:
@@ -288,6 +293,10 @@ class IntentRouter:
         self.model = model
         self.prompt = prompt
         self.prompt_version = prompt_version
+        # editing the prompt must invalidate cached verdicts even when the
+        # version label stays "v1" (which is what happens while tuning)
+        self.prompt_fingerprint = hashlib.sha256(
+            (prompt or "").encode("utf-8")).hexdigest()[:10]
         self.max_tokens = max_tokens
         self.reasoning_effort = reasoning_effort
         self.cache = IntentCache(cache_path)
@@ -312,7 +321,8 @@ class IntentRouter:
                 notes=["empty input rejected before the classifier"],
             )
 
-        key = IntentCache.key(self.model, self._version_tag, q)
+        key = IntentCache.key(self.model, self._version_tag, q,
+                              self.prompt_fingerprint)
         cached = self.cache.get(key)
         if cached is not None:
             plan = self._from_cache(cached.get("plan") or {}, q)

@@ -262,7 +262,7 @@ policy-rag-agent/
 │   ├── cli.py                  # command line interface
 │   ├── agent/
 │   │   ├── react.py            # ReAct loop + citation checking
-│   │   ├── tools.py            # agent tool registry (10 tools)
+│   │   ├── tools.py            # agent tool registry (11 tools)
 │   │   ├── calc.py             # safe arithmetic (AST whitelist, no eval)
 │   │   ├── scratchpad.py       # per-question working memory (bounded, in memory)
 │   │   ├── intent.py           # LLM intent & triage layer (cache, fail-open)
