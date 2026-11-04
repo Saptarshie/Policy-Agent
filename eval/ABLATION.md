@@ -812,8 +812,13 @@ recognising the benchmark's own chair/monitor case.
 | configuration | MH-01 | LC-08 | whole pack |
 |---|---|---|---|
 | before (rule absent) | 4/6 over six full-pack runs; ad-hoc runs split ~50/50 | consistently wrong ("zero hours") | 19/20 |
-| rule, no example | 3/6 opened with ₹0 (unjudged heads) | - | - |
+| rule, no example | 3/9 opened with ₹0 (unjudged headline reads; a second set was cut at 3 runs) | - | - |
 | rule + worked example | **4/6** | **0/3** | **18/20** |
+
+The rule-only set is worth reading too: where it did not open with ₹0 it opened with
+"the ₹25,000 combined cap is the binding limit - and the timing is a problem: the
+purchase at 20 days...", i.e. the condition is mentioned and the wrong number is still
+the headline. That shape appears in both sets.
 
 The failures after the rule are the interesting part. MH-01 now *notices* the condition
 ("It correctly notes the 30-day eligibility condition and the ₹25,000 combined cap") and
