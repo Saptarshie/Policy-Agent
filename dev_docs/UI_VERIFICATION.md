@@ -91,9 +91,9 @@ aligned.
   document instead.
 - A document's progress bar shows its *latest* job, so once ingestion finishes the
   scan job replaces it — informative, but it is the scan's progress, not ingest's.
-- Uploaded files are stored under `data/uploads/<uuid><ext>`; deleting the
-  document removes the DB rows but leaves the file on disk. Harmless in a demo,
-  worth a cleanup in production.
+- Uploaded files are stored under `data/uploads/<uuid><ext>` and deleting the
+  document **does** remove the stored file (`eval/verify_upload_cleanup.py`:
+  upload -> delete -> the file is gone).
 - The chat keeps the last 10 turns as history and sends them with each question;
   the trace panel shows tool calls, observations and elapsed time.
 - Citation chips are a display heuristic: `[doc § section]` and `[doc_name]` are
@@ -102,6 +102,7 @@ aligned.
 ## Evidence
 
 - `eval/verify_api.py` — the 42 checks, re-runnable against any running server
+- `eval/verify_upload_cleanup.py` — upload, delete, confirm the stored file is gone
 - `eval/verify_renderer.py` — loads the page script in node with a stub DOM and
   renders the archived answers, including XSS inputs
 - `eval/results/ui_verify/api_verification.json` — per-check pass/fail
