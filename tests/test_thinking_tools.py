@@ -59,6 +59,16 @@ class TestCalculate(unittest.TestCase):
             with self.assertRaises(CalcError):
                 calculate(bad, {})
 
+    def test_derivation_substitutes_whole_identifiers_only(self):
+        # naive str.replace corrupted these: "9ays * 0.5" and "2s - 2_off"
+        r = calculate("days * rate", {"d": 9, "days": 6, "rate": 0.5})
+        self.assertEqual(r["resolved"], "6 * 0.5")
+        r = calculate("days - day_off", {"day": 2, "days": 12, "day_off": 3})
+        self.assertEqual(r["resolved"], "12 - 3")
+        # function names are never substituted, even if a variable shares the name
+        r = calculate("round(gross * rate, 2)", {"gross": 100000, "rate": 0.18})
+        self.assertEqual(r["resolved"], "round(100000 * 0.18, 2)")
+
     def test_empty_expression(self):
         with self.assertRaises(CalcError):
             calculate("   ", {})

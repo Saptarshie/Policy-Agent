@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import operator
+import re
 from typing import Any, Dict
 
 _BIN_OPS = {
@@ -32,6 +33,7 @@ _FUNCS = {
     "min": min,
     "max": max,
 }
+_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 MAX_EXPR_CHARS = 500
 MAX_POW = 12          # 10**12 is plenty for money; stops 10**10**10
 
@@ -102,10 +104,15 @@ def calculate(expression: str, variables: Dict[str, Any] | None = None) -> Dict[
     except SyntaxError as e:
         raise CalcError(f"could not parse '{expr}': {e.msg}")
     value = _eval(tree, names)
-    # a compact derivation a reviewer can re-check by hand
-    shown = expr
-    for k, v in sorted(names.items()):
-        shown = shown.replace(k, f"{v:g}")
+    # Compact derivation a reviewer can re-check by hand. Substitute whole
+    # identifiers only: naive str.replace turns `days * rate` with a variable `d`
+    # into "9ays * rate", and `days - day_off` with `day` into "2s - 2_off".
+    shown = _IDENT_RE.sub(
+        lambda m: (f"{names[m.group(0)]:g}"
+                   if m.group(0) in names and m.group(0) not in _FUNCS
+                   else m.group(0)),
+        expr,
+    )
     return {
         "expression": expr,
         "variables": {k: (int(v) if float(v).is_integer() else v) for k, v in names.items()},
