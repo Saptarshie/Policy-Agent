@@ -4,7 +4,7 @@ from pathlib import Path
 
 from app.agent.react import AgentResult
 from app.agent.verify import (AnswerVerifier, gather_contexts,
-                              looks_like_refusal, quote_matches)
+                              quote_matches)
 from app.db import Database
 from app.llm import LLMResponse
 from tests.fakes import FakeEmbedder, FakeLLM, StubLLM
@@ -28,14 +28,51 @@ class TestQuoteMatching(unittest.TestCase):
         self.assertFalse(quote_matches("", CTX))
 
 
-class TestRefusalDetection(unittest.TestCase):
-    def test_markers(self):
-        self.assertTrue(looks_like_refusal(
-            "The ingested policy documents do not cover this."))
-        self.assertTrue(looks_like_refusal(
-            "I don't have enough information about that."))
-        self.assertFalse(looks_like_refusal(
-            "Employees may work remotely 3 days per week."))
+class TestEvidenceGate(unittest.TestCase):
+    """The verifier's own deterministic layer: no passages seen -> warn.
+
+    Whether the answer *is* a refusal is no longer decided here by matching
+    phrases - that is the decision model's job (tests/test_answer_shape.py).
+    """
+
+    def _verifier(self, db):
+        return AnswerVerifier(db=db, llm=None, enabled=True)
+
+    def test_no_evidence_and_policy_claim_warns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Database(Path(tmp) / "g.db")
+            shape = StubShape("answer")
+            v = AnswerVerifier(db=db, llm=None, enabled=True,
+                               shape_classifier=shape)
+            r = AgentResult(answer="You get 20 days of casual leave.")
+            v.check(r, "how many casual leave days?")
+            db.close()
+            self.assertTrue(any("without any retrieved evidence" in w
+                                for w in r.citation_warnings))
+
+    def test_no_evidence_for_chitchat_does_not_warn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Database(Path(tmp) / "g2.db")
+            v = AnswerVerifier(db=db, llm=None, enabled=True,
+                               shape_classifier=StubShape("chitchat"))
+            r = AgentResult(answer="Hello! How can I help?")
+            v.check(r, "hi")
+            db.close()
+            self.assertEqual(r.citation_warnings, [])
+
+
+class StubShape:
+    """Minimal stand-in for a shape classifier (real one: answer_shape.py)."""
+
+    def __init__(self, kind, declined=None, error=""):
+        self.kind = kind
+        self.declined = declined or []
+        self.error = error
+
+    def classify(self, question, answer, context_sample=None):
+        from app.agent.answer_shape import AnswerShape
+        return AnswerShape(kind=self.kind, declined_parts=list(self.declined),
+                           decided_by="stub", error=self.error)
 
 
 class _Base(unittest.TestCase):
@@ -73,7 +110,7 @@ class TestJudgeGate(_Base):
 
     def test_pure_refusal_skips_the_judge(self):
         fake = FakeLLM([])  # any call would raise
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("The ingested policy documents do not cover this.", [])
         v.check(r, "do the documents cover sabbaticals?")
         self.assertEqual(fake.received, [])
@@ -83,7 +120,7 @@ class TestJudgeGate(_Base):
         verdict = ('{"faithful": false, "unsupported_claims": ["3 days"], '
                    '"reason": "invented"}')
         fake = FakeLLM([LLMResponse(content=verdict)])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result(
             "The policy does not cover sabbaticals, but casual leave carries "
             "3 days [rw § 2. Allowance].", ["rw § 2. Allowance"])
@@ -99,7 +136,8 @@ class TestJudgeGate(_Base):
             captured["user"] = user
             return {"faithful": True, "unsupported_claims": [], "reason": "ok"}, None
 
-        v = AnswerVerifier(self.db, StubLLM(chat_json_fn=chat_json), enabled=True)
+        v = AnswerVerifier(self.db, StubLLM(chat_json_fn=chat_json),
+                           shape_classifier=None, enabled=True)
         r = self._result("3 remote days [rw § 2. Allowance].", ["rw § 2. Allowance"])
         v.check(r, "how many of my 8 days can I keep?",
                 user_message="I have 8 unused days - how many can I keep?")
@@ -117,7 +155,7 @@ class TestAnswerVerifier(_Base):
     def test_faithful_answer_passes(self):
         fake = FakeLLM([LLMResponse(content=(
             '{"faithful": true, "unsupported_claims": [], "reason": "ok"}'))])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("Employees may work remotely up to 3 days per week [rw #1].")
         v.check(r, "remote days?")
         self.assertTrue(r.faithful)
@@ -127,7 +165,7 @@ class TestAnswerVerifier(_Base):
         fake = FakeLLM([LLMResponse(content=(
             '{"faithful": false, "unsupported_claims": '
             '["the answer claims 5 remote days"], "reason": "number invented"}'))])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("Employees get 5 remote days and a free monitor [rw #1].")
         v.check(r, "remote days?")
         self.assertFalse(r.faithful)
@@ -158,7 +196,7 @@ class TestAnswerVerifier(_Base):
     def test_broken_judge_json_degrades_open(self):
         fake = FakeLLM([LLMResponse(content="not json"),
                         LLMResponse(content="still not json")])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("3 remote days [rw #1].")
         v.check(r, "remote days?")
         self.assertIsNone(r.faithful)   # no verdict -> stays unknown
@@ -171,7 +209,7 @@ class TestAnswerVerifier(_Base):
         good = ('{"faithful": false, "unsupported_claims": ["carry-forward is '
                 'unlimited"], "reason": "absent from contexts"}')
         fake = FakeLLM([LLMResponse(content=bad), LLMResponse(content=good)])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("Employees get 5 remote days [rw #1].")
         r.citations = ["rw § 2. Allowance"]
         v.check(r, "how many days?")
@@ -181,7 +219,7 @@ class TestAnswerVerifier(_Base):
     def test_false_without_claims_twice_degrades_to_unknown(self):
         bad = '{"faithful": false, "unsupported_claims": [], "reason": "feels off"}'
         fake = FakeLLM([LLMResponse(content=bad), LLMResponse(content=bad)])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("Employees get 5 remote days [rw #1].")
         r.citations = ["rw § 2. Allowance"]
         v.check(r, "how many days?")
@@ -191,7 +229,7 @@ class TestAnswerVerifier(_Base):
     def test_truthful_verdict_is_not_retried(self):
         good = '{"faithful": true, "unsupported_claims": [], "reason": "ok"}'
         fake = FakeLLM([LLMResponse(content=good)])
-        v = AnswerVerifier(self.db, fake, enabled=True)
+        v = AnswerVerifier(self.db, fake, enabled=True, shape_classifier=None)
         r = self._result("Employees get 3 remote days [rw #1].")
         r.citations = ["rw § 2. Allowance"]
         v.check(r, "how many days?")

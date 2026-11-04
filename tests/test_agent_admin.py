@@ -67,10 +67,11 @@ class AdminTestBase(unittest.TestCase):
         self.db.close()
         self.tmp.cleanup()
 
-    def _api(self, llm, router=None, **cfg_over) -> AdminAPI:
+    def _api(self, llm, router=None, shape=None, **cfg_over) -> AdminAPI:
         cfg = make_config(self.dir / "data", **cfg_over) if cfg_over else self.cfg
         return AdminAPI(config=cfg, db=self.db, embedder=self.embedder, llm=llm,
-                        intent_router=router or _router())
+                        intent_router=router or _router(),
+                        shape_classifier=shape or _shape("answer"))
 
 
 class TestIntentGateWiring(AdminTestBase):
@@ -152,6 +153,19 @@ class TestIntentGateWiring(AdminTestBase):
             "a colleague keeps harassing me and HR ignores it")
         self.assertTrue(result.answer.startswith("This sounds like something"))
         self.assertIn("Report concerns", result.answer)
+
+
+class _shape:
+    """Deterministic shape classifier for wiring tests (real one is JEV-based)."""
+
+    def __init__(self, kind="answer", declined=None):
+        self.kind = kind
+        self.declined = declined or []
+
+    def classify(self, question, answer, context_sample=None):
+        from app.agent.answer_shape import AnswerShape
+        return AnswerShape(kind=self.kind, declined_parts=list(self.declined),
+                           decided_by="stub")
 
 
 class TestVerifierWiring(AdminTestBase):

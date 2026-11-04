@@ -15,7 +15,7 @@ below) · **BY DESIGN** = looks like a defect, is not.
 |---|---|---|
 | intent front door | regex keyword gate | answered "What policies apply to parental leave?" with a document *listing*; overfits phrasings by construction. Replaced with an LLM triage layer; regex kept only as the ablation baseline. **FIXED** |
 | intent JSON | 700-token cap truncated the classifier mid-object and the repair layer accepted the fragment | silently produced a wrong category on a grievance case. Cap raised, corrective retry added, test added. **FIXED** |
-| judge gating | judge skipped any answer containing a refusal phrase | a real answer that also said "the policy does not cover X" bypassed verification entirely. **FIXED** |
+| judge gating | refusal detection was a hardcoded phrase list (`"do not cover"`, `"couldn't find"`, `"no information"` …) used to decide whether the judge runs | a lexical classifier for a language property: any refusal worded outside the list was misread, and a **partial** answer ("X happens, but the documents do not say about Z") was either skipped or judged as if it were a full answer. Replaced by the decision model (`app/agent/answer_shape.py`): four probability questions → `answer` / `partial` / `refusal` / `chitchat` / `unknown`. Chit-chat is skipped, everything else is judged, partial answers are checked in two halves, and a classifier outage degrades to *judge*, never to skip. **FIXED** |
 | judge evidence | judge received only the first 8 seen chunks (9k chars), in arrival order | correct conflict answers cite late passages, so the judge accused them of inventing numbers that were in the corpus. Now the cited chunks are resolved first and the budget is 24 chunks / 24k chars; truncation adds an explicit coverage note. **FIXED** |
 | judge verdicts | "faithful": false with no named claim was accepted as a failure | unexplainable warning in the UI, indistinguishable from a real hallucination. One corrective retry, then degrade to unknown. **FIXED** |
 | retrieval | `RAG_TOP_K` existed but the tool hardcoded 6 | config was a lie. **FIXED** |
@@ -48,6 +48,24 @@ embedding calls).
 or a provider error body reaches a browser. Fix: log the exception with a request
 id, return the id only. Also distinguish "model unavailable" (503) from "bad
 request" (422) instead of collapsing both.
+
+### BY DESIGN — the verifier judges refusals and partial answers, and never trusts a verdict it cannot explain
+
+Three rules that look wasteful or lenient until you see the failure they prevent:
+
+* **A refusal is judged when passages exist.** "The ingested policy documents do
+  not cover this" is a claim *about the corpus*, and a wrong one tells an
+  employee their entitlement does not exist. It costs one judge call on the
+  questions that end in refusal — the rarest answer type in the corpus.
+* **A partial answer is judged in two halves.** The answered half is checked
+  against the passages; the declined half is checked against whether any passage
+  addresses it. A correct answered half never excuses a wrong decline, and a
+  wrong decline never makes the answered half unverifiable. The declined parts
+  are named in the judge payload so it does not have to guess the boundary.
+* **An unsubstantiated `faithful: false` is not reported.** One retry to name the
+  claim; if it still cannot, the verdict becomes `unknown`. A warning the system
+  cannot explain is worse than no warning, because it trains the reviewer to
+  ignore warnings.
 
 ### O3 (medium) — `requires_table_check` is a hint with no consumer
 Triage flags tabular/tiered questions (precision 86%, recall 100% on 17 labelled

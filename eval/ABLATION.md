@@ -17,6 +17,7 @@ python eval/report_ablation.py                                 # merged table
 python eval/measure_retrieval.py --k 1,3,6                     # retriever comparison
 python eval/calibrate_judge.py --samples 10                    # judge TPR/TNR
 python eval/rescore.py                                         # re-apply corrected labels
+python eval/run_shape_eval.py                                  # answer-shape classifier
 ```
 
 All three table-producing scripts share one scoring implementation
@@ -310,3 +311,81 @@ degrades to `unknown` instead of becoming an accusation. v1 is the default
   set was built to expose v1's weaknesses, so the improvement is partly by
   construction; the honest claim is "v2 fixes specific observed failures", not
   "v2 is generally better".
+
+## 7. Verifier change (post-ablation) and the shape classifier
+
+Variant B/C were re-run after the refusal-detection rewrite, because the verifier
+now judges refusals and partial answers instead of skipping them on a phrase
+match. The shape layer is the decision model (`typesafe/jev`), four probability
+questions per answer:
+
+| question | meaning |
+|---|---|
+| `declines_part` | does the answer decline part of the question? |
+| `states_rules` | does it state rules / numbers / limits / dates? |
+| `is_only_refusal` | is it *only* a refusal, with no policy specifics? |
+| `is_chitchat` | is it only greeting / thanks / small talk? |
+
+Measured on 12 hand-labelled answers (`eval/shape_cases.jsonl`), one JEV request
+each:
+
+```
+accuracy 12/12 = 100%      answer 4/4   partial 3/3   refusal 3/3   chitchat 2/2
+latency  p50 1.5s          max 1.6s
+```
+
+The case that matters most is `s12`: an answer that *contains* the words "not all
+flights are covered" while stating real rules. The old phrase list classified it
+as a refusal and skipped verification; the classifier returns `answer`, so it is
+judged.
+
+**Caveat, stated up front:** 12 cases I wrote myself, in a 4/3/3/2 split, is
+enough to catch a broken classifier and not enough to claim it is calibrated.
+One flipped case moves accuracy by 8 points. The set is a floor, not a
+benchmark, and it should grow with the corpus.
+
+Cost: ~1.5s per answered question against the decision model, ~2s more when the
+chat model has to be used as the fallback classifier (deployments without
+`DECISION_MODE=remote|hybrid`).
+
+## 8. Re-run after the verifier change (final numbers)
+
+B and C were re-run on the final code (`DECISION_MODE=remote`, so the shape
+classifier is the decision model), with the judge prompt that now also states the
+exhaustive-list rule:
+
+```
+var    n   pass  citLet  judgeFAIL  judge?  refused   p50s  tools  errors
+A     23  87.0%  100.0%       8.7%      21        0   15.3    2.3       0
+B     23 100.0%  100.0%      13.0%      20        2   25.1    2.5       0
+C     23 100.0%  100.0%       4.3%      20        2   25.8    2.6       0
+D     23 100.0%  100.0%       0.0%       0        2   12.3    2.7       0
+```
+
+(A and D keep their earlier rows: A is the code the shape layer never runs in -
+the regex gate never reaches the verifier - and D has the judge off.)
+
+### The judge-flag metric is not stable; the pass rate is
+
+B was measured twice on the final judge prompt: **0 flags, then 3**. C was
+measured twice: **3, then 1**. Same code, same cases, same temperature. The
+flags are real judgements about real text, but at n=23 a single flipped verdict
+is 4.3% and the judge's own precision is 8/10 (TNR), so ranking prompts by flag
+count would be reading noise. What reproduced exactly in all four runs is the
+pass rate: A 87.0%, B/C/D 100%.
+
+The four surviving flags are worth reading rather than counting:
+
+| case | flag | verdict on the flag |
+|---|---|---|
+| q16 (B) | "the Benefit Summary Table lists covered benefits for all three tiers" — the judge notes the table calls itself a *summary*, so it is not exhaustive and "cryotherapy is not covered" is an inference from absence | the judge is right on the wording; my earlier relabel of q16 as "a grounded no is correct" was the weaker reading. The case stays passing because a defensible "no, here is why" is the behaviour we want, but the disagreement is recorded rather than hidden |
+| q18 (B) | the transition rule (1 vs 2 working days before/after 1 July 2025) | plausible miss or plausible overreach — the amendment is ambiguous about which figure governs a leave request spanning the boundary; needs a human read |
+| e04 (B) | "the only HR contact that appears anywhere in the corpus is …" | a universal negative: the contexts cannot prove uniqueness, so the judge is right to want it softened |
+| e01 (C) | "the documents do not state whether the cap applies per calendar year or per leave year for new joiners" | a decline claim; the judge says the documents do state it. This is the partial-answer check working as designed — a wrong decline is now caught |
+
+### Latency caveat
+
+The p50 in this table was measured with two variants running concurrently on one
+machine, so it is 20-30% above the sequential figures measured earlier in the
+night (B 17.9s, C 18.9s). Compare latency within a run, not across runs; the
+shape classifier adds ~1.5s, and the judge adds ~6s (C vs D).

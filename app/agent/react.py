@@ -39,6 +39,8 @@ class AgentResult:
     seen_chunk_ids: List[int] = field(default_factory=list)
     judge_context_ids: List[int] = field(default_factory=list)
     faithful: Optional[bool] = None
+    answer_shape: str = ""                   # answer|partial|refusal|chitchat|unknown
+    declined_parts: List[str] = field(default_factory=list)
     unsupported_claims: List[str] = field(default_factory=list)
     tool_calls: int = 0
     elapsed_s: float = 0.0
@@ -56,6 +58,8 @@ class AgentResult:
             "seen_chunk_ids": self.seen_chunk_ids,
             "judge_context_ids": self.judge_context_ids,
             "faithful": self.faithful,
+            "answer_shape": self.answer_shape,
+            "declined_parts": self.declined_parts,
             "unsupported_claims": self.unsupported_claims,
             "tool_calls": self.tool_calls,
             "elapsed_s": round(self.elapsed_s, 2),

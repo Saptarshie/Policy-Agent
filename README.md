@@ -172,6 +172,16 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
    that names no claim is retried once and then degraded to `unknown`, never
    reported as a failure. Truncated evidence adds an explicit coverage note so
    an omission can never turn into an accusation.
+7b. **Answer shape is classified, not pattern-matched** — before judging, the
+   decision model (`typesafe/jev`, the same model the contradiction gate uses)
+   answers four questions about the answer: does it decline part of the
+   question, does it state policy rules, is it only a refusal, is it only
+   chit-chat. That decides *what* gets verified — chit-chat is skipped, **a
+   partial answer is always judged**, and a refusal is judged too, because
+   "the documents do not cover this" is a claim about the corpus. A classifier
+   outage degrades to `unknown`, which means the answer is judged anyway: the
+   failure mode is more checking, never less. Nothing here is decided by
+   matching phrases.
 8. **Precision-biased verifier** — different scope / complementary rules /
    topical similarity only are explicitly *not* contradictions; uncertain →
    false. Unverifiable-but-strong gate hits are marked UNVERIFIED, not
@@ -206,6 +216,7 @@ explanation, the gate's heuristic signals, resolve/dismiss buttons).
 | `SCAN_CROSS_DOC_ONLY` | `true` | only compare across documents |
 | `AGENT_MAX_STEPS` | `12` | ReAct loop budget |
 | `VERIFY_ANSWERS` | `true` | post-answer faithfulness judge (one extra LLM call) |
+| `DECISION_MODE` | `remote` | also selects the answer-shape classifier: `remote`/`hybrid` use the decision model, `heuristic` falls back to the chat model's JSON mode |
 | `INTENT_ENABLED` | `true` | LLM triage in front of the agent (one extra cheap call) |
 | `INTENT_MODEL` | *(empty)* | model for the classifier; empty = `LLM_MODEL` |
 | `INTENT_MAX_TOKENS` | `65536` | ceiling for the classifier's JSON reply (a ceiling, not a budget) |
@@ -251,6 +262,7 @@ policy-rag-agent/
 │   │   ├── tools.py            # agent tool registry
 │   │   ├── intent.py           # LLM intent & triage layer (cache, fail-open)
 │   │   ├── intent_legacy.py    # the old regex gate - ablation baseline only
+│   │   ├── answer_shape.py     # answer|partial|refusal|chitchat via the decision model
 │   │   └── verify.py           # evidence check + faithfulness judge
 │   ├── contradictions/
 │   │   ├── gate.py             # ★ decision model (stage 2): JEV heuristic +
@@ -300,8 +312,8 @@ ingestion pipeline with heuristic fallback, the store, the JEV gate
 (pass/reject/determinism), the full cascade (flag / gate-blocks-LLM /
 unverified fallback), the triage layer (cache, fail-open, corrective retry,
 plan injection), retrieval (FTS5 keyword index, RRF fusion, mode fallbacks),
-the faithfulness verifier (gating, judge context selection, unsubstantiated
-verdicts) and the HTTP API end-to-end.
+the faithfulness verifier (shape classification, gating, judge context
+selection, unsubstantiated verdicts, partial answers) and the HTTP API end-to-end.
 
 ### What the measurements changed
 
@@ -311,6 +323,7 @@ verdicts) and the HTTP API end-to-end.
 | end-to-end, 23 labelled cases | A (regex) **87%** → B/C (triage) **100%**; A fails exactly the injection, the harassment escalation and the joke |
 | classifier truncated at 700 output tokens | cap raised + corrective retry; `reasoning_effort=off` gives the same decisions at **4.1s vs 5.2s** |
 | judge accused correct conflict answers of inventing facts | judge now sees the cited chunks, the document inventory and each cited document's header — 5 false alarms → **0** |
+| refusal vs non-refusal was a hardcoded phrase list (`"do not cover"`, `"couldn't find"`) — a lexical classifier for a language property, and blind to partial answers | replaced by the decision model: four questions, probabilities, five shapes; partial answers always judged, refusals judged too, chit-chat skipped; failure degrades to *judge*, not to skip |
 | keyword retrieval returned 0/17 | FTS backfill fixed (it was counting the content table); hybrid RRF is now the default |
 | dense vs sparse vs hybrid | tied at k≥3 on a 7-document corpus; sparse wins one top-1 exact-token case. Reported as a tie, not a win |
 

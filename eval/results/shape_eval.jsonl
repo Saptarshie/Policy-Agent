@@ -1,0 +1,12 @@
+{"id": "s01", "expected": "answer", "got": "answer", "ok": true, "scores": {"declines_part": 0.02, "states_rules": 0.98, "is_only_refusal": 0.01, "is_chitchat": 0.01}, "latency_s": 1.49}
+{"id": "s02", "expected": "answer", "got": "answer", "ok": true, "scores": {"declines_part": 0.02, "states_rules": 0.99, "is_only_refusal": 0.01, "is_chitchat": 0.01}, "latency_s": 1.64}
+{"id": "s03", "expected": "answer", "got": "answer", "ok": true, "scores": {"declines_part": 0.05, "states_rules": 0.99, "is_only_refusal": 0.01, "is_chitchat": 0.01}, "latency_s": 1.44}
+{"id": "s04", "expected": "partial", "got": "partial", "ok": true, "scores": {"declines_part": 0.98, "states_rules": 0.89, "is_only_refusal": 0.03, "is_chitchat": 0.01}, "latency_s": 1.34}
+{"id": "s05", "expected": "partial", "got": "partial", "ok": true, "scores": {"declines_part": 0.97, "states_rules": 0.98, "is_only_refusal": 0.02, "is_chitchat": 0.01}, "latency_s": 1.32}
+{"id": "s06", "expected": "partial", "got": "partial", "ok": true, "scores": {"declines_part": 0.95, "states_rules": 0.92, "is_only_refusal": 0.04, "is_chitchat": 0.01}, "latency_s": 1.54}
+{"id": "s07", "expected": "refusal", "got": "refusal", "ok": true, "scores": {"declines_part": 0.98, "states_rules": 0.03, "is_only_refusal": 0.93, "is_chitchat": 0.15}, "latency_s": 1.55}
+{"id": "s08", "expected": "refusal", "got": "refusal", "ok": true, "scores": {"declines_part": 0.99, "states_rules": 0.04, "is_only_refusal": 0.98, "is_chitchat": 0.07}, "latency_s": 1.42}
+{"id": "s09", "expected": "refusal", "got": "refusal", "ok": true, "scores": {"declines_part": 0.98, "states_rules": 0.07, "is_only_refusal": 0.95, "is_chitchat": 0.04}, "latency_s": 1.24}
+{"id": "s10", "expected": "chitchat", "got": "chitchat", "ok": true, "scores": {"declines_part": 0.03, "states_rules": 0.03, "is_only_refusal": 0.09, "is_chitchat": 0.5}, "latency_s": 1.52}
+{"id": "s11", "expected": "chitchat", "got": "chitchat", "ok": true, "scores": {"declines_part": 0.02, "states_rules": 0.02, "is_only_refusal": 0.1, "is_chitchat": 0.88}, "latency_s": 1.3}
+{"id": "s12", "expected": "answer", "got": "answer", "ok": true, "scores": {"declines_part": 0.04, "states_rules": 0.98, "is_only_refusal": 0.01, "is_chitchat": 0.01}, "latency_s": 1.65}

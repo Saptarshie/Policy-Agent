@@ -122,9 +122,14 @@ def score(case: dict, result) -> dict:
         "pattern_ok": verdict["pattern_ok"],
         "doc_ok": verdict["doc_ok"],
         "refused": verdict["refused"],
-        "citation_warnings": len(result.citation_warnings),
+        # split the two kinds of warning: a faithfulness failure is not a
+        # citation that failed to resolve
+        "citation_warnings": len([w for w in result.citation_warnings
+                                  if not w.startswith("faithfulness check FAILED")]),
         "warnings": list(result.citation_warnings),
         "faithful": result.faithful,
+        "answer_shape": getattr(result, "answer_shape", ""),
+        "declined_parts": list(getattr(result, "declined_parts", []) or []),
         "unsupported_claims": result.unsupported_claims,
         "judge_context_ids": list(getattr(result, "judge_context_ids", []) or []),
         "error": result.error or "",

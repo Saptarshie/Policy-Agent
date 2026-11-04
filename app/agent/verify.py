@@ -30,25 +30,18 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from ..db import Database
 from ..llm import OpenAICompatClient
 from ..prompts import FAITHFULNESS_SYSTEM
+from .answer_shape import AnswerShape, build_shape_classifier
 
 log = logging.getLogger(__name__)
 
+#: sentinel for "build a shape classifier from whatever client is available"
+_AUTO = object()
+
 _WS = re.compile(r"\s+")
 
-_REFUSAL_MARKERS = (
-    "do not cover", "does not cover", "don't have enough information",
-    "do not have enough information", "not covered by the ingested",
-    "no information", "cannot find", "couldn't find", "not mention",
-)
-
-
 def _norm(s: str) -> str:
+    """Lowercase and collapse whitespace. Structural normalisation only."""
     return _WS.sub(" ", (s or "")).strip().lower()
-
-
-def looks_like_refusal(answer: str) -> bool:
-    a = _norm(answer)
-    return any(m in a for m in _REFUSAL_MARKERS)
 
 
 def quote_matches(quote: str, text: str, threshold: float = 0.82) -> bool:
@@ -139,7 +132,8 @@ class AnswerVerifier:
                  enabled: bool = True,
                  system_prompt: str = FAITHFULNESS_SYSTEM,
                  cache_path: Optional[str] = None,
-                 prompt_version: str = "") -> None:
+                 prompt_version: str = "",
+                 shape_classifier=_AUTO) -> None:
         self.db = db
         self.llm = llm
         self.enabled = enabled
@@ -148,6 +142,13 @@ class AnswerVerifier:
         # Verdicts vary run to run even at temperature 0 (provider-side), which
         # makes demos and regressions noisy. An identical (question, answer,
         # contexts, prompt) triple therefore replays its verdict from disk.
+        # What kind of answer is this? Asked of the decision model, never of a
+        # keyword list (see app/agent/answer_shape.py for why).
+        # AUTO -> build one (decision model, else the chat model's JSON mode);
+        # None -> classification disabled (the judge then runs on every answer)
+        self.shape_classifier = (build_shape_classifier(llm=llm)
+                                 if shape_classifier is _AUTO
+                                 else shape_classifier)
         self.cache_path = Path(cache_path) if cache_path else None
         self._cache: Dict[str, dict] = {}
         if self.cache_path and self.cache_path.exists():
@@ -199,20 +200,30 @@ class AnswerVerifier:
         contexts = gather_contexts(self.db, result.seen_chunk_ids)
         judge_ids = self._judge_context_ids(result)
 
+        # ---- what kind of answer is this? (decision model, not keywords)
+        shape = self._classify_shape(question, result.answer, contexts)
+        if shape is not None:
+            result.answer_shape = shape.kind
+            result.declined_parts = list(shape.declined_parts)
+
         # ---- deterministic evidence gate
-        if not contexts and not looks_like_refusal(result.answer):
+        # A bare refusal or chit-chat may legitimately have no evidence behind
+        # it; anything that states policy must have seen a passage.
+        claims_possible = shape is None or shape.has_claims
+        if not contexts and claims_possible:
             result.citation_warnings.append(
                 "answer was produced without any retrieved evidence "
                 "(no policy passages were seen during this run)"
             )
 
         # ---- LLM faithfulness judge
-        # Skip only a PURE refusal (no citations = no factual claims). An answer
-        # that says "does not cover X" while also asserting "Y is 6 days" is a
-        # substantive answer and must still be checked - the old code skipped
-        # it on the substring alone.
-        pure_refusal = looks_like_refusal(result.answer) and not result.citations
-        if self.llm is None or not contexts or pure_refusal:
+        # Skip ONLY when the classifier says the answer carries no policy
+        # content (chit-chat). Partial answers are always judged: the part that
+        # was answered has claims, and the part that was declined is itself a
+        # checkable statement about coverage.
+        if self.llm is None or not contexts:
+            return
+        if shape is not None and shape.kind == "chitchat":
             return
         judge_texts, used = cited_contexts(self.db, judge_ids)
         omitted = [cid for cid in judge_ids if cid not in used]
@@ -220,8 +231,16 @@ class AnswerVerifier:
             # never let a truncated evidence set turn into an accusation
             log.info("judge context truncated: %d of %d seen chunks omitted",
                      len(omitted), len(judge_ids))
+        declined = list(shape.declined_parts) if shape else []
+        if shape is not None and shape.is_partial and not declined:
+            # the classifier saw a decline but could not quote it (the decision
+            # model returns scores, not spans) - tell the judge to find it
+            declined = ["(the answer refers to parts the documents do not cover - "
+                        "identify them from the answer text)"]
         report = self.judge(question, result.answer, judge_texts or contexts,
-                            user_message=user_message, partial=bool(omitted))
+                            user_message=user_message,
+                            truncated=bool(omitted),
+                            declined=declined)
         result.judge_context_ids = used
         if not report.ran:
             return
@@ -233,6 +252,24 @@ class AnswerVerifier:
                 "faithfulness check FAILED - the answer contains claims not "
                 f"supported by the retrieved passages: {why[:400]}"
             )
+
+    def _classify_shape(self, question: str, answer: str,
+                        contexts: Sequence[str]) -> Optional[AnswerShape]:
+        """Shape of the answer, or None when no classifier is available.
+
+        A classifier outage returns ``kind='unknown'`` (which the caller treats
+        as "has claims, judge it"), so failure degrades toward more checking.
+        """
+        if self.shape_classifier is None:
+            return None
+        sample = "\n\n---\n\n".join(contexts)[:6000]
+        try:
+            shape = self.shape_classifier.classify(question, answer, sample)
+        except Exception as e:               # never break verification on this
+            log.warning("answer-shape classification failed (%s); judging anyway", e)
+            return AnswerShape(kind="unknown", decided_by="fallback", error=str(e))
+        log.info("answer shape: %s (%s)", shape.kind, shape.decided_by)
+        return shape
 
     def _judge_context_ids(self, result) -> List[int]:
         """Chunks the judge should read: the ones the answer CITES first.
@@ -309,8 +346,13 @@ class AnswerVerifier:
     def judge(self, question: str, answer: str,
               contexts: Sequence[str],
               user_message: Optional[str] = None,
-              partial: bool = False) -> FaithfulnessReport:
-        key = self._cache_key(question, answer, contexts)
+              truncated: bool = False,
+              declined: Optional[Sequence[str]] = None) -> FaithfulnessReport:
+        # the verdict depends on what the judge was ASKED, not only on the answer:
+        # the declined-parts block and the truncation note change the question
+        key = self._cache_key(
+            question, answer,
+            [*contexts, f"|declined={list(declined or [])}|truncated={truncated}"])
         hit = self._cache_get(key)
         if hit is not None:
             return FaithfulnessReport(
@@ -326,7 +368,18 @@ class AnswerVerifier:
             f"ALLOWED CONTEXTS (the only sources the answer may rely on):\n"
             f"{ctx_block}"
         )
-        if partial:
+        if declined:
+            listed = "\n".join(f"- {d}" for d in list(declined)[:4])
+            user += ("\n\nDECLINED BY THE ANSWER (the answer says the documents do not cover these):\n"
+                     f"{listed}\n\n"
+                     "A PARTIAL ANSWER IS CHECKED IN TWO HALVES:\n"
+                     "1. The part it answered: verify every rule, number, limit, date and "
+                     "obligation against the contexts exactly as usual.\n"
+                     "2. The part it declined: that is a claim ABOUT THE CORPUS (\"the documents "
+                     "do not say\"). It is SUPPORTED only if no context above addresses it. If any "
+                     "context above does address it - even partially - the decline is UNSUPPORTED: "
+                     "list it as a claim to remove, and quote the passage that contradicts it.")
+        if truncated:
             user += ("\n\nNOTE ON COVERAGE: this context set is a truncated subset of the passages the agent retrieved. A claim that merely does not "
                       "appear above MAY still have come from an omitted passage - only list it as unsupported if the text shown contradicts it, and "
                       "otherwise leave it out.")

@@ -211,16 +211,30 @@ Cheap layers first, expensive last:
    `[doc #chunk_id]` in the final answer is resolved against the store
    (fuzzy doc-name match, chunk-id existence); failures surface as
    `citation_warnings`, never silently.
-5. **Evidence + faithfulness check** (`app/agent/verify.py`) — the agent can
+5. **Answer shape** (`app/agent/answer_shape.py`) — before anything is judged,
+   the **decision model** answers four questions about the answer (does it
+   decline part of the question / does it state policy rules / is it only a
+   refusal / is it only chit-chat) and the shape is derived from those
+   probabilities: `answer`, `partial`, `refusal`, `chitchat`, `unknown`.
+   This replaced a hardcoded refusal-phrase list, which was a lexical
+   classifier for a language property and could not see a partial answer at
+   all. Ambiguous scores, a classifier outage or an unparseable verdict all
+   yield `unknown`, which the verifier treats as *judge it* — the failure mode
+   is more checking, never less.
+6. **Evidence + faithfulness check** (`app/agent/verify.py`) — the agent can
    only have relied on passages it *saw*: chunk ids are collected from tool
    observations during the run. An answer produced with zero retrieved
-   evidence gets an explicit warning. Then (optional, default on,
-   `VERIFY_ANSWERS`) one strict-JSON **LLM judge** compares the answer
-   against only those passages and lists unsupported claims →
-   `faithful=false` + `unsupported_claims[]` + warning. The judge degrades
-   open (unavailable/unparseable ⇒ `faithful=null`), and the answer is
+   evidence, while stating policy, gets an explicit warning. Then (optional,
+   default on, `VERIFY_ANSWERS`) one strict-JSON **LLM judge** compares the
+   answer against only those passages and lists unsupported claims →
+   `faithful=false` + `unsupported_claims[]` + warning. Chit-chat is skipped;
+   everything else is judged, including a **partial answer**, whose two halves
+   are checked differently: the answered half against the passages, the
+   declined half as a claim *about the corpus* (a decline is unsupported if any
+   passage addresses it). The judge degrades open
+   (unavailable/unparseable ⇒ `faithful=null`), and the answer is
    *flagged, never silently rewritten*.
-6. **Endpoint hardening** (`app/llm.py`) — retries with backoff on 429/5xx;
+7. **Endpoint hardening** (`app/llm.py`) — retries with backoff on 429/5xx;
    automatic feature downgrade when an endpoint rejects `tools`,
    `response_format` or `reasoning_effort`; automatic `max_tokens` halving when
    the configured 64k exceeds the endpoint cap; `chat_json()` parses every

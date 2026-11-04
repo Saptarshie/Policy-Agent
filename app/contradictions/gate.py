@@ -410,6 +410,54 @@ class SystemOneDecisionModel:
         self.timeout = timeout
         self.max_retries = max_retries
 
+    def ask(self, state: str, questions: dict) -> Optional[dict]:
+        """Ask the decision model arbitrary yes/no questions about *state*.
+
+        Returns ``{question_name: probability}`` or ``None`` when the endpoint
+        is unavailable. ``questions`` is ``{name: instructions}``; each becomes
+        a ``noul`` question, which is the model's probability that the statement
+        holds.
+        """
+        payload = {
+            "model": self.model,
+            "state": (state or "")[:32000],
+            "questions": {
+                name: {"type": "noul", "instructions": instr}
+                for name, instr in questions.items()
+            },
+        }
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                resp = requests.post(self.endpoint, headers=headers,
+                                     json=payload, timeout=self.timeout)
+                if resp.status_code == 429:
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                if resp.status_code != 200:
+                    log.warning("systemone endpoint returned HTTP %s: %s",
+                                resp.status_code, resp.text[:300])
+                    return None
+                data = resp.json()
+            except Exception as e:
+                if attempt < self.max_retries:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                log.warning("systemone endpoint failed: %s", e)
+                return None
+            answers = (data or {}).get("answers") or {}
+            out = {}
+            for name in questions:
+                try:
+                    out[name] = float(answers.get(name, {}).get("noul", 0.0))
+                except (TypeError, ValueError):
+                    out[name] = 0.0
+            return out
+        return None
+
     def score(
         self,
         text_a: str,

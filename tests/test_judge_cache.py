@@ -29,6 +29,7 @@ class TestJudgeCache(unittest.TestCase):
             return dict(VERDICT), None
 
         return AnswerVerifier(self.db, StubLLM(chat_json_fn=chat_json),
+                            shape_classifier=None,
                               enabled=True, system_prompt=FAITHFULNESS_SYSTEM,
                               cache_path=cache_path, prompt_version="v1")
 

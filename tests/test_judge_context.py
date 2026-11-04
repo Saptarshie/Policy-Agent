@@ -29,6 +29,7 @@ class TestJudgeContextSelection(unittest.TestCase):
             return {"faithful": True, "unsupported_claims": [], "reason": "ok"}, None
 
         self.verifier = AnswerVerifier(self.db, StubLLM(chat_json_fn=chat_json),
+                            shape_classifier=None,
                                        enabled=True, system_prompt=FAITHFULNESS_SYSTEM)
 
     def tearDown(self):

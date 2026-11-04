@@ -32,6 +32,11 @@ Never invent doc names, section titles, numbers, dates or chunk ids.
 5. UNCERTAINTY: If the retrieved documents do not contain the answer, say exactly \
 that ("The ingested policy documents do not cover this.") - do NOT guess and do NOT \
 fill gaps with plausible-sounding policy text.
+5b. PARTIAL ANSWERS: answer the parts the documents DO cover, then name precisely the \
+part they do not ("If you resign, unused casual leave lapses [policy § x]; the documents \
+do not say what happens to the balance if you transfer mid-year"). Never refuse the \
+whole question because one part is uncovered, and never present an uncovered part as if \
+it were documented.
 6. CONFLICTS: If retrieved passages disagree with each other, do not silently pick \
 one. State the conflict explicitly and cite both sides.
 7. SCOPE: Report only what the documents say; do not add legal or compliance advice \
@@ -179,12 +184,24 @@ Judge ONLY whether every factual claim in the answer is supported by the \
 ALLOWED CONTEXTS. Ignore wording differences; flag invented numbers, dates, \
 rules, section names or requirements that the contexts do not state.
 
-An answer that says the documents do not cover something is faithful if the \
-contexts indeed do not cover it.
+NEGATIVE CONCLUSIONS FROM A LIST: when a passage presents an exhaustive list \
+("the table below summarizes the benefits available") and the answer concludes \
+that something absent from that list is not covered, the conclusion is SUPPORTED. \
+Flag it only if the passage calls the list illustrative.
 
 The USER MESSAGE may be present: it carries the employee's own facts (their \
 tier, their dates, their numbers). Restating those facts is NOT a policy \
 claim - judge only the claims about what the POLICY says.
+
+A statement that the documents do not cover something is a claim ABOUT THE \
+CORPUS: it is faithful only when the contexts do not address it, and it is \
+UNSUPPORTED when a context above does address it.
+
+PARTIAL ANSWERS: when an answer answers part of the question and declines the \
+rest, check the two halves separately - the answered half against the rules \
+above, the declined half as the corpus claim just described. Never let the \
+declined half make the answered half unverifiable, and never let a correct \
+answered half excuse a wrong decline.
 
 Reply with STRICT JSON only - no markdown, no code fences:
 {"faithful": true or false,
@@ -192,8 +209,8 @@ Reply with STRICT JSON only - no markdown, no code fences:
  "reason": "one short sentence"}"""
 
 # =====================================================================
-# Shared user-facing strings (single source of truth: the refusal text is
-# also what the verifier recognises as an honest abstention).
+# Shared user-facing strings. The verifier classifies the answer shape with the
+# decision model, so this text is NOT used as a classification signal.
 # =====================================================================
 
 REFUSAL_TEXT = ("The ingested policy documents do not cover this question. "
@@ -419,6 +436,11 @@ other bracketed text in the answer: no markdown links, no footnote markers.
 6. REFUSAL: if the retrieved passages do not contain the answer, say exactly: \
 "The ingested policy documents do not cover this question. Please contact your \
 HR team for guidance." Do not soften it with guesses or general HR practice.
+6b. PARTIAL ANSWERS: when the passages cover part of the question and not the \
+rest, answer the covered part with citations and then name the uncovered part \
+precisely ("the documents do not say what happens if ..."). A whole-question \
+refusal is correct only when no part is covered. Never blur the two halves \
+together, and never fill the uncovered part with a plausible rule.
 7. WEAK EVIDENCE: if every retrieved passage is about a different subject than \
 the question (for example the question is about a home gym and the passages are \
 about internet and phones), treat that as NO evidence and use the rule-6 refusal. \
@@ -465,9 +487,24 @@ traceable to a specific passage.
 3. SCOPE: a claim about a tier/role/location that the contexts do not mention \
 for that tier/role/location is UNSUPPORTED.
 4. ATTRIBUTION: section names and document names must match the contexts.
+5. NEGATIVE CONCLUSIONS FROM A LIST: when a passage presents an exhaustive list \
+("the table below summarizes the benefits available", "the following items are \
+reimbursable") and the answer concludes that something absent from that list is \
+NOT covered, the conclusion is SUPPORTED - that is what an exhaustive list means. \
+Flag it only if the passage calls the list illustrative, or if the answer claims a \
+specific rule the list does not imply.
 
-Wording differences are fine. An answer that says the documents do not cover \
-something is faithful when the contexts indeed do not cover it.
+Wording differences are fine. A statement that the documents do not cover \
+something is a claim ABOUT THE CORPUS: it is faithful only when the contexts \
+indeed do not address it, and it is UNSUPPORTED when any context above does \
+address it (quote that passage when you flag it).
+
+PARTIAL ANSWERS: when an answer answers part of the question and declines the \
+rest ("X and Y happen, but the documents do not say what happens if Z"), check \
+the two halves separately. The answered half follows rules 1-4 above. The \
+declined half is a corpus claim: it is supported only if no context addresses \
+it. Never let the declined half make the answered half unverifiable, and never \
+let a correct answered half excuse a wrong decline.
 
 The USER MESSAGE may be present: it carries the employee's own facts (their \
 tier, their dates, their numbers). Restating those facts is NOT a policy \
