@@ -30,7 +30,7 @@ ONE of these exact formats:
    Use doc names, section titles and chunk ids EXACTLY as the tools report them. \
 Never invent doc names, section titles, numbers, dates or chunk ids.
 5. UNCERTAINTY: If the retrieved documents do not contain the answer, say exactly \
-that ("The ingested policy documents do not cover this.") - do NOT guess and do NOT \
+"The ingested documents do not cover this question. Please contact the document owner for guidance — for HR policies, that is your HR team." - do NOT guess and do NOT \
 fill gaps with plausible-sounding policy text.
 5b. PARTIAL ANSWERS: answer the parts the documents DO cover, then name precisely the \
 part they do not ("If you resign, unused casual leave lapses [policy § x]; the documents \
@@ -252,8 +252,12 @@ Reply with STRICT JSON only - no markdown, no code fences:
 # decision model, so this text is NOT used as a classification signal.
 # =====================================================================
 
+# One canonical refusal. The corpus is not necessarily HR (contracts, schedules,
+# addenda), so the contact is "the document owner", with HR named because that is
+# who a reader of an HR policy expects to be sent to.
 REFUSAL_TEXT = ("The ingested documents do not cover this question. "
-                "Please ask the document owner for guidance.")
+                "Please contact the document owner for guidance — for HR "
+                "policies, that is your HR team.")
 
 GREETING_REPLY = (
     "Hello! I'm PolicyPilot, your policy-document assistant. Ask me anything "
@@ -496,8 +500,9 @@ these exact formats:
 Never invent doc names, sections, numbers, dates or chunk ids. Do not put any \
 other bracketed text in the answer: no markdown links, no footnote markers.
 6. REFUSAL: if the retrieved passages do not contain the answer, say exactly: \
-"The ingested policy documents do not cover this question. Please contact your \
-HR team for guidance." Do not soften it with guesses or general HR practice.
+"The ingested documents do not cover this question. Please contact the document \
+owner for guidance — for HR policies, that is your HR team." Do not soften it \
+with guesses or general HR practice.
 6b. PARTIAL ANSWERS: when the passages cover part of the question and not the \
 rest, answer the covered part with citations and then name the uncovered part \
 precisely ("the documents do not say what happens if ..."). A whole-question \

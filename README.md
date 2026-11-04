@@ -48,7 +48,11 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   under `eval/results/`.
 
 Models: **Ollama `embeddinggemma`** for embeddings, **any OpenAI-compatible
-endpoint** for the LLM (URL + key from `.env`), `MAX_OUTPUT_TOKENS = 65536`.
+endpoint** for the LLM (URL + key from `.env`), `MAX_OUTPUT_TOKENS = 65536`. The
+numbers in this README were produced with `deepseek-v4.1-flash` over a hosted
+OpenAI-compatible endpoint and `embeddinggemma` running locally; nothing in the code
+depends on either choice, and a free tier or a laptop model works (slower, and the
+agent's tool-calling discipline is what suffers first on a small model).
 
 ---
 
@@ -256,9 +260,11 @@ each was verified — are in `dev_docs/UI_VERIFICATION.md`.
    or contracts; the classifier refuses by *shape of request*, never by topic
    (see `eval/ABLATION.md` §11, where an HR-flavoured triage refused three
    commercial questions before retrieval). It also de-noises the question and proposes the search queries.
-2. **Grounding prompt** — answer only from tool output; explicit
-   "the documents don't cover this" escape hatch; conflicts must be surfaced,
-   never silently resolved.
+2. **Grounding prompt** — answer only from tool output; one canonical refusal
+   sentence ("the ingested documents do not cover this question" — and who to ask:
+   the document owner, HR for HR policies) quoted verbatim by both agent prompts and
+   pinned by a test, so the model's refusal and the code's refusal are the same
+   string; conflicts must be surfaced, never silently resolved.
 3. **Forced citations + post-hoc verification** — citations that don't
    resolve to a real document/chunk produce visible warnings.
 4. **Tool-call schema repair (heuristic regex)** — code fences, single
@@ -429,7 +435,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 277 offline tests: pytest OR python run.py selftest
+├── tests/                      # 281 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -504,7 +510,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (277 tests in 25 files, offline, no keys) covers: schema repair + feedback,
+The suite (281 tests in 26 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (including the parallel-window pool and its merge call), the

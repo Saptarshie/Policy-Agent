@@ -21,6 +21,30 @@ Everything is env-configurable (`.env`, see `.env.example`). Every unit test
 and the offline smoke run use deterministic fakes — **no key needed to develop
 or run CI**.
 
+**Stack, and why it is not the suggested one.** Python 3.13 + FastAPI + SQLite
+(vectors in float32 BLOBs, keyword search through FTS5) + one HTML/JS file for the
+UI. Embeddings run locally through Ollama; the chat model is any
+OpenAI-compatible endpoint, so a free tier or a laptop model is enough. The brief
+suggests LangChain/LlamaIndex plus a vector store; both were rejected on purpose
+(§7.1, §7.2): the agent loop here is ~200 lines whose every failure mode is
+unit-tested, and brute-force cosine over a cached matrix is sub-millisecond at this
+size, so a framework would hide the mechanics the review is about, and a vector
+service would add an install step to a ten-minute README. Hardware limits only the
+local embedding model (a CPU is fine); nothing here needs a GPU.
+
+**What this document covers.** The brief asks for six things in `DESIGN.md`; each
+has a section below, and the parts that go past the ask are what pushed the page
+count past the suggested 2–4.
+
+| the brief asks for | section here | what is beyond the ask |
+|---|---|---|
+| architecture, data flow upload → index → query → answer, a diagram | §1 | failure paths, the SSE trace, citation resolution |
+| chunking & retrieval: how documents are split, what metadata is stored, how top chunks are chosen, why | §2, §2.1 | a measured dense-vs-sparse-vs-hybrid comparison, including the cell where hybrid loses |
+| grounding, and what happens when retrieval is weak | §3.1–3.7, **§3.10** | no post-answer judge (measured away), refusal text pinned by a test |
+| schema & APIs, and why that schema | §5 | error codes, `parts[]`, why `faithful` is `null` |
+| trade-offs, at least two rejected | §7 | ten, each with the measurement that decided it |
+| what to harden in two more weeks | §8 | benchmark-in-CI is the headline |
+
 ---
 
 ## 1. Architecture
@@ -71,6 +95,12 @@ rolling-window pipeline (§2), persisting progress into a `jobs` row
 (`stage`, `window i/n`, rolling-summary checkpoint) that the CLI and web UI
 poll. On success a second daemon thread starts the contradiction cascade
 (§4) against every other ingested document.
+
+Nothing about a document is known in advance: document names, section headings,
+citation strings and the corpus inventory all come from the store at query time,
+so a policy uploaded during a review is answerable as soon as its job says `done`.
+The two benchmark packs in §6 are the evidence — neither existed when the pipeline
+was written, and nothing in a prompt names a document.
 
 **Data flow — query → answer.** One triage call classifies the raw input and
 decides the route (§3.1) — a greeting or a document listing is answered
@@ -123,6 +153,15 @@ Documents can be huge; **nothing is ever fed whole** to the parser LLM.
   and soft target ~1,400 chars / hard cap ~2,200 (comfortably inside
   embeddinggemma's context). Tiny trailing chunks merge into their
   predecessor.
+* **What is stored per chunk** (the `chunks` table, and what retrieval and
+  citation actually use): `doc_id`, `chunk_index`, `section` (the heading the
+  chunk starts under), `breadcrumb` (`doc > section > subsection`), `text`,
+  `char_count`, the `embedding` as a float32 BLOB with its `norm` precomputed
+  (so cosine is a dot product), and `created_at`. The same text is mirrored into
+  an FTS5 external-content table for keyword search (§2.1) — one copy of the
+  text, two indexes. `section` is what a citation points at; `chunk_index`
+  orders a section's parts when a section spans chunks, which is exactly what
+  `GET /api/citations/resolve` returns.
 * **Embedding**: batches of `EMBED_BATCH_SIZE` through Ollama's `/api/embed`
   (legacy `/api/embeddings` fallback), with embeddinggemma's task prefixes
   (`task: search result | query: …` / `title: none | text: …`) applied
@@ -289,6 +328,39 @@ Cheap layers first, expensive last:
    against it). `REASONING_EFFORT` is the real cost lever: the classifier runs
    with reasoning off, the agent leaves the provider default in place.
 
+### 3.10 When retrieval is weak
+
+"Grounded" is only tested by the case where nothing relevant exists, so that case
+is designed rather than left emergent:
+
+* **No result at all.** `search_policy_docs` returns
+  `No matching passages found for top_k=… Try a different query, widen it … or
+  call list_policy_documents` — the agent sees an observation it can act on, not a
+  blank. The prompt then requires the one refusal sentence (`REFUSAL_TEXT`:
+  *"The ingested documents do not cover this question. Please contact the document
+  owner for guidance — for HR policies, that is your HR team."*), which is a
+  single constant quoted verbatim by both agent prompts and pinned by
+  `tests/test_prompts_invariants.py`, so the text the model produces, the text the
+  code returns on a deterministic refusal, and the text a reader sees cannot
+  drift apart.
+* **Weak but non-empty results.** The model gets those passages and nothing else.
+  The prompt forbids filling the gap with plausible policy text, and requires a
+  partial answer to *name* the uncovered part instead of refusing the whole
+  question. `min_similarity` exists so the agent can raise its own bar when it
+  suspects the question is off-corpus.
+* **There is no similarity threshold that auto-refuses.** A hard cut would refuse
+  an answer that happens to sit just under it, and "is this covered?" is precisely
+  the judgement a model can make with the candidate passages in front of it —
+  replacing that judgement with a number is the class of shortcut this codebase
+  removes elsewhere (§7.8). Coverage refusal belongs to the component that has
+  read the passages; triage never refuses on subject, only on the shape of the
+  request (§3.1).
+* **A fabricated citation cannot hide.** Deterministic resolution turns it into a
+  `citation_warning`, and the reader can click it and be told it does not resolve
+  (§3.6).
+* **Nothing vetoes after the fact.** No judge, no second model, no auto-refusal —
+  the measurement behind that choice is §3.7.
+
 ## 4. The contradiction cascade (staged, cost-aware)
 
 Runs in the background after every successful ingestion, for each chunk of the
@@ -406,6 +478,44 @@ above); the field is populated only when the offline audit harness runs, so a
 client must not read `null` as "unfaithful". `intent_route` is the triage
 decision, which is how an answer with zero tool calls can be legitimate
 (`DIRECT_REPLY` for a document listing, `FAST_REFUSE` for a non-document request).
+
+Requests are small on purpose:
+
+```json
+{"question": "Does the Standard tier cover dental implants?",
+ "history": [{"role": "user", "content": "…"}, {"role": "assistant", "content": "…"}]}
+```
+
+`history` is the client's own transcript, used so a follow-up ("and for Premier?")
+resolves; it is never treated as evidence. Uploads are `multipart/form-data` with a
+single `file` field.
+
+**Why this schema.** `answer` is prose because a person reads it. `citations` is a
+list of strings in the same `[doc § section]` form that appears inline, so a client
+can display them without re-parsing prose, and `GET /api/citations/resolve` turns
+any one of them into the passage behind it — verification does not depend on the
+client's own text munging. `steps` is the audit trail (tool, arguments,
+observation) that makes "why did it answer that?" answerable afterwards, which is
+also what the UI renders live. `seen_chunk_ids` is the set the answer was *allowed*
+to use, which is what the offline judge reads instead of trusting the citations.
+`intent_route` explains the one result shape that would otherwise look broken (zero
+tool calls). `faithful` is `null` rather than `false` because "nobody judged this"
+and "judged unfaithful" are different facts, and collapsing them would be a lie in a
+convenient direction.
+
+**Failure paths** (the brief's "handle empty queries and unreadable files without
+crashing"):
+
+| input | behaviour |
+|---|---|
+| empty / whitespace question | `400` over HTTP; through the CLI the same input gets "please ask a question about the ingested documents …" instead of an empty answer |
+| unsupported extension | `400 unsupported file type '.docx' (allowed: txt, md, pdf)` |
+| empty file | `400 empty file`; the temporary upload is deleted |
+| file over `MAX_UPLOAD_MB` | `413`; the body is streamed in 1 MB windows, so the process cannot be OOM'd before the check |
+| unreadable PDF (image-only, encrypted, truncated) | `ReaderError` → ingest job `error` **and** document `error`, with the reader's message in `jobs.error`; the API never 500s and the thread never dies silently |
+| job killed mid-run (process restart) | the job is reclaimed as `error` at startup after `STALE_JOB_MINUTES`, so a document cannot stay `ingesting` forever |
+| model endpoint down or timing out | `503 agent failed: …` on `/api/ask`; an `error` frame on the stream, which the UI renders as a terminal state |
+| unknown document / job / chunk id | `404` |
 
 Endpoints: `POST /api/documents` (upload, returns immediately and ingests in the
 background), `GET /api/documents` (status + live job progress + open-flag counts),
@@ -526,9 +636,11 @@ What these numbers do **not** establish:
 2. **Reranker** — small cross-encoder over the top-20 hits (bge-reranker via
    Ollama); usually the single biggest precision jump once the corpus is big
    enough for the fusion step to matter.
-3. **Judge verdict cache** — verdicts vary run to run at temperature 0; caching
-   them keyed by `sha(question + answer + contexts)` makes demos reproducible and
-   re-runs free (the triage layer already does exactly this).
+3. **A feedback loop** — the brief's thumbs up/down, stored and later joined to the
+   benchmark: right now quality is measured by a label set run offline, so a real
+   question that gets a bad answer leaves no trace. The cheapest version is to
+   store `{question, answer, citation_warnings, verdict}` from the UI and sample it
+   weekly; the interesting part is turning thumbs into *cases*, not into a number.
 4. **Table-aware extraction** — row-level digests for tables (PDF tables via
    pdfplumber with bbox detection), so "does tier X cover Y?" hits the exact
    cell.
@@ -560,6 +672,14 @@ What these numbers do **not** establish:
 * Benchmark numbers are single samples from a sampling model: the one miss moves
   between runs, so per-question hit rates (`eval/repeat_question.py`) are the honest
   unit, not one run's accuracy (§6).
+* Of the brief's stretch ideas, hybrid search is implemented and measured (§2.1) and
+  table extraction is not: PDF tables are flattened to text by the reader, so a
+  wide benefits table survives as word order rather than cells (§8.4 names the fix).
+  Versioning ("this policy supersedes v2") is not implemented either — a superseded
+  document stays in the corpus and can produce a contradiction flag instead of a
+  replacement (§8.7). Both are stated rather than half-built.
+* No auth, no multi-tenancy: one process, one corpus, one operator. The admin and
+  employee surfaces are the same HTTP API with no role check (§8.5).
 * Scanned/image PDFs are rejected with a clear error rather than OCR'd.
 * The lexical signals are English-oriented and can *bias* the decision model's
   score (they no longer decide anything). A pair the heuristics find boring still
