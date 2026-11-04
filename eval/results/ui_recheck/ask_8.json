@@ -1,0 +1,159 @@
+{
+  "answer": "**Short answer:** Casual leave is deducted day-for-day from your accrued balance when you take it, but **casual leave cannot be encashed at all** \u2014 so an \"encashment\" of casual leave days is not a permitted transaction and would not reduce your casual leave balance. Only Earned/Privilege Leave can be encashed (up to 5 days at year end).\n\n## 1. How casual leave is deducted when you take leave\n\n- Casual Leave accrues at **1 day per completed month of service, up to 12 days per calendar year**, and the balance is visible in the HRMS at the start of each month [leave_policy \u00a7 3.1 Accrual and Usage].\n- You may use it as soon as it has accrued; **advancing usage against future accrual is not permitted** [leave_policy \u00a7 3.1 Accrual and Usage]. So a day taken is deducted from the balance already accrued \u2014 you cannot go negative.\n- Requests must go through the HRMS portal (email/chat requests are not formally submitted); planned leave needs advance notice, and unplanned leave must be reported before 10:00 AM and regularized in the HRMS within 2 working days [leave_policy \u00a7 3.3 Application Procedure]. The 2025 amendment reduced the planned-leave notice from 2 working days to **1 working day** effective July 1, 2025 [leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)].\n- Probationary employees are capped at 1 casual leave day per month [leave_policy \u00a7 1. Overview].\n\n## 2. Encashment \u2014 casual leave is excluded\n\n- Unused casual leave above the carry-forward cap \"lapses permanently on December 31 and **cannot be recovered, encashed, or transferred to another leave type**\" [leave_policy \u00a7 3.2 Carry-Forward].\n- The only encashment provision in the policy is for **Earned/Privilege Leave: \"Up to 5 unused days may be encashed at year end\"** [leave_policy \u00a7 2. Leave Types and Annual Entitlements].\n\nSo if the 2 days in your scenario are casual leave, the documents do not permit encashing them, and no deduction from the casual leave balance occurs on that account. If they are Earned/Privilege Leave days, they come out of that separate 18-day balance, not the casual leave balance [leave_policy \u00a7 2. Leave Types and Annual Entitlements].\n\n## 3. The resulting balance\n\nUsing your figures \u2014 14 days casual leave balance, 3 days taken, 2 days encashed:\n\n- Leave taken: **14 \u2212 3 = 11 days** remaining.\n- Encashment: **no deduction**, because casual leave cannot be encashed [leave_policy \u00a7 3.2 Carry-Forward].\n- **Resulting casual leave balance: 11 days** (14 \u2212 3 = 11; the 2 encashed days are not deducted from casual leave).\n\nThat 11 is my arithmetic on your inputs, not a figure stated in any passage.\n\n## 4. Two things to check against your own numbers\n\n**a) A 14-day casual leave balance is not a standard annual entitlement.** The annual entitlement is 12 days [leave_policy \u00a7 2. Leave Types and Annual Entitlements]. A 14-day balance could only arise through carry-forward from the previous year.\n\n**b) The carry-forward cap is itself disputed.** The base policy caps carry-forward at **6 days** [leave_policy \u00a7 3.2 Carry-Forward], while the 2025 amendment states the cap \"is increased from 6 days to **15 days**\" effective July 1, 2025 [leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)]. The contradiction scanner has flagged these two passages as an open, verified conflict [contradiction #2]. The amendment is dated and expressly amends \u00a7 3.2, but the documents do not contain a clause stating which text governs the unamended policy document, so I am reporting both rather than picking one. This matters for your balance: under a 6-day cap, days above 6 would lapse on December 31; under a 15-day cap, up to 15 would carry forward.\n\n**Not covered:** the documents do not describe the payroll mechanics of encashment (rate of pay, timing of payment) for Earned/Privilege Leave beyond the 5-day year-end limit.\n\nSources:\n- [leave_policy \u00a7 3.1 Accrual and Usage]\n- [leave_policy \u00a7 3.2 Carry-Forward]\n- [leave_policy \u00a7 3.3 Application Procedure]\n- [leave_policy \u00a7 2. Leave Types and Annual Entitlements]\n- [leave_policy \u00a7 1. Overview]\n- [leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)]\n- Contradiction flag #2 (OPEN, verified)",
+  "steps": [
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave balance deduction encashment",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"casual leave balance deduction encashment\" (top_k=8; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.033)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 days. Any unuse"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave encashment rules maximum days",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"casual leave encashment rules maximum days\" (top_k=8; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.033)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 days. Any unus"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "encashment of leave days at year end",
+        "top_k": 10
+      },
+      "observation": "Found 10 passages for query \"encashment of leave days at year end\" (top_k=10; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.033)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 days. Any unused b"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave balance 14 days deduct 3 days encash 2 days remaining",
+        "top_k": 10
+      },
+      "observation": "Found 10 passages for query \"casual leave balance 14 days deduct 3 days encash 2 days remaining\" (top_k=10; score in brackets):\n\n[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | (score 0.033)\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, "
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "Earned Privilege Leave encashment year end five days",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"Earned Privilege Leave encashment year end five days\" (top_k=6; score in brackets):\n\n[chunk 3] Doc: leave_policy | Section: 2. Leave Types and Annual Entitlements | (score 0.033)\n\"\"\"\n## 2. Leave Types and Annual Entitlements\n\nThe table below summarizes the leave types ava"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "14 days casual leave entitlement",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"14 days casual leave entitlement\" (top_k=6; score in brackets):\n\n[chunk 5] Doc: leave_policy | Section: 3.1 Accrual and Usage | (score 0.033)\n\"\"\"\n## 3.1 Accrual and Usage\n\nCasual Leave accrues at 1 day per completed month of service, up to the annual entitlement of 12 day"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "casual leave encashment permitted or not",
+        "min_similarity": 0.5
+      },
+      "observation": "Found 6 passages for query \"casual leave encashment permitted or not\" (min_similarity=0.5; score in brackets):\n\n[chunk 4] Doc: leave_policy | Section: 3. Casual Leave | (score 0.654)\n\"\"\"\n## 3. Casual Leave\n\nCasual Leave is the default paid leave type for absences that are not illness-related. It is "
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 6
+      },
+      "observation": "[chunk 6] Doc: leave_policy | Section: 3.2 Carry-Forward | Breadcrumb: leave_policy > Policy Number: HR-LVE-2024-001 > 3.2 Carry-Forward\n\"\"\"\n## 3.2 Carry-Forward\n\nUnused casual leave may be carried forward into the next calendar year, capped at 6 days. Any unused balance above 6 days lapses permanen"
+    },
+    {
+      "type": "tool_call",
+      "tool": "calculate",
+      "arguments": {
+        "expression": "balance - used",
+        "variables": {
+          "balance": 14,
+          "used": 3
+        }
+      },
+      "observation": "11   (expression: 14 - 3)\nState this figure with its inputs in the answer: a computed number must be traceable, and the documents do not state it."
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 15
+      },
+      "observation": "5 all contradiction(s); showing up to 15:\n\n#5 [VERIFIED, OPEN, confidence 0.96, gate 0.89]\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 57)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely for at"
+    },
+    {
+      "type": "final",
+      "content": "**Short answer:** Casual leave is deducted day-for-day from your accrued balance when you take it, but **casual leave cannot be encashed at all** \u2014 so an \"encashment\" of casual leave days is not a permitted transaction and would not reduce your casual leave balance. Only Earned/Privilege Leave can be encashed (up to 5 days at year end).\n\n## 1. How casual leave is deducted when you take leave\n\n- Ca"
+    }
+  ],
+  "citations": [
+    "leave_policy \u00a7 3.1 Accrual and Usage",
+    "leave_policy \u00a7 3.3 Application Procedure",
+    "leave_policy_2025_amendment \u00a7 Leave Policy Amendment \u2014 2025 (Policy CL-2025-07)",
+    "leave_policy \u00a7 1. Overview",
+    "leave_policy \u00a7 3.2 Carry-Forward",
+    "leave_policy \u00a7 2. Leave Types and Annual Entitlements"
+  ],
+  "citation_warnings": [
+    "citation 'contradiction #2' does not match any ingested document"
+  ],
+  "seen_chunk_ids": [
+    6,
+    5,
+    3,
+    4,
+    50,
+    7,
+    10,
+    8,
+    2
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 5,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 10,
+  "elapsed_s": 50.75,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "How are casual leave days deducted when an employee takes leave and encashes leave, and what is the resulting casual leave balance?",
+    "search_queries": [
+      "casual leave balance calculation",
+      "casual leave encashment rules",
+      "leave deduction and encashment policy"
+    ],
+    "entities": [
+      "casual leave",
+      "14 days",
+      "3 days",
+      "2 days encashment"
+    ],
+    "requires_table_check": false,
+    "tone_guidance": "Provide a clear, neutral explanation of how casual leave balance is calculated after usage and encashment, citing relevant policy terms.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee is asking how casual leave balance is affected by taking leave and encashing days.",
+    "decided_by": "llm",
+    "prompt_version": "v1",
+    "latency_s": 4.66,
+    "notes": []
+  }
+}

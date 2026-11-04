@@ -43,12 +43,14 @@ class TestListContradictions(unittest.TestCase):
 
     def test_open_flags_include_both_sides_and_the_reason(self):
         out = self.registry.execute("list_contradictions", {})
-        self.assertIn(f"#{self.cid}", out)
+        self.assertIn(f"Flag {self.cid}", out)
         self.assertIn("remote_v1", out)
         self.assertIn("remote_v2", out)
         self.assertIn("3 days vs 1 day.", out)
         self.assertIn("VERIFIED", out)
-        self.assertIn("[doc_name", out)   # tells the model how to cite
+        # the flag may not be cited as a source: the instruction must say so
+        self.assertIn("Cite the PASSAGES, not the flag", out)
+        self.assertIn("never as [contradiction", out)
 
     def test_empty_result_says_none_found_not_clean(self):
         self.db.set_contradiction_status(self.cid, "resolved")
@@ -61,7 +63,7 @@ class TestListContradictions(unittest.TestCase):
         self.assertEqual(self.db.list_contradictions("OPEN"), [])
         out = self.registry.execute("list_contradictions", {"status": "all"})
         self.assertIn("dismissed", out)
-        self.assertIn(f"#{self.cid}", out)
+        self.assertIn(f"Flag {self.cid}", out)
 
     def test_limit_is_respected_and_reported(self):
         out = self.registry.execute("list_contradictions", {"limit": 1})

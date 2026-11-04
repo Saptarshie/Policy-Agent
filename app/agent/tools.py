@@ -441,8 +441,9 @@ class ToolRegistry:
         for f in rows[:limit]:
             tag = "VERIFIED" if f.get("verified") else "UNVERIFIED"
             lines.append(
-                f"\n#{f['id']} [{tag}, {f.get('status')}, confidence {float(f.get('confidence') or 0):.2f}, "
-                f"gate {float(f.get('gate_score') or 0):.2f}]")
+                f"\nFlag {f['id']} - {tag}, {f.get('status')}, "
+                f"confidence {float(f.get('confidence') or 0):.2f}, "
+                f"gate {float(f.get('gate_score') or 0):.2f}")
             lines.append(f"  A: {f.get('doc_a')} § {f.get('section_a')} "
                          f"(chunk {f.get('chunk_a_id')})")
             lines.append(f"     \"{(f.get('text_a') or '')[:300]}\"")
@@ -452,8 +453,14 @@ class ToolRegistry:
             lines.append(f"  Why: {f.get('explanation') or '(no explanation)'}")
         if len(rows) > limit:
             lines.append(f"\n...{len(rows) - limit} more not shown")
-        lines.append("\nCite these as you would any other passage, e.g. "
-                     "[doc_name § section].")
+        # the flag is the scanner's own analysis, not a source: citing it inside
+        # brackets produces a citation that resolves to no document (and the
+        # citation check flags it), so the passages are what must be cited
+        lines.append(
+            "\nCite the PASSAGES, not the flag: [doc_a § section_a] and "
+            "[doc_b § section_b]. Square brackets are reserved for document "
+            "citations - mention a flag in prose instead (\"the scanner flags "
+            "this as contradiction 4\"), never as [contradiction 4].")
         return "\n".join(lines)
 
     def _need_scratch(self) -> Scratchpad:

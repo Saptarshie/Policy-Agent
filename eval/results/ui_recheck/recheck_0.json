@@ -1,0 +1,115 @@
+{
+  "answer": "**Under the current policy: 1 day per week.** Remote work is limited to a maximum of 1 day per calendar week, and each remote day requires written approval from your direct manager [remote_work_policy_v2 \u00a7 2. Office Attendance]. The same section requires at least 4 days per calendar week in your assigned office [remote_work_policy_v2 \u00a7 2. Office Attendance].\n\n**Important: the documents disagree on this number.** Three ingested documents state different limits:\n\n| Document | Limit | Effective date |\n|---|---|---|\n| remote_work_policy_v2 (ACME Hybrid Work Policy v2.0) | max **1 day/week** | 2025-06-01 |\n| remote_work_policy_v1 (Remote Work Policy v1.0) | up to **3 days/week** | 2024-01-01 |\n| sample_policy (RW-2025-014) | tiers of **3, 4 or 5 days/week** | 2025-03-01 |\n\n- v1.0 says employees \"may work remotely for up to 3 days per calendar week\" [remote_work_policy_v1 \u00a7 2. Remote Work Allowance].\n- The sample policy's tier table lists Bronze 3 days/week, Silver 4 days/week and Gold 5 days/week remote [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.].\n\nv2.0 is the latest-dated remote work policy from the same owner (People Operations) and is the natural successor to v1.0, so 1 day/week is the best reading of the current rule \u2014 but note that the sample policy (effective March 1, 2025) still describes arrangements of 3\u20135 remote days per week, which is incompatible with v2.0's 1-day cap. The documents do not state which one prevails where they overlap, so if you are relying on this for an actual arrangement, confirm with People Operations. The scanner also flags a scope conflict between v1.0 (engineering, design and support only) and v2.0 (all full-time employees in every function).\n\nSources:\n- [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.]",
+  "steps": [
+    {
+      "type": "thought",
+      "content": "I'll search the policy documents for remote work frequency rules."
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work days per week frequency",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"remote work days per week frequency\" (top_k=6; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.033)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned office at least 4 days per calendar week. Remote "
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "telework work from home allowance eligibility",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"telework work from home allowance eligibility\" (top_k=6; score in brackets):\n\n[chunk 39] Doc: remote_work_policy_v1 | Section: 2. Remote Work Allowance | (score 0.033)\n\"\"\"\n2. Remote Work Allowance\n\nEmployees may work remotely for up to 3 days per calendar week. The remain"
+    },
+    {
+      "type": "thought",
+      "content": "Two policy versions give different limits. Let me check the contradiction audit trail and document metadata."
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 10
+      },
+      "observation": "3 all contradiction(s); showing up to 10:\n\nFlag 5 - VERIFIED, resolved, confidence 0.96, gate 0.89\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 57)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotel"
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "remote_work_policy_v2"
+      },
+      "observation": "Document: remote_work_policy_v2 (status: ready, 0 chunks)\nRolling summary: ACME Hybrid Work Policy v2.0, effective 2025-06-01, owned by People Operations, applies to all full-time employees in every function. Employees must work in their assigned office at least 4 days per calendar week; remote work"
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "remote_work_policy_v1"
+      },
+      "observation": "Document: remote_work_policy_v1 (status: ready, 0 chunks)\nRolling summary: ACME Corporation Remote Work Policy v1.0 effective 2024-01-01, owned by People Operations, applies to full-time engineering, design, and support employees; contractors and interns have separate agreements. Employees may work "
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "sample_policy"
+      },
+      "observation": "Document: sample_policy (status: ready, 0 chunks)\nRolling summary: Acme Corp Remote Work Allowance Policy RW-2025-014 is effective March 1, 2025. Employees remote at least three days/week receive a $50 monthly internet stipend via payroll, covering only the primary household connection with no recei"
+    },
+    {
+      "type": "final",
+      "content": "**Under the current policy: 1 day per week.** Remote work is limited to a maximum of 1 day per calendar week, and each remote day requires written approval from your direct manager [remote_work_policy_v2 \u00a7 2. Office Attendance]. The same section requires at least 4 days per calendar week in your assigned office [remote_work_policy_v2 \u00a7 2. Office Attendance].\n\n**Important: the documents disagree on"
+    }
+  ],
+  "citations": [
+    "remote_work_policy_v2 \u00a7 2. Office Attendance",
+    "remote_work_policy_v1 \u00a7 2. Remote Work Allowance",
+    "sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025."
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    45,
+    39,
+    57,
+    49,
+    24,
+    43,
+    41,
+    25
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 2,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 6,
+  "elapsed_s": 20.74,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "How many days per week is remote work permitted?",
+    "search_queries": [
+      "remote work days per week",
+      "telework frequency policy",
+      "work from home allowance"
+    ],
+    "entities": [],
+    "requires_table_check": false,
+    "tone_guidance": "Provide a clear, direct answer citing the relevant policy limit.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee is asking about the permitted frequency of remote work per week.",
+    "decided_by": "cache",
+    "prompt_version": "v1",
+    "latency_s": 0.0,
+    "notes": []
+  }
+}

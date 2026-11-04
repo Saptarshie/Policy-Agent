@@ -1,0 +1,39 @@
+{
+  "answer": "Hello! I'm PolicyPilot, your policy-document assistant. Ask me anything about the ingested policies and I'll answer with citations to the exact documents and sections.",
+  "steps": [
+    {
+      "type": "direct",
+      "content": "intent gate: GREETING"
+    }
+  ],
+  "citations": [],
+  "citation_warnings": [],
+  "seen_chunk_ids": [],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 0,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 0,
+  "elapsed_s": 0.0,
+  "error": null,
+  "intent": "GREETING",
+  "intent_route": "DIRECT_REPLY",
+  "intent_plan": {
+    "intent": "GREETING",
+    "route": "DIRECT_REPLY",
+    "de_noised_question": "",
+    "search_queries": [],
+    "entities": [],
+    "requires_table_check": false,
+    "tone_guidance": "Respond warmly and briefly, inviting the employee to ask an HR policy or benefits question.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee has sent a bare greeting with no question attached.",
+    "decided_by": "llm",
+    "prompt_version": "v1",
+    "latency_s": 3.85,
+    "notes": []
+  }
+}

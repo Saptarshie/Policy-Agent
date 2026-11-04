@@ -1,0 +1,140 @@
+{
+  "answer": "Yes \u2014 the documents contradict each other on remote work, and the contradiction scanner has flagged these as verified, open conflicts.\n\n**1. How many days you may work remotely (three incompatible rules)**\n\n- \"All employees are entitled to work remotely up to 5 days per week, subject to manager approval\" and \"There is no mandatory office attendance day\" [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)]\n- \"Employees must work from their assigned office at least 4 days per calendar week. Remote work is limited to a maximum of 1 day per week and requires written approval from the direct manager for each remote day\" [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- \"Employees may work remotely for up to 3 days per calendar week. The remaining working days must be spent at the assigned office location\" [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n\nThese are mutually exclusive: 5 days remote with no office day vs. 1 day remote / 4 office days vs. 3 days remote / 2 office days. The scanner logs the 5-vs-1 and 5-vs-3 pairs as verified conflicts (confidence 0.99 each).\n\n**2. Related knock-on differences between the two ACME versions**\n\n- Eligibility: 6 months' continuous employment, PIP employees ineligible [remote_work_policy_v1 \u00a7 4. Eligibility] vs. 12 months plus a \"meets expectations\" rating [remote_work_policy_v2 \u00a7 2. Office Attendance / summary]\n- Core hours: reachable 10:00\u201316:00 [remote_work_policy_v1 \u00a7 6. Core Hours] vs. 09:00\u201317:00 [remote_work_policy_v2]\n- Notice to change an arrangement: 15 days written notice [remote_work_policy_v1 \u00a7 2. Remote Work Allowance] vs. 30 days via the HR portal [remote_work_policy_v2]\n\n**3. Remote-work money: stipend vs. reimbursement**\n\n- A no-receipt monthly internet stipend of $50 for employees remote at least 3 days/week, with a tier table paying $75/mo at Gold (5 days/week) [sample_policy \u00a7 Policy Number: RW-2025-014]\n- Versus a $60/month home-internet limit where \"each category requires an itemized receipt\" [expense_policy \u00a7 2. Reimbursable Categories]\n\nSo the same home-internet cost is described as a receipt-free stipend in one document and a receipt-required reimbursement capped at $60 in another, and the $75 Gold-tier stipend exceeds that $60 cap. The scanner logs this as a verified conflict (confidence 0.96).\n\n**What the documents do not resolve:** none of the retrieved passages states which document prevails \u2014 I found no precedence, \"supersedes\", or effective-date-ordering clause that settles the conflict. The effective dates differ (remote_work_policy_v1: 2024-01-01; remote_work_policy_v2: 2025-06-01; sample_policy RW-2025-014: March 1, 2025; ui_check_remote_policy: \"2026 Revision\"), but the documents themselves do not say that a later date overrides an earlier one, so I cannot tell you which rule applies. That needs an owner decision.\n\nSources:\n- [ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)]\n- [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- [remote_work_policy_v1 \u00a7 4. Eligibility]\n- [remote_work_policy_v1 \u00a7 6. Core Hours]\n- [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.]\n- [expense_policy \u00a7 2. Reimbursable Categories]",
+  "steps": [
+    {
+      "type": "thought",
+      "content": "I'll check the contradiction audit trail and search the remote work passages in parallel."
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 20
+      },
+      "observation": "5 all contradiction(s); showing up to 20:\n\n#5 [VERIFIED, OPEN, confidence 0.96, gate 0.89]\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 57)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely for at"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work policy eligibility days per week",
+        "min_similarity": 0.5
+      },
+      "observation": "Found 7 passages for query \"remote work policy eligibility days per week\" (min_similarity=0.5; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.652)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned office at least 4 days per ca"
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "remote_work_policy_v1"
+      },
+      "observation": "Document: remote_work_policy_v1 (status: ready, 0 chunks)\nRolling summary: ACME Corporation Remote Work Policy v1.0 effective 2024-01-01, owned by People Operations, applies to full-time engineering, design, and support employees; contractors and interns have separate agreements. Employees may work "
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "remote_work_policy_v2"
+      },
+      "observation": "Document: remote_work_policy_v2 (status: ready, 0 chunks)\nRolling summary: ACME Hybrid Work Policy v2.0, effective 2025-06-01, owned by People Operations, applies to all full-time employees in every function. Employees must work in their assigned office at least 4 days per calendar week; remote work"
+    },
+    {
+      "type": "tool_call",
+      "tool": "get_document_summary",
+      "arguments": {
+        "doc_name": "ui_check_remote_policy"
+      },
+      "observation": "Document: ui_check_remote_policy (status: ready, 0 chunks)\nRolling summary: Remote Work Policy (2026 Revision): All employees are entitled to work remotely up to 5 days per week, subject to manager approval. There is no mandatory office attendance day. The company provides a laptop and a one-time ho"
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 1
+      },
+      "observation": "5 all contradiction(s); showing up to 1:\n\n#5 [VERIFIED, OPEN, confidence 0.96, gate 0.89]\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 57)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotely for at "
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 24
+      },
+      "observation": "[chunk 24] Doc: expense_policy | Section: 2. Reimbursable Categories | Breadcrumb: expense_policy > Policy Number: HR-EXP-2024-003 > 2. Reimbursable Categories\n\"\"\"\n## 2. Reimbursable Categories\n\nThe following recurring remote-work categories are reimbursed monthly, up to the stated limits.\n\n| Catego"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "supersedes previous policy precedence effective date replaces",
+        "top_k": 5
+      },
+      "observation": "Found 5 passages for query \"supersedes previous policy precedence effective date replaces\" (top_k=5; score in brackets):\n\n[chunk 30] Doc: travel_reimbursement_policy | Section: Acme Corporation | (score 0.032)\n\"\"\"\nACME CORPORATION\nTravel and Expense Reimbursement Policy\n\nEffective date: 2024-03-01\n\""
+    },
+    {
+      "type": "final",
+      "content": "Yes \u2014 the documents contradict each other on remote work, and the contradiction scanner has flagged these as verified, open conflicts.\n\n**1. How many days you may work remotely (three incompatible rules)**\n\n- \"All employees are entitled to work remotely up to 5 days per week, subject to manager approval\" and \"There is no mandatory office attendance day\" [ui_check_remote_policy \u00a7 Remote Work Policy"
+    }
+  ],
+  "citations": [
+    "ui_check_remote_policy \u00a7 Remote Work Policy (2026 Revision)",
+    "remote_work_policy_v2 \u00a7 2. Office Attendance",
+    "remote_work_policy_v1 \u00a7 2. Remote Work Allowance",
+    "remote_work_policy_v1 \u00a7 4. Eligibility",
+    "remote_work_policy_v2 \u00a7 2. Office Attendance / summary",
+    "remote_work_policy_v1 \u00a7 6. Core Hours",
+    "remote_work_policy_v2",
+    "sample_policy \u00a7 Policy Number: RW-2025-014",
+    "expense_policy \u00a7 2. Reimbursable Categories",
+    "sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025."
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    45,
+    54,
+    39,
+    57,
+    41,
+    38,
+    43,
+    24,
+    30,
+    14,
+    37,
+    1,
+    44
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 0,
+  "parallel_turns": 3,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 8,
+  "elapsed_s": 27.44,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "Do the policy documents contradict each other regarding remote work?",
+    "search_queries": [
+      "remote work policy consistency",
+      "remote work contradictions",
+      "remote work guidelines overlap"
+    ],
+    "entities": [],
+    "requires_table_check": false,
+    "tone_guidance": "Answer neutrally, citing any conflicting clauses if found; if no contradiction exists, state that clearly.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee asks whether the policy documents contain contradictory statements about remote work.",
+    "decided_by": "cache",
+    "prompt_version": "v1",
+    "latency_s": 0.0,
+    "notes": []
+  }
+}

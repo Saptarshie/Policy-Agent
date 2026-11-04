@@ -4,9 +4,12 @@ import time
 
 import requests
 
-BASE = "http://127.0.0.1:8077"
-UP = pathlib.Path("C:/Users/sapta/AppData/Local/hermes/cache/scratch/ui_verify/uploads")
-src = pathlib.Path("C:/Users/sapta/AppData/Local/hermes/cache/scratch/ui_check_leak.txt")
+import os
+
+BASE = os.getenv("BASE", "http://127.0.0.1:8077")
+DATA_DIR = pathlib.Path(os.getenv("DATA_DIR", "./data"))
+UP = DATA_DIR / "uploads"
+src = DATA_DIR / "_leak_check.txt"
 src.write_text("Leak test policy: interns get 2 casual leave days per year.\n",
                encoding="utf-8")
 

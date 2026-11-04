@@ -1,0 +1,185 @@
+{
+  "answer": "**Yes \u2014 the documents contradict each other on remote work, in several distinct ways.** The contradiction scanner has three verified flags in total, and two of them concern remote work (one of those is marked resolved, one open). Beyond the flagged pairs, the remote-work passages also disagree on core hours, eligibility and stipend mechanics.\n\n## 1. How many days may an employee work remotely? (direct conflict)\n- **v1:** \"Employees may work remotely for up to **3 days** per calendar week. The remaining working days must be spent at the assigned office location.\" [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- **v2:** \"Employees must work from their assigned office at least **4 days** per calendar week. Remote work is limited to a maximum of **1 day** per week and requires written approval from the direct manager for each remote day.\" [remote_work_policy_v2 \u00a7 2. Office Attendance]\n\nThese are incompatible weekly limits (3 remote days vs. 1 remote day). Note that v2 is dated later (effective 2025-06-01) than v1 (effective 2024-01-01) [remote_work_policy_v2 \u00a7 ACME Hybrid Work Policy (v2.0)] [remote_work_policy_v1 \u00a7 Acme Corporation], but **neither document states that it supersedes or repeals the other** \u2014 so the documents themselves do not resolve which limit applies.\n\n## 2. Who is covered (flagged by the scanner as an open contradiction)\n- **v1:** applies to \"all full-time employees in **engineering, design, and support** functions. Contractors and interns are covered by separate agreements.\" [remote_work_policy_v1 \u00a7 1. Purpose]\n- **v2:** applies to \"all full-time employees in **every function**.\" [remote_work_policy_v2 \u00a7 1. Purpose]\n\n## 3. Eligibility thresholds (also inconsistent)\n- **v1:** eligible after \"**6 months** of continuous employment\"; employees on a performance improvement plan are not eligible. [remote_work_policy_v1 \u00a7 4. Eligibility]\n- **v2:** \"only to employees who have completed **12 months** of continuous employment and who hold a performance rating of 'meets expectations' or higher.\" [remote_work_policy_v2 \u00a7 4. Eligibility]\n\n## 4. Core hours (inconsistent)\n- **v1:** reachable \"between **10:00 and 16:00** local time.\" [remote_work_policy_v1 \u00a7 6. Core Hours]\n- **v2:** reachable \"between **09:00 and 17:00** local time.\" [remote_work_policy_v2 \u00a7 6. Core Hours]\n\n## 5. Remote-work pay/equipment (flagged by the scanner; marked resolved)\n- **sample_policy (RW-2025-014, eff. 2025-03-01):** a **$50/month** internet stipend for employees remote at least three days per week, \"requires **no receipts**\", plus a one-time **$600** equipment budget; its tier table lists Bronze 3 days/$50/$400, Silver 4 days/$60/$600, Gold 5 days/$75/$800. [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.]\n- **expense_policy:** home internet reimbursed up to **$60/month**, and \"Each category requires an **itemized receipt**\"; unclaimed amounts are forfeited. [expense_policy \u00a7 2. Reimbursable Categories]\n\nSo the same home-internet benefit is described as a no-receipt $50 stipend in one document and a receipt-based $60 cap in another, and the Gold tier's $75/month exceeds the $60 cap. The scanner records this pair as a verified contradiction that has since been marked resolved \u2014 the documents as ingested do not themselves show an amendment reconciling the two figures.\n\n## 6. Equipment provisioning (minor inconsistency)\n- **v1:** \"a laptop and a security token.\" [remote_work_policy_v1 \u00a7 5. Equipment and Security]\n- **v2:** \"a laptop, a security token, and a **monitor**,\" with VPN plus multi-factor authentication. [remote_work_policy_v2 \u00a7 5. Equipment]\n\n## Bottom line\nThe corpus does not present a single consistent remote-work rule. The sharpest conflict is the weekly remote-day allowance (3 days vs. 1 day), followed by scope, eligibility, core hours and the internet-stipend terms. The documents contain no statement of precedence between v1 and v2, so **the ingested documents do not say which version governs** \u2014 that is a gap, not something I can infer.\n\nSources:\n- [remote_work_policy_v1 \u00a7 2. Remote Work Allowance]\n- [remote_work_policy_v2 \u00a7 2. Office Attendance]\n- [remote_work_policy_v1 \u00a7 1. Purpose]\n- [remote_work_policy_v2 \u00a7 1. Purpose]\n- [remote_work_policy_v1 \u00a7 4. Eligibility]\n- [remote_work_policy_v2 \u00a7 4. Eligibility]\n- [remote_work_policy_v1 \u00a7 6. Core Hours]\n- [remote_work_policy_v2 \u00a7 6. Core Hours]\n- [remote_work_policy_v1 \u00a7 5. Equipment and Security]\n- [remote_work_policy_v2 \u00a7 5. Equipment]\n- [sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.]\n- [expense_policy \u00a7 2. Reimbursable Categories]",
+  "steps": [
+    {
+      "type": "thought",
+      "content": "I'll check the contradiction audit trail and search the remote work passages in parallel."
+    },
+    {
+      "type": "tool_call",
+      "tool": "list_contradictions",
+      "arguments": {
+        "status": "all",
+        "limit": 20
+      },
+      "observation": "3 all contradiction(s); showing up to 20:\n\nFlag 5 - VERIFIED, resolved, confidence 0.96, gate 0.89\n  A: sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025. (chunk 57)\n     \"Policy Number: RW-2025-014. Effective Date: March 1, 2025.\n1. Internet Stipend\nEmployees working remotel"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote work policy eligibility days per week",
+        "min_similarity": 0.5
+      },
+      "observation": "Found 6 passages for query \"remote work policy eligibility days per week\" (min_similarity=0.5; score in brackets):\n\n[chunk 45] Doc: remote_work_policy_v2 | Section: 2. Office Attendance | (score 0.652)\n\"\"\"\n## 2. Office Attendance\n\nEmployees must work from their assigned office at least 4 days per ca"
+    },
+    {
+      "type": "thought",
+      "content": "Clear conflicts are emerging. Let me read the full v2 policy and check for more remote-work passages."
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 44
+      },
+      "observation": "[chunk 44] Doc: remote_work_policy_v2 | Section: ACME Hybrid Work Policy (v2.0) | Breadcrumb: remote_work_policy_v2 > ACME Hybrid Work Policy (v2.0)\n\"\"\"\n# ACME Hybrid Work Policy (v2.0)\n\n_Effective: 2025-06-01. Owner: People Operations._\n\n## 1. Purpose\n\nThis policy defines ACME Corporation's hybrid "
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "min_similarity": 0.45,
+        "query": "hybrid work core hours eligibility equipment stipend remote days"
+      },
+      "observation": "Found 9 passages for query \"hybrid work core hours eligibility equipment stipend remote days\" (min_similarity=0.45; score in brackets):\n\n[chunk 57] Doc: sample_policy | Section: Policy Number: RW-2025-014. Effective Date: March 1, 2025. | (score 0.600)\n\"\"\"\nPolicy Number: RW-2025-014. Effective Date:"
+    },
+    {
+      "type": "thought",
+      "content": "Let me check the remaining v2 sections (equipment/stipend) and confirm v1's full allowance text."
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "remote_work_policy_v2 equipment allowance stipend reimbursement section 3 section 5",
+        "top_k": 6
+      },
+      "observation": "Found 6 passages for query \"remote_work_policy_v2 equipment allowance stipend reimbursement section 3 section 5\" (top_k=6; score in brackets):\n\n[chunk 57] Doc: sample_policy | Section: Policy Number: RW-2025-014. Effective Date: March 1, 2025. | (score 0.033)\n\"\"\"\nPolicy Number: RW-2025-014. Effectiv"
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 39
+      },
+      "observation": "[chunk 39] Doc: remote_work_policy_v1 | Section: 2. Remote Work Allowance | Breadcrumb: remote_work_policy_v1 > 2. Remote Work Allowance\n\"\"\"\n2. Remote Work Allowance\n\nEmployees may work remotely for up to 3 days per calendar week. The remaining working days must be spent at the assigned office locat"
+    },
+    {
+      "type": "thought",
+      "content": "Let me read v1's equipment section and find v2's remaining sections."
+    },
+    {
+      "type": "tool_call",
+      "tool": "read_policy_chunk",
+      "arguments": {
+        "chunk_id": 42
+      },
+      "observation": "[chunk 42] Doc: remote_work_policy_v1 | Section: 5. Equipment and Security | Breadcrumb: remote_work_policy_v1 > 5. Equipment and Security\n\"\"\"\n5. Equipment and Security\n\nThe company provides a laptop and a security token for remote work. Employees must connect through the corporate VPN whenever they"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "ACME Hybrid Work Policy v2 equipment security workspace requirements",
+        "top_k": 8
+      },
+      "observation": "Found 8 passages for query \"ACME Hybrid Work Policy v2 equipment security workspace requirements\" (top_k=8; score in brackets):\n\n[chunk 44] Doc: remote_work_policy_v2 | Section: ACME Hybrid Work Policy (v2.0) | (score 0.033)\n\"\"\"\n# ACME Hybrid Work Policy (v2.0)\n\n_Effective: 2025-06-01. Owner: People"
+    },
+    {
+      "type": "tool_call",
+      "tool": "search_policy_docs",
+      "arguments": {
+        "query": "v2 hybrid work policy section 3 remote work allowance number of remote days",
+        "top_k": 5
+      },
+      "observation": "Found 5 passages for query \"v2 hybrid work policy section 3 remote work allowance number of remote days\" (top_k=5; score in brackets):\n\n[chunk 39] Doc: remote_work_policy_v1 | Section: 2. Remote Work Allowance | (score 0.033)\n\"\"\"\n2. Remote Work Allowance\n\nEmployees may work remotely for up to 3 days"
+    },
+    {
+      "type": "tool_call",
+      "tool": "scratchpad_write",
+      "arguments": {
+        "key": "remote_conflicts",
+        "text": "v1 (eff 2024-01-01): up to 3 remote days/week, remaining days at office [remote_work_policy_v1 \u00a7 2. Remote Work Allowance #39]; scope = engineering, design, support only [v1 \u00a7 1. Purpose #38]; eligibility 6 months continuous [v1 \u00a7 4. Eligibility #41]; core hours 10:00-16:00 [v1 \u00a7 6. Core Hours #43]; equipment laptop+token [v1 \u00a7 5 #42].\nv2 (eff 2025-06-01): office at least 4 days/week, remote max 1 day/week with written manager approval per remote day [remote_work_policy_v2 \u00a7 2. Office Attendance #45]; scope = all full-time employees every function [v2 \u00a7 1. Purpose #44]; eligibility 12 months + \"meets expectations\" rating [v2 \u00a7 4. Eligibility #47]; core hours 09:00-17:00 [v2 \u00a7 6. Core Hours #49]; equipment laptop+token+monitor, MFA [v2 \u00a7 5. Equipment #48].\nsample_policy RW-2025-014 (eff 2025-03-01): $50/mo internet stipend for remote >=3 days/week, no receipts; $600 one-time equipment budget; tiers Bronze 3d/$50/$400, Silver 4d/$60/$600, Gold 5d/$75/$800 [sample_policy #57].\nexpense_policy (Northwind): home internet $60/mo cap, itemized receipt required, no rollover [expense_policy \u00a7 2. Reimbursable Categories #24]."
+      },
+      "observation": "note 'remote_conflicts' written (1132 chars). Notes now: remote_conflicts(1132)"
+    },
+    {
+      "type": "tool_call",
+      "tool": "scratchpad_read",
+      "arguments": {},
+      "observation": "=== remote_conflicts ===\nv1 (eff 2024-01-01): up to 3 remote days/week, remaining days at office [remote_work_policy_v1 \u00a7 2. Remote Work Allowance #39]; scope = engineering, design, support only [v1 \u00a7 1. Purpose #38]; eligibility 6 months continuous [v1 \u00a7 4. Eligibility #41]; core hours 10:00-16:00 "
+    },
+    {
+      "type": "final",
+      "content": "**Yes \u2014 the documents contradict each other on remote work, in several distinct ways.** The contradiction scanner has three verified flags in total, and two of them concern remote work (one of those is marked resolved, one open). Beyond the flagged pairs, the remote-work passages also disagree on core hours, eligibility and stipend mechanics.\n\n## 1. How many days may an employee work remotely? (di"
+    }
+  ],
+  "citations": [
+    "remote_work_policy_v1 \u00a7 2. Remote Work Allowance",
+    "remote_work_policy_v2 \u00a7 2. Office Attendance",
+    "remote_work_policy_v2 \u00a7 ACME Hybrid Work Policy (v2.0)",
+    "remote_work_policy_v1 \u00a7 Acme Corporation",
+    "remote_work_policy_v1 \u00a7 1. Purpose",
+    "remote_work_policy_v2 \u00a7 1. Purpose",
+    "remote_work_policy_v1 \u00a7 4. Eligibility",
+    "remote_work_policy_v2 \u00a7 4. Eligibility",
+    "remote_work_policy_v1 \u00a7 6. Core Hours",
+    "remote_work_policy_v2 \u00a7 6. Core Hours",
+    "sample_policy \u00a7 Policy Number: RW-2025-014. Effective Date: March 1, 2025.",
+    "expense_policy \u00a7 2. Reimbursable Categories",
+    "remote_work_policy_v1 \u00a7 5. Equipment and Security",
+    "remote_work_policy_v2 \u00a7 5. Equipment"
+  ],
+  "citation_warnings": [],
+  "seen_chunk_ids": [
+    45,
+    39,
+    57,
+    41,
+    38,
+    43,
+    44,
+    24,
+    47,
+    49,
+    25,
+    23,
+    42,
+    37,
+    48,
+    30,
+    50
+  ],
+  "judge_context_ids": [],
+  "faithful": null,
+  "answer_shape": "",
+  "scratch_notes": 1,
+  "parallel_turns": 5,
+  "declined_parts": [],
+  "unsupported_claims": [],
+  "tool_calls": 11,
+  "elapsed_s": 53.48,
+  "error": null,
+  "intent": "POLICY_DIRECT_LOOKUP",
+  "intent_route": "REACT_LOOP",
+  "intent_plan": {
+    "intent": "POLICY_DIRECT_LOOKUP",
+    "route": "REACT_LOOP",
+    "de_noised_question": "Do the policy documents contradict each other regarding remote work?",
+    "search_queries": [
+      "remote work policy consistency",
+      "remote work contradictions",
+      "remote work guidelines overlap"
+    ],
+    "entities": [],
+    "requires_table_check": false,
+    "tone_guidance": "Answer neutrally, citing any conflicting clauses if found; if no contradiction exists, state that clearly.",
+    "refusal_reason": "",
+    "user_state_summary": "The employee asks whether the policy documents contain contradictory statements about remote work.",
+    "decided_by": "cache",
+    "prompt_version": "v1",
+    "latency_s": 0.0,
+    "notes": []
+  }
+}
