@@ -280,7 +280,8 @@ class AdminAPI:
         return "\n".join(lines)
 
     def ask(self, question: str,
-            history: Optional[List[Dict[str, str]]] = None) -> AgentResult:
+            history: Optional[List[Dict[str, str]]] = None,
+            on_event=None) -> AgentResult:
         """Full ask pipeline: LLM triage -> route -> agent -> answer.
 
         There is no post-answer LLM verification in this path: at model parity
@@ -296,8 +297,20 @@ class AdminAPI:
         because only the agent has read the corpus and only it may refuse
         for missing coverage.
         """
+        def _emit(kind: str, payload: Dict[str, Any]) -> None:
+            if on_event is None:
+                return
+            try:
+                on_event(kind, payload)
+            except Exception:
+                log.debug("event listener failed", exc_info=True)
+
+        _emit("stage", {"name": "triage"})
         plan = self.intent_router.classify(question)
         plan_dict = plan.to_dict()
+        _emit("stage", {"name": "routed", "intent": plan.intent,
+                        "route": plan.route,
+                        "question": plan.de_noised_question or question})
 
         # ---------------------------------------------------- deterministic routes
         if plan.route == "FAST_REFUSE":
@@ -338,7 +351,7 @@ class AdminAPI:
 
         # ------------------------------------------------------------- the agent
         result = self.agent.run(plan.de_noised_question or question,
-                               history=history, plan=plan)
+                               history=history, plan=plan, on_event=on_event)
         result.intent = plan.intent
         result.intent_route = plan.route
         result.intent_plan = plan_dict

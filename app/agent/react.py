@@ -155,8 +155,14 @@ class ReactAgent:
 
     def run(self, question: str,
             history: Optional[List[Dict[str, str]]] = None,
-            plan=None) -> AgentResult:
+            plan=None,
+            on_event=None) -> AgentResult:
         """Run the ReAct loop.
+
+        ``on_event(kind, payload)`` is called as the loop progresses
+        (``turn`` / ``step`` / ``error``), so a caller can stream the trace.
+        A raising callback must never break the answer, so its errors are
+        swallowed here.
 
         ``plan`` is an optional :class:`app.agent.intent.IntentPlan`; its
         de-noised question is the one to answer, and its suggested searches
@@ -176,6 +182,20 @@ class ReactAgent:
                 messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": question})
 
+        def _emit_step(step: Dict[str, Any], full_obs: Optional[str] = None) -> None:
+            payload = step
+            if full_obs is not None and step.get("observation") is not None:
+                payload = {**step, "observation": full_obs[:1200]}
+            _emit("step", payload)
+
+        def _emit(kind: str, payload: Dict[str, Any]) -> None:
+            if on_event is None:
+                return
+            try:
+                on_event(kind, payload)
+            except Exception:                     # a broken listener cannot
+                log.debug("event listener failed", exc_info=True)   # stop an answer
+
         steps: List[Dict[str, Any]] = []
         n_tool_calls = 0
         parallel_turns = 0
@@ -192,16 +212,19 @@ class ReactAgent:
                     seen_chunk_ids.append(cid)
 
         for _step in range(self.max_steps):
+            _emit("turn", {"n": _step + 1})
             try:
                 resp = self.llm.chat(messages, tools=self.registry.specs)
             except LLMError as e:
                 error = str(e)
+                _emit("error", {"error": error})
                 break
 
             # ---- native tool calls
             if resp.tool_calls:
                 if resp.content and resp.content.strip():
                     steps.append({"type": "thought", "content": resp.content.strip()})
+                    _emit("step", steps[-1])
                 messages.append(self._native_assistant_msg(resp))
                 if len(resp.tool_calls) > 1:
                     parallel_turns += 1
@@ -209,6 +232,7 @@ class ReactAgent:
                     obs, step = self._run_tool(tc.name, tc.arguments, scratch)
                     _remember_chunks(obs)
                     steps.append(step)
+                    _emit_step(step, obs)
                     if step["type"] == "tool_call":
                         n_tool_calls += 1
                     messages.append({"role": "tool", "tool_call_id": tc.id,
@@ -227,6 +251,7 @@ class ReactAgent:
                     obs, step = self._run_tool(c.get("name", ""), raw, scratch)
                     _remember_chunks(obs)
                     steps.append(step)
+                    _emit_step(step, obs)
                     if step["type"] == "tool_call":
                         n_tool_calls += 1
                     messages.append({"role": "tool",
@@ -237,6 +262,7 @@ class ReactAgent:
             # ---- final answer
             answer = (resp.content or "").strip()
             steps.append({"type": "final", "content": answer[:400]})
+            _emit("step", steps[-1])
             break
         else:
             # reasoning budget exhausted -> force a grounded final answer

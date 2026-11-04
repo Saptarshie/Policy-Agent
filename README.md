@@ -142,8 +142,14 @@ Uploading `sample_docs/amendments/leave_policy_2025_amendment.md` next to
 
 `python run.py serve` gives you a three-pane console: **Documents** (upload,
 progress bars, delete, rescan), **Chat** (grounded answers rendered from the
-agent's markdown - headings, tables, lists, inline code - with citation chips,
-a collapsible ReAct trace and citation-check warnings) and **Contradiction
+agent's markdown - headings, tables, lists, inline code - with citation chips
+and citation-check warnings). The ReAct trace is **live**: triage, each turn,
+each thought, every tool call with its arguments and a 1.2k-character slice of
+the observation the agent actually read appears as it happens over SSE
+(`POST /api/ask/stream`), so a 20-second answer shows its work instead of a
+spinner. Each step is its own collapsible row and the whole trace is collapsible
+too; if you fold it while the agent is still working it stays folded, and it
+folds itself only when the answer arrives and **Contradiction
 tracker** (flags with both quoted passages, why they clash, the decision
 model's signals, resolve/dismiss buttons).
 
@@ -330,6 +336,7 @@ python eval/measure_scan.py         # serial vs batched vs threaded scan
 python eval/verify_api.py           # 42 end-to-end API checks (needs a live server)
 python eval/verify_renderer.py      # chat markdown renderer, incl. XSS inputs
 python eval/check_docs.py           # README/DESIGN vs code (env keys, tools, removed features)
+python eval/watch_stream.py "question"  # time every SSE frame of a live answer
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
@@ -342,7 +349,8 @@ gate-blocks-LLM / unverified fallback), document-name resolution (uniqueness
 required: v1 vs v2), the triage layer (cache keyed on the prompt fingerprint,
 fail-open, corrective retry, plan injection), retrieval (FTS5 keyword index, RRF
 fusion, threshold search, chunk-to-chunk similarity), the offline faithfulness
-judge (shape classification, judge context selection, partial answers) and the
+judge (shape classification, judge context selection, partial answers), the SSE
+stream (frame order, a listener that raises, the non-streaming fallback) and the
 HTTP API end-to-end.
 
 ### What the measurements changed

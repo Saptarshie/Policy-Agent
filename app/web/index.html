@@ -78,6 +78,23 @@
   .flag .sig { color: var(--muted); font-size: 11px; }
   .empty { color: var(--muted); font-size: 12.5px; padding: 8px; }
   .thinking { color: var(--muted); font-style: italic; font-size: 12px; }
+  /* live ReAct trace: steps appear as the agent takes them */
+  .live .trace { margin: 0; }
+  .live .trace > summary { color: var(--accent); }
+  .live .steps { margin-top: 6px; }
+  .live .step { margin: 3px 0 3px 2px; padding-left: 8px; border-left: 2px solid var(--line); }
+  .live .step > summary { cursor: pointer; font-size: 11.5px; color: var(--text); }
+  .live .step > pre { margin: 4px 0 6px; background: #101624; border: 1px solid var(--line);
+                      border-radius: 6px; padding: 6px 8px; font-size: 11.5px;
+                      white-space: pre-wrap; max-height: 220px; overflow: auto; }
+  .live .step.tool > summary { color: var(--accent); }
+  .live .step.err > summary { color: var(--bad); }
+  .live .stage { font-size: 11.5px; color: var(--muted); margin: 3px 0; }
+  .live .answer { margin-top: 8px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+         background: var(--warn); margin-right: 6px; animation: pulse 1.1s infinite; }
+  .dot.done { background: var(--ok); animation: none; }
+  @keyframes pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
   .msg h3, .msg h4, .msg h5, .msg h6 { margin: 10px 0 4px; font-size: 14px; }
   .msg h3 { font-size: 15px; }
   .msg ul, .msg ol { margin: 4px 0 4px 18px; padding: 0; }
@@ -334,33 +351,162 @@ function addMsg(cls, text) {
   return div;
 }
 
+// POST and read the response as Server-Sent Events. Falls back to the plain
+// endpoint if the server streams nothing (older build / proxy that buffers).
+async function streamAsk(payload, onFrame) {
+  const res = await fetch('/api/ask/stream', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok || !res.body) {
+    let msg = res.statusText;
+    try { msg = (await res.json()).detail || msg; } catch {}
+    throw new Error(msg);
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let cut;
+    while ((cut = buf.indexOf('\n\n')) >= 0) {
+      const raw = buf.slice(0, cut);
+      buf = buf.slice(cut + 2);
+      if (raw.startsWith(':')) continue;              // keep-alive comment
+      let event = 'message', data = '';
+      for (const line of raw.split('\n')) {
+        if (line.startsWith('event: ')) event = line.slice(7).trim();
+        else if (line.startsWith('data: ')) data += line.slice(6);
+      }
+      let parsed = {};
+      try { parsed = data ? JSON.parse(data) : {}; } catch { parsed = { raw: data }; }
+      onFrame(event, parsed);
+    }
+  }
+}
+
+function stepLabel(step) {
+  if (step.type === 'tool_call') return `TOOL ${esc(step.tool)}(${esc(JSON.stringify(step.arguments || {}))})`;
+  if (step.type === 'tool_error') return `TOOL_ERROR ${esc(step.tool)} — ${esc((step.problems || []).join('; '))}`;
+  if (step.type === 'thought') return 'THOUGHT';
+  if (step.type === 'final') return 'FINAL ANSWER';
+  return esc(step.type || 'STEP');
+}
+
+function stepBody(step) {
+  if (step.type === 'tool_call') return step.observation || '';
+  if (step.type === 'tool_error') return (step.problems || []).join('\n');
+  if (step.type === 'thought') return step.content || '';
+  if (step.type === 'final') return step.content || '';
+  return JSON.stringify(step, null, 2);
+}
+
+function answerHtml(res) {
+  let html = citeHtml(md(res.answer || '(no answer)'));
+  if (res.error) html += `<div class="warnbox">agent error: ${esc(res.error)}</div>`;
+  if (res.citation_warnings && res.citation_warnings.length)
+    html += `<div class="warnbox">⚠ citation check: ${res.citation_warnings.map(esc).join('<br>')}</div>`;
+  return html;
+}
+
 async function send() {
   const q = $('question').value.trim();
   if (!q) return;
   $('question').value = '';
   addMsg('user', q);
   history.push({ role: 'user', content: q });
-  const holder = addMsg('agent', '…');
-  holder.innerHTML = '<span class="thinking">thinking — ReAct tool_call loop running (search → read → answer)…</span>';
+
+  const holder = addMsg('agent', '');
+  holder.innerHTML = `<div class="live">
+      <details class="trace" open>
+        <summary><span class="dot"></span><span class="sum">working — triage…</span></summary>
+        <div class="steps"></div>
+      </details>
+      <div class="answer"></div>
+    </div>`;
+  const det = holder.querySelector('details.trace');
+  const stepsBox = holder.querySelector('.steps');
+  const answerBox = holder.querySelector('.answer');
+  const sumEl = holder.querySelector('.sum');
+  const dot = holder.querySelector('.dot');
+
+  let steps = 0, tools = 0, userToggled = false, finished = false;
+  // if the user folds the trace while it runs, respect that: never re-open it
+  det.addEventListener('toggle', () => { if (!finished) userToggled = true; });
+
+  const bump = (text) => { sumEl.innerHTML = text; };
+  const addStage = (text) => {
+    const div = document.createElement('div');
+    div.className = 'stage';
+    div.textContent = text;
+    stepsBox.appendChild(div);
+  };
+  const addStep = (step) => {
+    const d = document.createElement('details');
+    d.className = 'step' + (step.type === 'tool_error' ? ' err' : '')
+                  + ((step.type === 'tool_call' || step.type === 'tool_error') ? ' tool' : '');
+    const summary = document.createElement('summary');
+    summary.innerHTML = stepLabel(step);
+    const pre = document.createElement('pre');
+    pre.textContent = stepBody(step);
+    d.appendChild(summary);
+    d.appendChild(pre);
+    stepsBox.appendChild(d);
+    steps += 1;
+    if (!userToggled) det.open = true;
+    bump(`working — ${steps} step(s), ${tools} tool call(s)…`);
+    holder.parentElement.scrollTop = holder.parentElement.scrollHeight;
+  };
+
   try {
-    const res = await api('/api/ask', { method: 'POST', body: JSON.stringify({ question: q, history: history.slice(-10) }) });
-    history.push({ role: 'assistant', content: res.answer });
-    let html = citeHtml(md(res.answer || '(no answer)'));
-    if (res.error) html += `<div class="warnbox">agent error: ${esc(res.error)}</div>`;
-    if (res.citation_warnings && res.citation_warnings.length)
-      html += `<div class="warnbox">⚠ citation check: ${res.citation_warnings.map(esc).join('<br>')}</div>`;
-    if (res.steps && res.steps.length) {
-      const trace = res.steps.map(s => {
-        if (s.type === 'thought') return `THOUGHT: ${s.content}`;
-        if (s.type === 'tool_call') return `TOOL ${s.tool}(${JSON.stringify(s.arguments)})\n  → ${s.observation}`;
-        if (s.type === 'tool_error') return `TOOL_ERROR ${s.tool}: ${(s.problems||[]).join('; ')}`;
-        return `FINAL: ${s.content}`;
-      }).join('\n');
-      html += `<details class="trace"><summary>ReAct trace — ${res.tool_calls} tool call(s), ${res.elapsed_s}s</summary><pre>${esc(trace)}</pre></details>`;
-    }
-    holder.innerHTML = html;
+    await streamAsk({ question: q, history: history.slice(-10) }, (event, data) => {
+      if (event === 'stage') {
+        if (data.name === 'triage') addStage('triage — classifying the question');
+        else if (data.name === 'routed')
+          addStage(`routed: ${data.intent} → ${data.route}`);
+        return;
+      }
+      if (event === 'turn') { bump(`working — turn ${data.n}, ${steps} step(s), ${tools} tool call(s)…`); return; }
+      if (event === 'step') {
+        if (data.type === 'tool_call') tools += 1;
+        addStep(data);
+        return;
+      }
+      if (event === 'error') { addStep({ type: 'tool_error', tool: 'agent', problems: [data.error] }); return; }
+      if (event === 'final') {
+        finished = true;
+        answerBox.innerHTML = answerHtml(data);
+        dot.className = 'dot done';
+        sumEl.textContent = `ReAct trace — ${data.tool_calls || tools} tool call(s), `
+          + `${data.elapsed_s || '?'}s · ${steps} step(s)`;
+        // the work is over: fold the trace unless the user opened it themselves
+        if (!userToggled) det.open = false;
+        history.push({ role: 'assistant', content: data.answer || '' });
+        holder.parentElement.scrollTop = holder.parentElement.scrollHeight;
+      }
+    });
   } catch (e) {
-    holder.innerHTML = `<span class="warnbox">⚠ ${esc(e.message)}</span>`;
+    // streaming unavailable: answer the old way rather than losing the question
+    try {
+      const res = await api('/api/ask', {
+        method: 'POST',
+        body: JSON.stringify({ question: q, history: history.slice(-10) }),
+      });
+      finished = true;
+      answerBox.innerHTML = answerHtml(res);
+      dot.className = 'dot done';
+      sumEl.textContent = `answered without streaming — ${res.tool_calls || 0} tool call(s)`;
+      if (!userToggled) det.open = false;
+      history.push({ role: 'assistant', content: res.answer || '' });
+    } catch (e2) {
+      answerBox.innerHTML = `<span class="warnbox">⚠ ${esc(e2.message)}</span>`;
+      finished = true;
+      dot.className = 'dot done';
+      sumEl.textContent = 'failed';
+    }
   }
   $('chatlog').scrollTop = $('chatlog').scrollHeight;
 }

@@ -491,3 +491,38 @@ errors - after five fixes. Full detail in `dev_docs/UI_VERIFICATION.md`.
    a prompt under the same "v1" label replayed pre-edit verdicts - which is why
    bug 3 looked unfixed right after the patch. The key now carries a fingerprint
    of the prompt text.
+
+## 12. Live trace in the web UI (SSE)
+
+The chat pane used to show a spinner and then dump the whole ReAct trace at the
+end, so a 60-second multi-hop answer looked like a hang. The trace is now
+streamed: `POST /api/ask/stream` emits `stage` / `turn` / `step` / `final` frames
+as the agent works, each rendered as its own collapsible row.
+
+Mechanics: `ReactAgent.run(..., on_event=...)` and `AdminAPI.ask(..., on_event=...)`
+take a callback; the route runs the (blocking) ask on a worker thread and bridges
+its events into an SSE generator through a queue, with 15-second keep-alive
+comments so a buffering proxy cannot make the UI look dead. `POST /api/ask` is
+unchanged, and the UI falls back to it if the stream fails, so nothing that
+worked before depends on the new path.
+
+Measured on the running app (`eval/watch_stream.py`, deepseek-v4.1-flash):
+
+```
++  0.0s  stage  triage
++  3.6s  stage  routed: POLICY_DIRECT_LOOKUP -> REACT_LOOP
++  5.6s  turn   1
++  8.7s  step   thought
++  9.1s  step   tool_call search_policy_docs({"query": "...", "top_k": 6})
++  9.4s  step   tool_call search_policy_docs({"query": "..."})     <- parallel turn
++  9.4s  turn   2
++ 13.1s  step   tool_call list_contradictions({"status": "all"})
++ 20.9s  step   final
++ 20.9s  FINAL  4 tools, 15.3s, 5 citations, 0 warnings
+```
+
+In the browser (Chromium, 8 steps): the first three rows were on screen at 4.5s
+with the answer still empty, folding the trace at 4.5s kept it folded as four
+more steps arrived, and the final answer landed at 16.6s with the summary
+"ReAct trace - 5 tool call(s), 15.6s, 8 step(s)". Tests: `tests/test_stream.py`
+(frame order, a listener that raises, empty question, the plain endpoint).

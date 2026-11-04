@@ -6,12 +6,15 @@ wired with fakes, production uses the real one (see ``app.main``).
 
 from __future__ import annotations
 
+import json
+import queue
+import threading
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
 from ..admin import AdminAPI
@@ -111,6 +114,53 @@ def create_app(api: Optional[AdminAPI] = None) -> FastAPI:
         except Exception as e:
             raise HTTPException(503, f"agent failed: {e}")
         return result.to_dict()
+
+    @app.post("/api/ask/stream")
+    def ask_stream(req: AskRequest) -> StreamingResponse:
+        """Same pipeline as /api/ask, streamed as Server-Sent Events.
+
+        Synchronous on purpose: the agent is a blocking tool-call loop, so it
+        runs on a worker thread and its events are queued for this generator.
+        A client that cannot read streams keeps working with /api/ask.
+        """
+        if not req.question.strip():
+            raise HTTPException(400, "empty question")
+
+        def frames():
+            events: "queue.Queue" = queue.Queue()
+
+            def on_event(kind: str, payload: dict) -> None:
+                events.put((kind, payload))
+
+            def work() -> None:
+                try:
+                    result = _api.ask(req.question, history=req.history,
+                                      on_event=on_event)
+                    events.put(("final", result.to_dict()))
+                except Exception as e:               # noqa: BLE001 - reported, not raised
+                    events.put(("error", {"error": str(e)}))
+                finally:
+                    events.put(("done", {}))
+
+            threading.Thread(target=work, daemon=True, name="ask-stream").start()
+            # an immediate comment opens the stream so the browser shows it live
+            yield ": stream open\n\n"
+            while True:
+                try:
+                    kind, payload = events.get(timeout=15)
+                except queue.Empty:
+                    yield ": keep-alive\n\n"        # keeps proxies/UI from timing out
+                    continue
+                if kind == "done":
+                    break
+                yield f"event: {kind}\ndata: {json.dumps(payload, default=str)}\n\n"
+
+        return StreamingResponse(
+            frames(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                     "X-Accel-Buffering": "no"},
+        )
 
     # ------------------------------------------------------ contradictions
 

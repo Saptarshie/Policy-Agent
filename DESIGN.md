@@ -243,7 +243,16 @@ Cheap layers first, expensive last:
    contract plus the deterministic citation check above; the judge survives as an
    offline audit (`eval/calibrate_judge.py`). The full measurement is in
    `dev_docs/DATAFLOW.md` §6 and `eval/ABLATION.md`.
-8. **Endpoint hardening** (`app/llm.py`) — retries with backoff on 429/5xx;
+8. **The trace is streamed, not replayed** (`POST /api/ask/stream`) — the agent
+   accepts an `on_event(kind, payload)` callback and emits `turn`, `step`
+   (thought / tool_call / tool_error / final) and `error` as it works; the route
+   bridges that callback to Server-Sent Events (worker thread → queue →
+   generator, 15s keep-alive comments), and the UI appends a collapsible row per
+   step. Streaming is additive: `POST /api/ask` still returns the whole result,
+   and the UI falls back to it if a proxy buffers the stream. Editing a step's
+   observation for the stream (1.2k chars) does not change the stored result
+   (300 chars), so the payload shape the evals read is untouched.
+9. **Endpoint hardening** (`app/llm.py`) — retries with backoff on 429/5xx;
    automatic feature downgrade when an endpoint rejects `tools`,
    `response_format` or `reasoning_effort`; automatic `max_tokens` halving when
    the configured 64k exceeds the endpoint cap; `chat_json()` parses every
