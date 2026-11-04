@@ -49,6 +49,22 @@ or a provider error body reaches a browser. Fix: log the exception with a reques
 id, return the id only. Also distinguish "model unavailable" (503) from "bad
 request" (422) instead of collapsing both.
 
+### BY DESIGN (with a caveat) — `DECISION_MODE=heuristic` still lets lexical overlap decide
+
+`JEVStyleGate` scores a candidate contradiction with content-word overlap and a
+few weighted signals. In `remote`/`hybrid` mode that is a *prefilter* and the
+decision model refines it; in `heuristic` mode (the `.env.example` default, and
+the only option when no endpoint is configured) it decides alone, and a
+below-threshold pair is silently dropped as "not a contradiction".
+
+That is the last place in the tree where a language judgement is made
+lexically, and it is a compromise, not a principle: a deployment with an
+endpoint should set `DECISION_MODE=remote`. The ablation and every measurement
+in `eval/` run with `remote` for exactly this reason. Removing `heuristic` as a
+*decider* entirely would mean marking every unrefined pair UNVERIFIED, which
+turns a quiet screen into a flood of flags — so the honest fix is configuration
+plus this note, not more code.
+
 ### BY DESIGN — the verifier judges refusals and partial answers, and never trusts a verdict it cannot explain
 
 Three rules that look wasteful or lenient until you see the failure they prevent:
