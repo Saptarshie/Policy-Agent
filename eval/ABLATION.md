@@ -730,6 +730,32 @@ Per-question (`eval/results/benchmark_20261104_221824.jsonl`):
 | 19 | LC-18 | correct | 38.4 | 4 | 1/1 | The answer correctly concludes no because the 90-day reque |
 | 20 | LC-15 | partial | 49.0 | 11 | 2/2 | The answer correctly states the five-business-day exceptio |
 
+### The first run's five incorrects, item by item
+
+`eval/results/benchmark_20261104_221246.jsonl`:
+
+| id | tools | points | what the answer did |
+|---|---|---|---|
+| LC-01 | 0 | 0/10 | refused before retrieval: "The ingested policy documents do not cover this question. Please contact your HR team for guidance." — while the reference is 45 excess accounts, 10 waived, 35 x ₹800 = ₹28,000/month |
+| LC-05 | 0 | 0/10 | same refusal; the reference is that the Customer owns the Rules Engine under CO-2 on payment of the allocated ₹18,00,000 |
+| LC-15 | 0 | 0/10 | same refusal; the reference applies the five-business-day PO exception and follows it to "the invoice stays valid, so the payment clock runs" |
+| LC-06 | 11 | 4/10 | read the credit table and bound 97.8% to the **5%** band (99.50-99.899%) instead of the lowest band (20%); it did correctly identify Chronic Failure. Scored 10/10 in the next run, so this is an unstable band-selection error |
+| LC-08 | 16 | 6/10 | read "Scheduled Maintenance is excluded, up to four hours per calendar month" and treated the four-hour cap as a property of the window rather than a limit on the exclusion, so six hours gave "zero hours". It computed 6 - 4 = 2 later in the same answer but as a hypothetical |
+
+Three mechanisms, not five:
+
+1. **The front door deciding topic scope** (LC-01, LC-05, LC-15) - fixed by §"Fix: refuse by
+   shape of request"; all three became real attempts, two of them correct.
+2. **Reading a rule's limit as part of its description** (LC-08, and LC-06's band choice) -
+   the table is retrieved and quoted, and the mapping from the given number to the row/limit
+   is where it fails. This is the same family as MH-12/MH-01 in §9: the rule is recited,
+   the arithmetic that turns it into an answer for *these* numbers is skipped.
+3. **A safety instruction outranking a mechanism the document provides** - in the final run
+   LC-04 reports the CO-2 vs OF-7 threshold conflict instead of applying the order-of-
+   precedence clause that settles it; LC-15 declines a consequence the contract spells out.
+   Both are the "never pick silently / never state what is not written" rules firing on a
+   question where the corpus already decides.
+
 ### What still fails, and why
 
 * **LC-08 (incorrect, 4/10).** Six hours of properly noticed Sunday maintenance,
