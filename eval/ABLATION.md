@@ -827,6 +827,25 @@ instead leads with ₹25,000 as the short answer"). LC-08 did not move at all: t
 three "zero hours". And the pack went **down** one, because MH-12 regressed to partial -
 the added text diluted the "apply the figures you are given" rule.
 
+**Exactly two verdicts moved** between the run without the rule
+(`benchmark_20261104_222121`, 19/20) and the run with it (`benchmark_20261104_235232`,
+18/20); every other question kept its verdict:
+
+| id | without the rule | with the rule | what changed in the answer |
+|---|---|---|---|
+| MH-01 | incorrect, 10 tools, 43.5s | partial, 7 tools, 49.0s | gained "but not immediately", kept the wrong headline: "**Short answer: ₹25,000 — but not immediately.**" It now knows the condition and still answers the unconditional question |
+| MH-12 | correct, 2 tools, 14.9s | partial, 3 tools, 23.6s | lost the number: from "the lower figure is the actual combined itinerary, and that is the amount reimbursed" (₹25,000 named later) to "the company reimburses the actual combined itinerary — because the rule is ...", with no figure at all |
+
+So the net -1 is entirely MH-12, and MH-01's move from incorrect to partial is a grade
+change, not a fix: "₹25,000 — but not immediately" is a self-contradicting headline for a
+question that asks what can be claimed *immediately*. A user reading only the first line is
+still misled, so the pack score understates the harm.
+
+The mechanism is visible in both rows: the rule licensed **narrating** the condition
+("but not immediately", "because the rule is ...") instead of **applying** it, which is the
+same state-the-rule-don't-commit shape it was written to remove - now with an extra
+sentence of explanation around it.
+
 Cost: MH-01's traces grew from ~6-10 tool calls and ~40s to 8-21 calls and 47-103s. The
 rule makes the agent check more conditions without making it commit to the answer the
 check implies.
