@@ -764,3 +764,82 @@ documented for the HR judge in §6); the rubric points are the judge's own score
 a second rater's; and this pack has no refusal cases — every question carries
 `expected_behavior: answer_with_qualified_conclusion`, so "calibrated uncertainty" is
 measured only through the rubric's 1 point.
+
+---
+
+## 12. A generalized prompt rule that did not work (kept as a negative result)
+
+§9 leaves one failure shape open: the rule is recited and the question's own facts are
+never run through it — MH-01 answers the ₹25,000 cap when the stated 20-days-after-joining
+puts the reader before the 30-day eligibility date; MH-12 states the lower-of rule without
+naming ₹25,000; LC-08 headlines "zero hours" when six hours of maintenance exceed the
+four-hour cap and two hours count as Unavailable.
+
+**Before writing a rule, the front door was cleared.** The intent plan for MH-01 keeps the
+decisive fact and even proposes the right query:
+
+```
+de-noised : ...a ₹14,000 ergonomic chair and a ₹17,000 monitor purchased 20 days after
+            joining under the hybrid work policy?
+queries   : hybrid work equipment reimbursement policy | ergonomic chair monitor purchase
+            claim limit | new joiner equipment reimbursement eligibility
+```
+
+so the router is not where the fact is lost, and the same plan produced ₹0 in some runs
+and ₹25,000 in others. The failure is in the agent's reading and commitment.
+
+**The rule** (both agent prompts), written as a procedure rather than a case:
+
+```
+BACKGROUND IS PART OF THE QUESTION. Whatever the question states before the actual ask -
+a date, a tenure, an amount, an event that already happened, a role, which version of an
+agreement is in force - is background the ask may silently depend on, and the wording does
+not tell you whether it does. Test it: for each stated fact ask "what here is conditioned
+on this?" (eligibility, waiting period, notice period, threshold, effective date, version,
+who is covered). If a condition applies, the answer is the conditional answer, not the
+unconditional one; if none does, say briefly that it does not. Answering only the question
+as literally worded, when the given facts decide which case the reader is in, is a wrong
+answer.
+```
+
+plus one worked demonstration of the *walk* (facts → test → commit), deliberately taken
+from a different domain - a 30-day notice period and a start date - and labelled
+"illustrative only, not a rule of any ingested document", so it could not be answered by
+recognising the benchmark's own chair/monitor case.
+
+**Measured** (`eval/repeat_question.py <id> <n> --judge`, same judge as the pack runs):
+
+| configuration | MH-01 | LC-08 | whole pack |
+|---|---|---|---|
+| before (rule absent) | 4/6 over six full-pack runs; ad-hoc runs split ~50/50 | consistently wrong ("zero hours") | 19/20 |
+| rule, no example | 3/6 opened with ₹0 (unjudged heads) | - | - |
+| rule + worked example | **4/6** | **0/3** | **18/20** |
+
+The failures after the rule are the interesting part. MH-01 now *notices* the condition
+("It correctly notes the 30-day eligibility condition and the ₹25,000 combined cap") and
+still leads with ₹25,000 ("it does not state the required immediate claim amount of ₹0 and
+instead leads with ₹25,000 as the short answer"). LC-08 did not move at all: three runs,
+three "zero hours". And the pack went **down** one, because MH-12 regressed to partial -
+the added text diluted the "apply the figures you are given" rule.
+
+Cost: MH-01's traces grew from ~6-10 tool calls and ~40s to 8-21 calls and 47-103s. The
+rule makes the agent check more conditions without making it commit to the answer the
+check implies.
+
+**Reverted.** The rule and the demonstration were removed from `app/prompts.py` before
+commit; this section is the record. The measured pack is 19/20 without them.
+
+**What this says about prompt tuning**, and why it is written down rather than deleted:
+
+1. **A rule that names a failure mode does not fix it.** The model could restate the rule
+   and still produce the shape the rule forbids, because the competing instruction
+   ("ground everything, cite everything, hedge when unsure") is enforced by much more of
+   the prompt than the new rule is.
+2. **Prompt text is not additive.** Adding 20 lines cost one question elsewhere (MH-12),
+   which is invisible unless the whole pack is re-run - a single-question A/B would have
+   reported "+1" or "no change" and kept a regression.
+3. **Latency is the tax that shows up first.** Twice the tool calls for the same formal
+   score is a loss, and the traces make that visible before the judge does.
+4. **The fix for this failure class is probably not a prompt rule at all** - it is answer
+   *shape* (lead with the decisive figure, then the rule), which the project deliberately
+   does not enforce with a post-hoc checker. Left open, and named as open.
