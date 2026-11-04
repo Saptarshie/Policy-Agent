@@ -309,7 +309,7 @@ def main() -> int:
             "rubric_points": (sum(grading["scores"].values())
                               if grading.get("scores") else None),
             "tool_calls": payload.get("tool_calls"),
-            "steps_used": len(payload.get("steps") or []),
+            "step_entries": len(payload.get("steps") or []),   # entries, not turns
             "forced_final": any(isinstance(s, dict) and
                                 str(s.get("note", "")).startswith("forced")
                                 for s in (payload.get("steps") or [])),
@@ -360,7 +360,8 @@ def main() -> int:
     sec_hits = sum(r["citation_section_hits"] for r in results)
 
     forced = [r for r in results if r.get("forced_final")]
-    steps_used = [r["steps_used"] for r in results if r.get("steps_used") is not None]
+    step_entries = [r["step_entries"] for r in results
+                    if r.get("step_entries") is not None]
 
     scored = [r for r in results if r.get("rubric_points") is not None]
     rubric_summary = None
@@ -412,8 +413,8 @@ def main() -> int:
             "max_steps_env": os.getenv("AGENT_MAX_STEPS", ""),
             "forced_final": len(forced),
             "forced_ids": [r["id"] for r in forced],
-            "max_used": max(steps_used) if steps_used else None,
-            "mean_used": round(statistics.mean(steps_used), 1) if steps_used else None,
+            "max_entries": max(step_entries) if step_entries else None,
+            "mean_entries": round(statistics.mean(step_entries), 1) if step_entries else None,
         },
         "time_s": {"total_wall": round(time.time() - started, 1),
                    "qa_wall": round(sum(times), 1),
@@ -451,8 +452,8 @@ def main() -> int:
     log(f"  citation warnings                 {summary['citation_warnings_total']}")
     steps = summary.get("agent_steps") or {}
     if steps:
-        log(f"  agent steps                       max used {steps['max_used']}, "
-            f"mean {steps['mean_used']}, forced finals {steps['forced_final']}"
+        log(f"  agent steps                       max entries {steps['max_entries']}, "
+            f"mean {steps['mean_entries']}, forced finals {steps['forced_final']}"
             + (f"  (AGENT_MAX_STEPS={steps['max_steps_env']})" if steps['max_steps_env'] else ""))
     rubric = summary.get("rubric")
     if rubric:

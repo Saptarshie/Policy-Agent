@@ -516,10 +516,12 @@ from fitting.
 
 ### Is the step budget the constraint? No.
 
-`AGENT_MAX_STEPS=12` bounds loop *turns*, not tool calls, and when it runs out the
-agent is forced to answer with what it has (the step is tagged
-`note="forced after max steps"`). Tracing the failures directly
-(`python eval/trace_steps.py <pack> MH-01,MH-12`):
+`AGENT_MAX_STEPS=12` bounds loop *turns*, not tool calls (a turn with three parallel
+calls is one turn), and when it runs out the agent is forced to answer with what it
+has - the final step is tagged `note="forced after max steps"`. The `steps` list in a
+result is a list of *entries* (a turn appends one entry per tool call plus thoughts),
+so its length is an upper bound on turns, not a turn count. Tracing the failures
+directly (`python eval/trace_steps.py <pack> MH-01,MH-12`):
 
 ```
 question   steps/12  tool calls  forced  verdict
@@ -530,7 +532,11 @@ LC-08          6         3         no     incorrect ("zero hours")
 LC-04         10         7         no     partial   (reported a resolvable conflict)
 ```
 
-*13 = 12 turns plus the final answer appended as a step.
+*13 entries: the final answer is appended as its own entry, and a turn with several
+tool calls appends several.
+
+The same signal over a whole run: the 20-question HR pass recorded
+`agent steps: max entries 16, mean 6.3, **forced finals 0**`.
 
 No failing question was cut off, so a larger budget cannot change any of these
 answers: the misses are **retrieval targeting** (MH-01 searches the caps section six
