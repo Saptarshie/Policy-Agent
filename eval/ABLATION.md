@@ -514,6 +514,36 @@ corpus), and the third run on the same code still failed. A 20-question pack wit
 one judge is a measurement, not a target; further tuning would be indistinguishable
 from fitting.
 
+### Is the step budget the constraint? No.
+
+`AGENT_MAX_STEPS=12` bounds loop *turns*, not tool calls, and when it runs out the
+agent is forced to answer with what it has (the step is tagged
+`note="forced after max steps"`). Tracing the failures directly
+(`python eval/trace_steps.py <pack> MH-01,MH-12`):
+
+```
+question   steps/12  tool calls  forced  verdict
+MH-01         13*        9-11      no     incorrect (answered the cap question, not eligibility)
+MH-12          4-5       2-3       no     partial   (same shape every run)
+MH-14         10         6         no     correct   (the 21-tool outlier was slower, not better)
+LC-08          6         3         no     incorrect ("zero hours")
+LC-04         10         7         no     partial   (reported a resolvable conflict)
+```
+
+*13 = 12 turns plus the final answer appended as a step.
+
+No failing question was cut off, so a larger budget cannot change any of these
+answers: the misses are **retrieval targeting** (MH-01 searches the caps section six
+times and never retrieves the 30-day eligibility clause), not truncation. The
+opposite signal is also visible: the longest trajectory observed on MH-01 (24 tool
+calls, 79.5s) was one of the wrong answers - more turns bought hedging, not coverage.
+Parallel calling already collapses independent lookups into one turn, so the
+effective budget is larger than 12 sequential calls.
+
+The runner now records `steps_used` and `forced_final` per row and prints
+`agent steps: max used N, mean M, forced finals K`, so the question "would more steps
+help?" is answered by the run rather than by guesswork.
+
 ### Asking the questions concurrently
 
 `--workers N` runs N questions (and their judgement calls) at once:

@@ -309,6 +309,11 @@ def main() -> int:
             "rubric_points": (sum(grading["scores"].values())
                               if grading.get("scores") else None),
             "tool_calls": payload.get("tool_calls"),
+            "steps_used": len(payload.get("steps") or []),
+            "forced_final": any(isinstance(s, dict) and
+                                str(s.get("note", "")).startswith("forced")
+                                for s in (payload.get("steps") or [])),
+            "parallel_turns": payload.get("parallel_turns"),
             "elapsed_s": round(payload.get("elapsed_s") or 0, 2),
             "wall_s": round(task, 1),
             "wall_with_judge_s": round(task_total, 1),
@@ -353,6 +358,9 @@ def main() -> int:
     exp_cites = sum(r["expected_citation_docs"] for r in results)
     doc_hits = sum(r["citation_doc_hits"] for r in results)
     sec_hits = sum(r["citation_section_hits"] for r in results)
+
+    forced = [r for r in results if r.get("forced_final")]
+    steps_used = [r["steps_used"] for r in results if r.get("steps_used") is not None]
 
     scored = [r for r in results if r.get("rubric_points") is not None]
     rubric_summary = None
@@ -400,6 +408,13 @@ def main() -> int:
                             "section_level_pct": pct(sec_hits, exp_cites)},
         "citation_warnings_total": sum(len(r["citation_warnings"]) for r in results),
         "rubric": rubric_summary,
+        "agent_steps": {
+            "max_steps_env": os.getenv("AGENT_MAX_STEPS", ""),
+            "forced_final": len(forced),
+            "forced_ids": [r["id"] for r in forced],
+            "max_used": max(steps_used) if steps_used else None,
+            "mean_used": round(statistics.mean(steps_used), 1) if steps_used else None,
+        },
         "time_s": {"total_wall": round(time.time() - started, 1),
                    "qa_wall": round(sum(times), 1),
                    "mean": round(statistics.mean(times), 1) if times else 0,
@@ -434,6 +449,11 @@ def main() -> int:
     log(f"  citation recall (doc + section)   {sec_hits}/{exp_cites}  "
         f"({summary['citation_recall']['section_level_pct']}%)")
     log(f"  citation warnings                 {summary['citation_warnings_total']}")
+    steps = summary.get("agent_steps") or {}
+    if steps:
+        log(f"  agent steps                       max used {steps['max_used']}, "
+            f"mean {steps['mean_used']}, forced finals {steps['forced_final']}"
+            + (f"  (AGENT_MAX_STEPS={steps['max_steps_env']})" if steps['max_steps_env'] else ""))
     rubric = summary.get("rubric")
     if rubric:
         log(f"  rubric (judge-scored)             {rubric['mean_points']}/"
