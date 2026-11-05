@@ -926,3 +926,57 @@ Three things this pair of runs says, beyond the scores:
    ran out of `AGENT_MAX_STEPS` and answered from what it had (partial, not wrong).
    Earlier diagnosis said the agent is never cut off; that held for the HR pack, and
    does not hold universally - `forced finals` in the summary is the counter to watch.
+
+## 14. Rolling summary out, document brief in, and the triage layer shown the corpus
+
+The per-window rolling summary and its merge call were never an input to anything the
+user sees: chunk text comes from the document's own structure, and the summary was only
+reachable through `get_document_summary`. It was replaced by one **document brief** per
+document (opening `INGEST_BRIEF_WORDS` words + every heading -> at most 3 sentences),
+which the triage layer now reads as a bounded `CORPUS` block (<=8 documents, 300 chars
+each), alongside `get_document_summary`, `run.py list` and the offline judge's inventory.
+
+Why this was worth a measurement rather than a code change: the complaint was "the
+intent layer refuses answers it should route". Checked first, on 60 benchmark answers
+(HR 20 + contract 20 + contract 20 from the earlier run): **zero** refusal-text answers
+on answerable questions and zero zero-tool-call answers. There was no false-refusal rate
+to reduce. So the experiment was run on what the corpus block *can* move - classification
+accuracy - using the 67-case set with and without briefs.
+
+| variant | cases | intent accuracy | route accuracy | false refusals | missed refusals | p50 |
+|---|---|---|---|---|---|---|
+| v1 (no corpus block) | 67 | 98.5% | 100% | 0 | 1 | 5.22s |
+| v1+corpus | 67 | **100%** | 100% | 0 | 1 | 4.92s |
+
+The one case the block fixed was `g05` ("I'm moving to another city next month - does
+that change my remote work…"), which had been read as `MULTI_HOP_COMPARISON` and is now
+`IMPLICIT_SITUATION_OR_GRIEVANCE`: the brief put the policy's own vocabulary
+(relocation / mobility / remote work) in front of the classifier.
+
+Three things this does **not** show:
+
+1. **Not a cost win.** The merge call became the brief call; per document the pipeline
+   still makes ~2 window parses + 1 summary-shaped call. The 4-document index took
+   67.5s against 78.2s earlier, but that is endpoint load, not a structural saving.
+2. **Not a refusal fix.** Nothing was refusing before, so nothing stopped refusing.
+   The corpus block carries a new risk - a model deciding "the brief doesn't mention
+   this, so refuse" - which is why the prompt forbids exactly that in as many words and
+   `tests/test_corpus_brief.py` pins the rule text.
+3. **One case, on one set.** 98.5% -> 100% is one item out of 67. It is real (same cases,
+   same model, same temperature, only the block changed) but it is not a large effect,
+   and the corpus block costs tokens on every triage call.
+
+What the block is *for*, beyond accuracy: de-noising and query planning now speak the
+document's vocabulary ("service credit", "carry-forward", "booking class") instead of the
+employee's, and a question naming a document is routed to that document's terms.
+
+End-to-end on the HR pack with briefs (run `benchmark_20261105_111219`, sequential,
+fresh index in `data_bench_brief`): **19/20** correct, 20/20 with partials, refusals
+2/2, citation recall **28/29 document, 27/29 document+section** (was 29/29 before the
+brief), 0 warnings, 0 forced finals, QA 441.0s.
+
+So accuracy held and citation recall lost one or two references. With n=20 that is
+inside the per-run movement measured in §13 (the same pack has moved 19 <-> 20 and
+its miss wanders between cases), so it is recorded as "no detected change" rather than
+as a regression — but it is not a win either, and anyone re-running this should compare
+`citation_section_hits` per case rather than the single percentage.

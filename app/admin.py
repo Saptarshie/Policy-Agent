@@ -198,6 +198,7 @@ class AdminAPI:
             max_parse_tokens=getattr(self.cfg, "ingest_max_tokens", 3000),
             parallel_windows=getattr(self.cfg, "ingest_parallel_windows", 1),
             heuristic_max_chars=getattr(self.cfg, "ingest_heuristic_max_chars", 0),
+            brief_words=getattr(self.cfg, "ingest_brief_words", 1000),
         )
 
     # --------------------------------------------------------------- documents
@@ -283,6 +284,24 @@ class AdminAPI:
                      "answer with citations.")
         return "\n".join(lines)
 
+    def corpus_briefs(self, limit: int = 8, chars: int = 240) -> List[Dict[str, str]]:
+        """What the triage layer is allowed to know about the corpus.
+
+        One line per ready document, bounded on both axes: a triage prompt that
+        grows with the corpus is a triage prompt that eventually stops classifying.
+        An empty brief is honest - the model is told the brief is missing rather
+        than shown a blank line it would read as "this document covers nothing".
+        """
+        out: List[Dict[str, str]] = []
+        for d in self.db.list_documents():
+            if d.get("status") != "ready":
+                continue
+            brief = (d.get("summary") or "").strip()
+            out.append({"name": d["name"], "brief": brief[:chars]})
+            if len(out) >= limit:
+                break
+        return out
+
     def ask(self, question: str,
             history: Optional[List[Dict[str, str]]] = None,
             on_event=None) -> AgentResult:
@@ -310,7 +329,7 @@ class AdminAPI:
                 log.debug("event listener failed", exc_info=True)
 
         _emit("stage", {"name": "triage"})
-        plan = self.intent_router.classify(question)
+        plan = self.intent_router.classify(question, corpus=self.corpus_briefs())
         plan_dict = plan.to_dict()
         _emit("stage", {"name": "routed", "intent": plan.intent,
                         "route": plan.route,

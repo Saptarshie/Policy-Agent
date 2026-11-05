@@ -145,28 +145,37 @@ An LLM boundary-finder would be a semantic chunker: it would have to re-emit the
 to store it, and a citation would then quote a model's paraphrase instead of the
 policy.
 
-**Where the rolling summary goes — and where it does not.** The per-window parse
-produces `window_title`, `key_terms`, `statements` and a `rolling_summary`. In the
-chained mode (`INGEST_PARALLEL_WINDOWS=1`) that summary is fed into the *next*
-window's parser prompt, so window i+1 is read in the context of window i; in the
-default parallel mode the chain is gone and one merge call folds the per-window
-summaries into `documents.summary` at the end. Either way:
+**The document brief — what the triage layer and the agent know about a document.**
+One bounded call per document reads its opening `INGEST_BRIEF_WORDS` words (default
+1000) plus its complete heading list, and writes at most three sentences (≤70 words):
+what the document covers, who it applies to, and what it can answer. It is stored on
+`documents.summary` and mirrored into `docs/meta_json` as `brief`.
 
-* it is **not** an input to chunking, and it is **not** part of a chunk's text —
-  chunk text stays verbatim, because a citation has to quote the policy rather than
-  a summary of it;
-* it is **not** embedded and **not** searched: retrieval sees chunk vectors and
-  chunk text, nothing else;
-* it surfaces in three document-level places: the `get_document_summary` tool
-  (summary + key terms + up to 15 extracted statements), `python run.py list` and the
-  UI's document cards, and the offline judge's inventory (`app/agent/verify.py`), so
-  the judge does not flag a correct statement about *which documents exist* as
-  unsupported.
+There is no rolling summary any more. The old design chained window *i*'s summary
+into window *i+1*'s parser prompt and then made one merge call; nothing in that chain
+ever reached a chunk, and the triage layer never saw the result, so it cost calls to
+produce a paragraph that only `get_document_summary` could quote. Windows now parse
+independently (no ordering at all), and the one summary-shaped call per document is
+the brief — which is small, bounded, and consumed by something that matters.
 
-So the summary is orientation metadata, not retrieval context. It costs one extra
-LLM call per document (the merge) on top of roughly two window calls; whether the
-agent actually asks for it is not measured, and §9 says so rather than implying it is
-load-bearing.
+What the brief is and is not:
+
+* **Not chunk input.** Chunk text stays a verbatim slice of the file: the same
+  document indexed with two different briefs produces byte-identical chunks
+  (`tests/test_corpus_brief.py` asserts exactly that).
+* **Not embedded, not searched.** Retrieval sees chunk vectors and chunk text.
+* **Consumed at four points**: the triage layer (all ready documents, at most 8, 300
+  chars each, as a `CORPUS` block — §3.1), `get_document_summary`, `python run.py list`
+  and the UI's document cards, and the offline judge's inventory, so the judge does
+  not flag a correct statement about *which documents exist* as unsupported.
+* **Bounded twice, deliberately** — words read on the way in, sentences written on
+  the way out — because this text goes into the triage prompt for every document on
+  every question. A prompt that grows with the corpus is a prompt that eventually
+  stops classifying.
+* **If the call fails**, the fallback is deterministic and honest: the heading list
+  plus the document's first two sentences, with a warning recorded on the job. A
+  missing brief is shown as `(no brief available)` rather than as an empty line a
+  model would read as "this document covers nothing".
 
 * **Reading**: `txt`/`md` decoded with UTF-8 → latin-1 fallback; markdown
   decoration stripped but headings kept; `pdf` via `pypdf` page-by-page
@@ -304,6 +313,14 @@ Cheap layers first, expensive last:
    and the layer **fails open**: any error routes to the agent, because a
    triage outage must not become a coverage outage. The old regex gate is kept
    as `app/agent/intent_legacy.py` purely as the ablation baseline.
+   **It is shown what the corpus contains** — the bounded `CORPUS` block above, one
+   line per ready document. That is orientation, not evidence, and the prompt says so
+   in as many words: never refuse because a brief does not mention the topic (a digest
+   omits almost everything by design), never answer from a brief, and `FAST_REFUSE`
+   only for input that is not a document question or is an injection attempt. The
+   verdict cache keys on a fingerprint of the corpus block, so uploading a policy
+   invalidates classifications instead of replaying verdicts decided against a
+   different corpus. What this bought is measured in §6.
    Measured on 67 labelled cases (45 canonical + 22 adversarial/ambiguous):
    **route accuracy 74.6% → 100%**, missed refusals **15 → 1**, false refusals 0
    in both, at the cost of one cached call (p50 5.2s, 4.1s with reasoning

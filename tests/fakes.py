@@ -19,10 +19,15 @@ class FakeLLM:
     chat_json mimics the real client: one retry with the parse error fed
     back before giving up."""
 
-    def __init__(self, responses: List[Any]) -> None:
+    def __init__(self, responses: List[Any], brief: str = "A short test document.") -> None:
         self.responses = list(responses)
         self.received: List[Dict[str, Any]] = []      # chat() calls
         self.json_received: List[Dict[str, Any]] = []  # chat_json() calls
+        # The document brief is a second kind of chat_json call (one per document).
+        # It is answered from ``brief`` instead of the scripted queue, and recorded
+        # separately, so a test that counts window parses keeps counting windows.
+        self.brief = brief
+        self.brief_calls: List[Dict[str, Any]] = []
 
     def chat(self, messages, tools=None, temperature=None, max_tokens=None,
              response_format=None, reasoning_effort=None) -> LLMResponse:
@@ -39,6 +44,12 @@ class FakeLLM:
     def chat_json(self, system: str, user: str, temperature=None,
                   max_tokens=None, reasoning_effort=None
                   ) -> Tuple[Optional[dict], Optional[str]]:
+        if "one-paragraph briefs" in (system or ""):
+            self.brief_calls.append({"messages": [{"role": "system", "content": system},
+                                                  {"role": "user", "content": user}],
+                                     "max_tokens": max_tokens,
+                                     "reasoning_effort": reasoning_effort})
+            return ({"brief": self.brief} if self.brief else None), None
         messages: List[Dict[str, str]] = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -137,9 +148,10 @@ class StubIntentRouter:
         self.default = default
         self.calls: List[str] = []
 
-    def classify(self, question: str):
+    def classify(self, question: str, corpus=None):
         q = (question or "").strip()
         self.calls.append(q)
+        self.corpus = corpus
         for needle, plan in self.plans.items():
             if needle in q.lower():
                 return plan

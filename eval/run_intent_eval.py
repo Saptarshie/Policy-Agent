@@ -95,7 +95,7 @@ def build_router(variant: str, cfg):
     )
     return IntentRouter(
         llm=llm, model=cfg.intent_model or cfg.llm_model,
-        cache_path=str(ROOT / "eval" / "results" / f"intent_cache_{variant}.json"),
+        cache_path=str(ROOT / "eval" / "results" / f"intent_cache_{variant.replace('+', '_')}.json"),
         prompt=prompt, prompt_version=variant,
         max_tokens=cfg.intent_max_tokens,
     )
@@ -181,6 +181,10 @@ def main() -> int:
                     help="include the adversarial/ambiguous hard set")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--briefs-from", default="",
+                    help="DATA_DIR whose indexed documents supply the CORPUS block "
+                         "(one brief per ready document). Rows are recorded as "
+                         "<variant>+corpus so they never mix with the baseline.")
     args = ap.parse_args()
 
     cfg = get_config()
@@ -193,11 +197,25 @@ def main() -> int:
         cases = cases[: args.limit]
     done = load_results()
 
+    briefs = None
+    if args.briefs_from:
+        from app.db import Database
+        db = Database(Path(args.briefs_from) / "policy_rag.db")
+        briefs = [{"name": d["name"], "brief": (d.get("summary") or "").strip()}
+                  for d in db.list_documents() if d.get("status") == "ready"]
+        db.close()
+        print(f"corpus block: {len(briefs)} document(s) from {args.briefs_from}")
+
     for variant in [v.strip() for v in args.variant.split(",") if v.strip()]:
+        label = variant + ("+corpus" if briefs is not None else "")
         router = build_router(variant, cfg)
+        if briefs is not None:
+            # the cache key already carries a corpus fingerprint, so one cache file
+            # per prompt variant is safe: verdicts with and without briefs coexist
+            router.prompt_version = label
         rows = []
         for case in cases:
-            prev = done.get((variant, case["id"]))
+            prev = done.get((label, case["id"]))
             if prev is not None:
                 rows.append(prev)
                 continue
@@ -205,10 +223,10 @@ def main() -> int:
             if variant == "legacy":
                 plan = classify_intent_legacy(case["text"])
             else:
-                plan = router.classify(case["text"])
+                plan = router.classify(case["text"], corpus=briefs)
             latency = time.time() - t0
             row = {
-                "variant": variant, "id": case["id"], "text": case["text"],
+                "variant": label, "id": case["id"], "text": case["text"],
                 "accept": case["accept"], "intent": plan.intent,
                 "route": plan.route, "de_noised_question": plan.de_noised_question,
                 "search_queries": plan.search_queries,
@@ -226,7 +244,7 @@ def main() -> int:
                 mark = "ok " if row["intent_ok"] else "BAD"
                 print(f"  [{mark}] {case['id']:4} {plan.intent:32} "
                       f"{plan.route:13} {latency:4.1f}s  {case['text'][:60]}")
-        report(variant, rows, len(cases))
+        report(label, rows, len(cases))
     return 0
 
 

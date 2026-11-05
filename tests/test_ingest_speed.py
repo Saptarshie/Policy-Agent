@@ -84,21 +84,28 @@ class TestParallelWindows(_Base):
             self.assertEqual(d["status"], "ready", doc)
             self.assertTrue(d["summary"], doc)
 
-    def test_windows_are_not_chained_and_the_summary_is_one_merge_call(self):
+    def test_windows_are_independent_and_the_brief_is_one_extra_call(self):
         fake = FakeLLM([LLMResponse(content=WINDOW_JSON) for _ in range(40)])
         result = self._pipeline(fake, parallel_windows=3).ingest(self.path, "rw")
         self.assertGreater(result["windows"], 1)
 
-        # every window parse starts from an empty previous summary (de-chained)
+        # one parse per window, each standing on its own (no previous summary in
+        # the prompt at all any more), and no merge call afterwards
         window_prompts = [c["messages"][-1]["content"] for c in fake.json_received]
         self.assertEqual(len(window_prompts), result["windows"])
-        self.assertTrue(all("(empty)" in p for p in window_prompts))
-        # ...and the rolling summary came from ONE extra call over the parts
-        merges = [c for c in fake.received
-                  if "Merge these per-window summaries" in c["messages"][0]["content"]]
-        self.assertEqual(len(merges), 1,
-                         [c["messages"][0]["content"][:60] for c in fake.received])
-        self.assertIn("[1]", merges[0]["messages"][-1]["content"])
+        self.assertFalse(any("Previous rolling summary" in p for p in window_prompts))
+        self.assertFalse([c for c in fake.received
+                          if "Merge these per-window summaries" in c["messages"][0]["content"]])
+
+        # the document summary now comes from ONE brief call, built from the
+        # opening plus the heading list
+        self.assertEqual(len(fake.brief_calls), 1)
+        brief_prompt = fake.brief_calls[0]["messages"][-1]["content"]
+        self.assertIn("Headings (complete list", brief_prompt)
+        self.assertIn("1. Allowance", brief_prompt)
+        self.assertIn("ACME Remote Work Policy", brief_prompt)
+        doc = self.db.get_document(result["doc_id"])
+        self.assertEqual(doc["summary"], fake.brief)
 
     def test_a_failed_window_still_lands_as_a_warning(self):
         good = LLMResponse(content=WINDOW_JSON)
@@ -106,7 +113,7 @@ class TestParallelWindows(_Base):
         fake = FakeLLM([good, bad, bad, good, good, good, good, good, good,
                         good, good, good])
         result = self._pipeline(fake, parallel_windows=3).ingest(self.path, "rw")
-        self.assertTrue(any("heuristic fallback" in w for w in result["warnings"]),
+        self.assertTrue(any("metadata skipped" in w for w in result["warnings"]),
                         result["warnings"])
         self.assertEqual(self.db.get_document(result["doc_id"])["status"], "ready")
 
@@ -116,6 +123,7 @@ class TestHeuristicSizeThreshold(_Base):
         fake = FakeLLM([LLMResponse(content=WINDOW_JSON) for _ in range(10)])
         result = self._pipeline(fake, heuristic_max_chars=100_000).ingest(self.path, "rw")
         self.assertEqual(fake.received, [], "the LLM must not be called at all")
+        self.assertEqual(fake.brief_calls, [], "a small document needs no brief call")
         doc = self.db.get_document(result["doc_id"])
         self.assertEqual(doc["status"], "ready")
         self.assertGreater(result["chunks"], 0)

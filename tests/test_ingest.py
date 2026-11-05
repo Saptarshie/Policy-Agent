@@ -56,7 +56,9 @@ class TestIngestPipeline(unittest.TestCase):
                               chunk_target=300, chunk_max=450)
 
     def test_ingest_with_llm(self):
-        fake = FakeLLM([LLMResponse(content=WINDOW_JSON) for _ in range(20)])
+        fake = FakeLLM([LLMResponse(content=WINDOW_JSON) for _ in range(20)],
+                       brief="Covers remote work: 3 remote days/week with approval, "
+                             "15 days notice, eligible after 6 months.")
         events = []
         result = self._pipeline(fake).ingest(
             self.path, "rw", on_progress=lambda p: events.append(p))
@@ -64,6 +66,7 @@ class TestIngestPipeline(unittest.TestCase):
         doc = self.db.get_document(result["doc_id"])
         self.assertEqual(doc["status"], "ready")
         self.assertIn("3 remote days", doc["summary"])
+        self.assertEqual(len(fake.brief_calls), 1)
         meta = __import__("json").loads(doc["meta_json"])
         self.assertIn("may work remotely 3 days", meta["statements"])
         self.assertGreater(result["chunks"], 1)
@@ -83,7 +86,7 @@ class TestIngestPipeline(unittest.TestCase):
         fake = FakeLLM([LLMResponse(content="sorry, not json"),
                         LLMResponse(content="still not json")])
         result = self._pipeline(fake).ingest(self.path, "rw2")
-        self.assertTrue(any("heuristic fallback" in w for w in result["warnings"]))
+        self.assertTrue(any("metadata skipped" in w for w in result["warnings"]))
         doc = self.db.get_document(result["doc_id"])
         self.assertEqual(doc["status"], "ready")
         self.assertGreater(self.db.count_chunks(result["doc_id"]), 0)

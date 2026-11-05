@@ -1,0 +1,55 @@
+{
+  "benchmark": "hr_rag_policy_pack_and_benchmark",
+  "workers": 2,
+  "timing_note": "2 concurrent: times include contention, not comparable",
+  "questions": 2,
+  "index_wall_s": 0.8,
+  "index_per_doc_s": {
+    "01_LEAVE_AND_ATTENDANCE_POLICY": 0.0,
+    "02_HEALTH_AND_WELLBEING_BENEFITS": 0.0,
+    "03_WORKPLACE_EXPENSE_AND_REMOTE_WORK_POLICY": 0.0,
+    "04_TRAVEL_RELOCATION_AND_MOBILITY_POLICY": 0.0
+  },
+  "answer_accuracy_pct": 0.0,
+  "strict_or_partial_pct": 50.0,
+  "verdicts": {
+    "correct": 0,
+    "partial": 1,
+    "incorrect": 1,
+    "unjudged": 0
+  },
+  "answerable": {
+    "n": 2,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "refusals": {
+    "n": 0,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "citation_recall": {
+    "expected": 3,
+    "doc_level_pct": 100.0,
+    "section_level_pct": 100.0
+  },
+  "citation_warnings_total": 0,
+  "rubric": null,
+  "agent_steps": {
+    "max_steps_env": "12",
+    "forced_final": 0,
+    "forced_ids": [],
+    "max_used": 13,
+    "mean_used": 9
+  },
+  "time_s": {
+    "total_wall": 54.5,
+    "qa_wall": 68.8,
+    "mean": 34.4,
+    "p50": 34.4,
+    "p95": 49.8,
+    "max": 49.8,
+    "min": 19.0
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261104_225001.jsonl"
+}

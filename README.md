@@ -23,7 +23,9 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   structure-aware chunking. Windows are parsed **concurrently**
   (`INGEST_PARALLEL_WINDOWS`) at `reasoning_effort=off`: **501.7s → 78.2s** for the
   four-document benchmark pack, with byte-identical chunks
-  (`eval/compare_parse_modes.py`).
+  (`eval/compare_parse_modes.py`). Each document also gets one **bounded brief**
+  (opening words + every heading → ≤3 sentences) which is what the triage layer and
+  the agent read to know what the corpus holds; the brief never enters chunk text.
 - **Intelligent chunking** — heading-aware, paragraph/sentence-boundary chunking
   with breadcrumbs (no random fixed-size cuts).
 - **Hybrid retrieval** — cosine over stored vectors fused with SQLite FTS5/BM25 by
@@ -362,6 +364,7 @@ it is populated only by the offline audit harness, so a client must not read a
 | `INGEST_WINDOW_CHARS` | `6000` | rolling-window size for read+parse |
 | `INGEST_LLM_ENABLED` | `true` | set `false` for heuristic-only ingestion |
 | `INGEST_HEURISTIC_MAX_CHARS` | `0` | documents at or below this size skip the LLM parse anyway (`0` = never); metadata only |
+| `INGEST_BRIEF_WORDS` | `1000` | opening words the per-document brief reads (the brief is the triage layer's and the agent's view of what a document is about; at most 3 sentences out) |
 | `INGEST_REASONING_EFFORT` | `off` | effort for the window parser — structured extraction, measured 4.2× faster at `off` with the same metadata shape |
 | `INGEST_MAX_TOKENS` | `3000` | output cap for one window-parse call |
 | `INGEST_PARALLEL_WINDOWS` | `4` | windows parsed at once; `1` restores the sequential chained parse. Stored chunks are identical either way |
@@ -435,7 +438,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 281 offline tests: pytest OR python run.py selftest
+├── tests/                      # 290 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -492,6 +495,7 @@ python eval/compare_parse_modes.py --doc <path.md>    # sequential vs parallel i
 # ablations
 python eval/run_eval.py             # 18-case eval against a live stack (legacy set)
 python eval/run_intent_eval.py --variant legacy,v1,v2 --hard   # triage ablation
+python eval/run_intent_eval.py --variant v1 --hard --briefs-from data_bench  # + CORPUS block
 python eval/run_ablation.py --variant A,B,C,D                  # end-to-end prompts
 python eval/report_ablation.py      # merged comparison table
 
@@ -510,7 +514,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (281 tests in 26 files, offline, no keys) covers: schema repair + feedback,
+The suite (290 tests in 28 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (including the parallel-window pool and its merge call), the
@@ -543,6 +547,7 @@ non-streaming fallback) and the HTTP API end-to-end.
 | 20 benchmark questions took 373.9s of wall clock | `--workers 10`: **67.8s**, same 19/20; the summary stamps `workers` + `timing_note`, because those timings include contention |
 | the triage prompt called the corpus "HR policy", so the contract pack got canned HR refusals in ~8s with **zero** tool calls (13/20) | refuse by *shape of request*, never by subject: **15/20**, false refusals 0, and the three refused contract questions now compute (LC-01 → ₹28,000) |
 | one benchmark miss, chased over six runs | the miss **moves** (MH-12, MH-19, MH-01) — it is sampling, not a broken router — so `eval/repeat_question.py` reports hit rates (`MH-01`: 4/6), never one verdict |
+| the triage layer had to classify without knowing what the corpus holds | it is shown a bounded `CORPUS` block (one 300-char brief per ready document): intent accuracy **98.5% → 100%**, route 100%, false refusals still 0 — the one remaining misclassification was a question whose vocabulary only the document brief supplies. The brief never enters chunk text (`tests/test_corpus_brief.py`) |
 | a general "background is part of the question" prompt rule | measured and **reverted**: MH-01 4/6 → 3/6 with the rule, 4/6 with a worked example, pack 19/20 → 18/20. The model learned to *notice* the condition and still led with the wrong figure (`eval/ABLATION.md` §12) |
 | citation chips looked clickable and did nothing; the panel then dumped raw markdown (`##` headings, rows of pipe characters) | chips resolve against the store (`GET /api/citations/resolve`) and the passage is rendered with a `raw` toggle; a miss names the sections the document really has, and a section split across chunks returns all its parts |
 | "working — triage…" could spin forever: a stalled call is a 10-minute read timeout and a dead stream showed nothing | the waiting state counts *output* silence (15s names it, 45s turns amber, 4 min aborts), and error / closed stream / dead server each end the bubble in a terminal state |

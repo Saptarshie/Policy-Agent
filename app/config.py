@@ -146,6 +146,7 @@ class Config:
     ingest_max_tokens: int = 3000          # the parser's output is small
     ingest_parallel_windows: int = 4       # 1 = the sequential chained parse
     ingest_heuristic_max_chars: int = 0    # >0: documents this small skip the LLM
+    ingest_brief_words: int = 1000         # opening words the document brief reads
     scan_workers: int = 4             # concurrent model/verifier requests
     decision_batch_size: int = 6      # pairs per batched request
     decision_recheck_band: float = 0.15  # re-ask pairs this near the threshold
@@ -226,6 +227,7 @@ def get_config() -> Config:
             ingest_max_tokens=_int("INGEST_MAX_TOKENS", 3000),
             ingest_parallel_windows=_int("INGEST_PARALLEL_WINDOWS", 4),
             ingest_heuristic_max_chars=_int("INGEST_HEURISTIC_MAX_CHARS", 0),
+            ingest_brief_words=_int("INGEST_BRIEF_WORDS", 1000),
             scan_workers=_int("SCAN_WORKERS", 4),
             decision_batch_size=_int("DECISION_BATCH_SIZE", 6),
             decision_recheck_band=_float("DECISION_RECHECK_BAND", 0.15),

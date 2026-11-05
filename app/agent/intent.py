@@ -160,6 +160,35 @@ def _as_bool(value: Any) -> bool:
     return False
 
 
+_CORPUS_MAX_DOCS = 8
+_CORPUS_MAX_CHARS = 240
+
+
+def format_corpus(corpus: Optional[List[Dict[str, str]]]) -> tuple[str, str]:
+    """Render the CORPUS block shown to the classifier, plus its fingerprint.
+
+    Bounded on both axes: a prompt that grows with the corpus is a prompt that
+    eventually stops classifying (and costs more on every question). The block is
+    labelled as a digest, because the whole failure mode it can cause is a model
+    refusing a question the brief simply does not mention.
+    """
+    docs = [d for d in (corpus or []) if isinstance(d, dict) and d.get("name")]
+    docs = docs[:_CORPUS_MAX_DOCS]
+    if not docs:
+        block = ("CORPUS (no documents ingested yet): the user may still ask about "
+                 "rules in documents that have not been uploaded.")
+        return block, "empty"
+    lines = [f"CORPUS ({len(docs)} document(s) ingested; each line is a one-paragraph "
+             "digest, NOT the document):"]
+    for d in docs:
+        name = str(d.get("name") or "").strip()[:80]
+        brief = str(d.get("brief") or "").strip()[:_CORPUS_MAX_CHARS]
+        lines.append(f"- {name}: {brief or '(no brief available)'}")
+    block = "\n".join(lines)
+    fp = hashlib.sha256(block.encode("utf-8")).hexdigest()[:10]
+    return block, fp
+
+
 def _as_str(value: Any, max_len: int = 500) -> str:
     return value.strip()[:max_len] if isinstance(value, str) else ""
 
@@ -237,11 +266,17 @@ class IntentCache:
 
     @staticmethod
     def key(model: str, prompt_version: str, question: str,
-            prompt_fingerprint: str = "") -> str:
+            prompt_fingerprint: str = "", corpus_fingerprint: str = "") -> str:
         """Cache key. The prompt FINGERPRINT is part of it on purpose: editing the
         routing prompt under the same version label used to replay the old
-        verdict forever, which is exactly the situation during prompt tuning."""
-        raw = (f"{prompt_version}|{prompt_fingerprint}|{model}|"
+        verdict forever, which is exactly the situation during prompt tuning.
+
+        The CORPUS fingerprint is there for the same reason one level up: the
+        classifier is now shown what the corpus contains, so uploading a policy
+        changes the answer it would give for the same question. Without this,
+        every verdict decided before the upload would be replayed forever.
+        """
+        raw = (f"{prompt_version}|{prompt_fingerprint}|{corpus_fingerprint}|{model}|"
                f"{' '.join((question or '').split())}")
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
@@ -309,7 +344,15 @@ class IntentRouter:
 
     # ------------------------------------------------------------------ api
 
-    def classify(self, question: str) -> IntentPlan:
+    def classify(self, question: str,
+                 corpus: Optional[List[Dict[str, str]]] = None) -> IntentPlan:
+        """Classify one input. ``corpus`` is [{name, brief}] - orientation only.
+
+        The briefs change *how* the input is classified (vocabulary, which
+        document it concerns, whether it is a listing request), never *whether*
+        the corpus covers it: that judgement stays with the agent, which has read
+        the passages. The prompt says so in as many words.
+        """
         q = (question or "").strip()
 
         # Input validation, not NLU: an empty query is never a policy question.
@@ -321,8 +364,11 @@ class IntentRouter:
                 notes=["empty input rejected before the classifier"],
             )
 
+        corpus_block, corpus_fp = format_corpus(corpus)
+        user_text = f"{corpus_block}\n\nQUESTION:\n{q}"
+
         key = IntentCache.key(self.model, self._version_tag, q,
-                              self.prompt_fingerprint)
+                              self.prompt_fingerprint, corpus_fp)
         cached = self.cache.get(key)
         if cached is not None:
             plan = self._from_cache(cached.get("plan") or {}, q)
@@ -335,7 +381,7 @@ class IntentRouter:
         t0 = time.time()
         try:
             obj, err = self.llm.chat_json(
-                self.prompt, q, temperature=0.0, max_tokens=self.max_tokens,
+                self.prompt, user_text, temperature=0.0, max_tokens=self.max_tokens,
                 reasoning_effort=self.reasoning_effort or None,
             )
         except Exception as e:              # endpoint down / timeout / auth
@@ -355,7 +401,7 @@ class IntentRouter:
             log.warning("intent classifier returned an unusable plan (%r); retrying once",
                         obj.get("intent"))
             retry_user = (
-                f"{q}\n\n[classifier correction] Your previous JSON was unusable "
+                f"{user_text}\n\n[classifier correction] Your previous JSON was unusable "
                 f"(invalid or truncated `intent`: {obj.get('intent')!r}). Return the "
                 "COMPLETE JSON object with one exact category from the schema."
             )
