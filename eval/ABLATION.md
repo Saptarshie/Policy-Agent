@@ -1076,3 +1076,54 @@ So the pack does its job — it produces the failure the other packs could not (
 confidently wrong negative claim about what the documents cover) and it exposes that
 this agent's citation habit is "cite what supports the sentence", not "cite everything
 the grader expects".
+
+## 16. The scratchpad is offered eleven times per question and used zero times
+
+The ReAct agent has five working-memory tools (`scratchpad_write / read / edit / delete /
+list`), 12 notes maximum, per question, in memory only. They were added so a question that
+needs several figures could hold them between turns instead of re-deriving them. Nothing
+had measured whether the agent ever reaches for them.
+
+`eval/scratch_usage.py` asks a pack's questions and counts what the agent actually called
+(`eval/results/scratch_20261105_124350.json`), adversarial pack, `--workers 10`:
+
+```
+id      calls  scratch  notes  turns  elapsed
+AX-01       5        0      0      4    30.9s
+AX-02      10        0      0      5    31.5s
+AX-03      20        0      0     12    71.0s
+...
+AX-13      31        0      0     16   129.0s
+AX-20       6        0      0      5    27.4s
+
+questions that touched it      0/20
+questions that kept notes      0/20
+scratch calls                  0 of 200 tool calls (0.0%)
+all tool calls   search_policy_docs 108, read_policy_chunk 63, calculate 19,
+                 get_document_summary 6, list_policy_documents 3, list_contradictions 1
+```
+
+Zero. Not "rarely" - not once, across 200 tool calls in 20 questions, on the pack whose
+questions take the most turns. The tools are in the registry, they are in the tool list the
+model sees, and the prompt says "if you kept notes, call scratchpad_read once before
+answering", which is a suggestion with no antecedent because nothing ever writes a note.
+
+Two readings, and the measurement does not choose between them:
+
+1. **The agent does not need them.** The conversation already holds every observation;
+   notes would be a second copy. Nothing in these questions is long enough to need
+   externalised state, and 20 turns is not a context problem.
+2. **The prompt does not ask for them.** "If you kept notes" presupposes a decision the
+   model is never told to make. A tool offered under a conditional that is never triggered
+   gets no use, and 0/20 is what that looks like.
+
+What is *not* true is the thing the tools were justified by in the first place - that a
+multi-step question benefits from a scratchpad. On this evidence it is dead weight in the
+answer path: five tool schemas in every prompt, an observation channel that never fires,
+and code plus tests that no run exercises end to end.
+
+The cheap experiment, not yet run: tell the agent to write down each figure it intends to
+compare as it finds it, for questions with two or more quantities, and see whether
+`calculate` calls (19 here) start consuming scratch notes instead of re-reading chunks
+(63 here). If usage stays at zero with an explicit instruction, the honest move is to
+delete the tools rather than keep paying for the schemas.

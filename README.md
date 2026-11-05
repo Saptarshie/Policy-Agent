@@ -457,6 +457,7 @@ policy-rag-agent/
 │   ├── run_intent_eval.py      # triage ablation (legacy regex vs v1 vs v2)
 │   ├── measure_retrieval.py / measure_scan.py    # label-only, no LLM calls
 │   ├── compare_parse_modes.py  # sequential vs parallel ingest -> identical chunks?
+│   ├── scratch_usage.py       # does the agent actually use its working memory?
 │   ├── profile_ingest.py       # per-call timing of the window parser
 │   ├── calibrate_judge.py      # offline judge TPR/TNR on injected claims
 │   ├── verify_api.py           # 42 end-to-end API checks (needs a live server)

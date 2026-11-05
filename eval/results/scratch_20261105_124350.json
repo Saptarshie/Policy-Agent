@@ -1,0 +1,302 @@
+{
+ "pack": "adversarial_policy_arbitrage_pack",
+ "data_dir": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\data_bench_adv",
+ "workers": 10,
+ "questions": 20,
+ "totals": {
+  "tool_calls": 200,
+  "scratch_calls": 0,
+  "questions_using_scratchpad": 0,
+  "questions_keeping_notes": 0
+ },
+ "by_tool": {},
+ "all_tools": {
+  "search_policy_docs": 108,
+  "read_policy_chunk": 63,
+  "get_document_summary": 6,
+  "list_policy_documents": 3,
+  "calculate": 19,
+  "list_contradictions": 1
+ },
+ "rows": [
+  {
+   "id": "AX-01",
+   "turns": 4,
+   "tool_calls": 5,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 4,
+    "read_policy_chunk": 1
+   },
+   "elapsed_s": 30.9
+  },
+  {
+   "id": "AX-02",
+   "turns": 5,
+   "tool_calls": 10,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 4,
+    "read_policy_chunk": 6
+   },
+   "elapsed_s": 31.5
+  },
+  {
+   "id": "AX-03",
+   "turns": 12,
+   "tool_calls": 20,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 11,
+    "read_policy_chunk": 5,
+    "get_document_summary": 1,
+    "list_policy_documents": 1,
+    "calculate": 2
+   },
+   "elapsed_s": 71.0
+  },
+  {
+   "id": "AX-04",
+   "turns": 3,
+   "tool_calls": 3,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 1
+   },
+   "elapsed_s": 19.8
+  },
+  {
+   "id": "AX-05",
+   "turns": 6,
+   "tool_calls": 9,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 5,
+    "read_policy_chunk": 2,
+    "calculate": 2
+   },
+   "elapsed_s": 39.5
+  },
+  {
+   "id": "AX-06",
+   "turns": 3,
+   "tool_calls": 3,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 1
+   },
+   "elapsed_s": 16.4
+  },
+  {
+   "id": "AX-07",
+   "turns": 4,
+   "tool_calls": 5,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 3,
+    "read_policy_chunk": 2
+   },
+   "elapsed_s": 32.1
+  },
+  {
+   "id": "AX-08",
+   "turns": 4,
+   "tool_calls": 5,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 1,
+    "calculate": 2
+   },
+   "elapsed_s": 23.9
+  },
+  {
+   "id": "AX-09",
+   "turns": 4,
+   "tool_calls": 4,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 1,
+    "calculate": 1
+   },
+   "elapsed_s": 19.5
+  },
+  {
+   "id": "AX-10",
+   "turns": 3,
+   "tool_calls": 3,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 1
+   },
+   "elapsed_s": 16.9
+  },
+  {
+   "id": "AX-11",
+   "turns": 3,
+   "tool_calls": 3,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 1
+   },
+   "elapsed_s": 15.6
+  },
+  {
+   "id": "AX-12",
+   "turns": 9,
+   "tool_calls": 13,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 6,
+    "read_policy_chunk": 5,
+    "calculate": 1,
+    "get_document_summary": 1
+   },
+   "elapsed_s": 52.1
+  },
+  {
+   "id": "AX-13",
+   "turns": 16,
+   "tool_calls": 31,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 18,
+    "read_policy_chunk": 5,
+    "get_document_summary": 1,
+    "calculate": 6,
+    "list_contradictions": 1
+   },
+   "elapsed_s": 129.0
+  },
+  {
+   "id": "AX-14",
+   "turns": 4,
+   "tool_calls": 6,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 2,
+    "calculate": 2
+   },
+   "elapsed_s": 18.3
+  },
+  {
+   "id": "AX-15",
+   "turns": 12,
+   "tool_calls": 23,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 10,
+    "read_policy_chunk": 11,
+    "get_document_summary": 1,
+    "list_policy_documents": 1
+   },
+   "elapsed_s": 79.7
+  },
+  {
+   "id": "AX-16",
+   "turns": 20,
+   "tool_calls": 33,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 18,
+    "read_policy_chunk": 11,
+    "get_document_summary": 1,
+    "list_policy_documents": 1,
+    "calculate": 2
+   },
+   "elapsed_s": 96.3
+  },
+  {
+   "id": "AX-17",
+   "turns": 3,
+   "tool_calls": 4,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 2,
+    "read_policy_chunk": 2
+   },
+   "elapsed_s": 14.5
+  },
+  {
+   "id": "AX-18",
+   "turns": 5,
+   "tool_calls": 8,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 5,
+    "read_policy_chunk": 1,
+    "get_document_summary": 1,
+    "calculate": 1
+   },
+   "elapsed_s": 28.7
+  },
+  {
+   "id": "AX-19",
+   "turns": 3,
+   "tool_calls": 6,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 4,
+    "read_policy_chunk": 2
+   },
+   "elapsed_s": 21.6
+  },
+  {
+   "id": "AX-20",
+   "turns": 5,
+   "tool_calls": 6,
+   "scratch_calls": 0,
+   "scratch_by_tool": {},
+   "scratch_notes_kept": 0,
+   "tools_by_name": {
+    "search_policy_docs": 4,
+    "read_policy_chunk": 2
+   },
+   "elapsed_s": 27.4
+  }
+ ]
+}
