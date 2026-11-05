@@ -495,6 +495,30 @@ Cheap layers first, expensive last:
    this is the shipped default (`PROMPT_AGENT`/`PROMPT_INTENT=v3`); `v1` selects the old
    behaviour for comparison.
 
+   Four decisions inside that, since the "why" matters more than the rule text:
+
+   *Why the conditions are extracted in triage, not only in the agent prompt.* The agent
+   never sees the raw question - it sees the plan block. A rule in the agent prompt can only
+   tell it to look for conditions in a paraphrase, which is where LC-08's six hours had
+   already been rounded away. Triage is the one place that reads the user's words, so it is
+   the one place that can list them.
+
+   *Why v3 is built on v1 and not on v2.* v2's measured gain was the judge's table-flag
+   probability (50% -> 86%), a different axis; composing v3 on v1 means the only difference
+   between the shipped prompt and the pre-change prompt is this rule. That keeps the ablation
+   honest and lets v1 stay byte-identical, which is why a reviewer can diff them.
+
+   *Why not a deterministic extractor.* Amounts, dates and provisos look parseable, and that
+   is exactly the trap: "six hours of properly noticed Sunday Scheduled Maintenance" is not a
+   duration to a regex, it is a duration *plus* two conditions that decide which clause
+   applies. The standing rule in this repo is that language decisions go to the model; the
+   only structure here is the JSON field that carries the model's answer.
+
+   *What it does not fix.* AX-13 (an unstated eligibility precondition - the conditions list
+   cannot supply what the question never states) and the residual caveat-omission family
+   (AX-19, LC-15, AX-01). `eval/FAILURES.md` records the four remaining not-fully-correct
+   answers and which lever is still unbuilt.
+
 ### 3.10 When retrieval is weak
 
 "Grounded" is only tested by the case where nothing relevant exists, so that case

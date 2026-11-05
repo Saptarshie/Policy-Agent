@@ -4,6 +4,43 @@ This is the companion to `eval/ABLATION.md`. ABLATION records what each change d
 the *aggregate* numbers; this file records what the system actually got wrong, one
 answer at a time, and what the mechanism of each error was.
 
+## Current state: four answers not fully correct, on the shipped prompt (v3)
+
+Three runs at `--workers 5 --reuse`, prompt v3, k=12, contract index scanned:
+`benchmark_20261105_190013` (adversarial), `_190344` (contract), `_190713` (HR).
+60 questions: **56 correct, 3 partial, 1 incorrect**.
+
+| case | pack | verdict | right | still missing |
+|---|---|---|---|---|
+| AX-01 | adversarial | partial | conditional "no automatic attribution"; the conjunctive test and its carve-out applied | leaves the owner-skill threshold unsettled, where the reference treats that condition as satisfied |
+| AX-19 | adversarial | partial | transfer not ignored solely for an eligibility motive; genuine-transfer factors applied | the caveat: programme-specific common-control / related-person rules may still aggregate the parties |
+| AX-15 | adversarial | incorrect | N$4,000 remote-work support and the either/or rule read correctly | the reference asserts a hybrid commuter amount the policy never states (mechanism D - a benchmark defect, not an agent error) |
+| LC-15 | contract | partial | the five-business-day saving provision applied; invoice remains valid | the opening "Yes" contradicts its own analysis, and the reference's assumption that the other invoice fields were present is unstated |
+
+How the five mechanisms stand now:
+
+- **A (rule restated, scenario not instantiated) — closed.** Prompt v3's conditions list
+  took LC-08 from 0/4 to 4/4 and MH-12 from 0/4 to 4/4 across repeats, with LC-10, LC-01 and
+  AX-20 unchanged (`eval/ABLATION.md` §21).
+- **B (sub-fact unresolved) — down to AX-13**, which is 1/3 correct now (from 0/3): its
+  missing fact is an *unstated* eligibility precondition, which a list of the conditions the
+  question states cannot supply.
+- **C (calibration) — one case left**, AX-01 hedging on a threshold the document leaves to
+  judgment. LC-14 now concludes.
+- **D (contested ground truth) — unchanged**, AX-15, by construction.
+- **E (missing caveat) — now the dominant residual**: AX-19 and LC-15, both answers that are
+  substantively right and do not say the extra thing the reference counts as part of the
+  answer. That is a different problem from A: nothing was misapplied, something was left unsaid.
+
+So the honest summary of the current state: the failures are no longer "did not apply the
+condition" - they are "answered the question and omitted an assumption, a caveat, or a
+judgment the reference expects". One is a benchmark defect. Lever 5 below is the one written
+for the remaining family, and it is still unbuilt and unmeasured.
+
+---
+
+## The run this file was originally written from (pre-v3, kept for the mechanisms)
+
 Collected from three runs on the shipped code (document brief, no rolling summary,
 triage shown the corpus block), 60 questions in total. The adversarial row is the run
 before citation recovery was switched on; a later run of the same pack (`ABLATION` §17)
@@ -292,9 +329,11 @@ listed as proposals precisely so nobody later mistakes them for findings.
    question gives and substitute them into the rule; if the rule's own number (a four-hour
    window) differs from the scenario's number (six hours), the scenario's number governs
    and the difference is the answer; if the answer is an amount, write the amount. This
-   targets A directly (MH-12, LC-08, LC-10) and is the highest-value single change
-   available. The risk is verbosity, and the way to detect it is the rubric's
-   `answer_correctness` staying flat while `reasoning` rises.
+   targets A directly (MH-12, LC-08, LC-10) and was the highest-value single change
+   available. **Built and measured as prompt v3** (`eval/ABLATION.md` §21): LC-08 and MH-12
+   went 0/4 -> 4/4, controls flat, packs 52/60 -> 56/60. The verbosity risk was watched for
+   and did not materialise - `reasoning` rose (2.85 -> 3/3 on contract) without
+   `answer_correctness` falling.
 2. **"Resolve the sentence's subject before quoting it"** — when a rule says "the highest
    applicable fee", find which fee is highest before moving on. Targets LC-07.
 3. **Indeterminacy first** — when a required fact is not established (authority, elapsed
@@ -314,9 +353,9 @@ already exists as a tool the agent simply did not reach for on MH-12.
 
 ## How to reproduce
 
-    /c/Python313/python.exe eval/run_benchmark.py --pack Benchmark/hr_rag_policy_pack_and_benchmark --data-dir data_bench_brief --reuse
-    /c/Python313/python.exe eval/run_benchmark.py --pack Benchmark/complex_contract_reasoning_pack --data-dir data_bench_legal_brief --reuse
-    /c/Python313/python.exe eval/run_benchmark.py --pack Benchmark/adversarial_policy_arbitrage_pack --data-dir data_bench_adv --workers 10
+    /c/Python313/python.exe eval/run_benchmark.py --pack Benchmark/hr_rag_policy_pack_and_benchmark --data-dir data_bench_brief --workers 5 --reuse
+    /c/Python313/python.exe eval/run_benchmark.py --pack Benchmark/complex_contract_reasoning_pack --data-dir data_bench_legal_scan --workers 5 --reuse
+    /c/Python313/python.exe eval/run_benchmark.py --pack Benchmark/adversarial_policy_arbitrage_pack --data-dir data_bench_adv --workers 5 --reuse
 
 Per-question rows (answer, judge reason, missed points, citations, timings) are in
 `eval/results/benchmark_<stamp>.jsonl`. `python eval/trace_steps.py <pack> <ids> <data_dir>`
