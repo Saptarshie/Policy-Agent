@@ -1296,3 +1296,47 @@ misses: the problem is lexical entry, not relational structure. The graph-shaped
 is a `section_refs` table in the existing SQLite file, not a second database — and it is
 worth building only after a question set exists that fails on precedence rather than on
 wording.
+
+## 19. Precedence: detection works, resolution is where it broke
+
+The contract pack has two textbook precedence pairs — an original clause and a later signed
+change order that replaces it:
+
+```
+Order Form § 2.3 Usage Overage            vs  § CO-2.1 Revised User Overage
+Order Form § 3 Project Milestones...      vs  § CO-2.2 Revised Production Acceptance
+```
+
+Running the cascade on that corpus (`api.scan(blocking=True)`, 4 documents, 22.3s) returns
+**exactly those two pairs and nothing else**:
+
+```
+OPEN | § 3. Project Milestones and Acceptance | § CO-2.2 Revised Production Acceptance
+OPEN | § 2.3 Usage Overage                    | § CO-2.1 Revised User Overage
+```
+
+So detection is not the weakness. Two flags, both true, zero spurious, one pass. The failure
+in §13/FAILURES (LC-04) was elsewhere, and it is worth stating precisely because it changes
+what should be fixed:
+
+1. **The benchmark indexes without scanning.** `run_benchmark ... --index-only` skips the
+   cascade so timings reflect the QA path, which means `list_contradictions` returns [] for
+   every question in every pack. The agent asked the tool, got nothing, and — correctly, per
+   its prompt — refused to pick a side between clauses that "the documents conflict" on. Its
+   answer even said so: "the contradiction scanner records no verified flag for this pair, so
+   the conflict is unresolved". A rational answer to a stale index.
+2. **A flag does not say which clause wins.** Even with the scan run, the flag records that
+   two passages conflict, not that CO-2 is the later signed instrument and therefore
+   controls. Resolution needs the precedence rule (Order Form §1.2 "Order of Precedence" plus
+   the change order's own effective date), and nothing in the flag carries a direction.
+
+That is the actual precedence gap: detection is solved, resolution is prompt work plus a
+missing relation. It is also the concrete case for the `section_refs` edge table discussed in
+§18.3 and DESIGN §9 — an edge `CO-2.1 --supersedes--> §2.3` with an effective date turns
+"these conflict" into "this one applies after 1 November 2026", which is what the agent
+needed and did not have.
+
+Practical consequence for the benchmarks: every pack is measured on an unscanned index, so
+`list_contradictions` is dead weight in a benchmark run. Either the harness scans (costs
+index time, adds real flags) or the question sets should not depend on it — right now they
+do, silently.

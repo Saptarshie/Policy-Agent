@@ -265,10 +265,15 @@ The 2026-11-05 01:0x runs of the same packs had LC-01, LC-04 and LC-15 failing. 
 pass in the current runs. Only one of those can be attributed to a change:
 
 * **LC-04** (productive use vs CO-2 threshold) failed because the answer declared the two
-  clauses an unresolved conflict and refused to apply the later change order — even
-  though the corpus contains the precedence rule. That was a real over-abstention, and
-  it is the one case in this file where the *system* changed behaviour. Whether it was
-  the brief, the corpus block, or sampling is not separable: nothing targeted precedence.
+  clauses an unresolved conflict. The mechanism is now pinned (ABLATION §19): the benchmark
+  indexes **without** running the contradiction scan, so `list_contradictions` returned
+  nothing, and the agent said so in its answer ("the contradiction scanner records no
+  verified flag for this pair"). Given an empty flag list and a prompt that forbids picking
+  sides between conflicting documents, abstaining was the instructed behaviour — the index
+  was stale, not the reasoning. With the scan run, both precedence pairs in that pack are
+  flagged correctly (2 flags, 0 spurious, 22.3s), which removes `list_contradictions` as the
+  explanation for the current-run pass: nothing targeted precedence, so treat the recovery as
+  sampling.
 * **LC-01** (labelling 45 vs 35 billable accounts) and **LC-15** (the payment clock,
   which spent 20 tool calls and hit the step cap) are sampling — §13 already showed the
   same pack scoring 15/20 and 16/20 on identical code.
