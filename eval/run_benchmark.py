@@ -309,6 +309,9 @@ def main() -> int:
             "rubric_points": (sum(grading["scores"].values())
                               if grading.get("scores") else None),
             "tool_calls": payload.get("tool_calls"),
+            # turns = model calls = the thing AGENT_MAX_STEPS caps; step_entries is
+            # thought + one entry per tool call + final, so a parallel turn adds several
+            "turns": payload.get("turns"),
             "step_entries": len(payload.get("steps") or []),   # entries, not turns
             "forced_final": any(isinstance(s, dict) and
                                 str(s.get("note", "")).startswith("forced")
@@ -362,6 +365,7 @@ def main() -> int:
     forced = [r for r in results if r.get("forced_final")]
     step_entries = [r["step_entries"] for r in results
                     if r.get("step_entries") is not None]
+    turns = [r["turns"] for r in results if r.get("turns") is not None]
 
     scored = [r for r in results if r.get("rubric_points") is not None]
     rubric_summary = None
@@ -415,6 +419,8 @@ def main() -> int:
             "forced_ids": [r["id"] for r in forced],
             "max_entries": max(step_entries) if step_entries else None,
             "mean_entries": round(statistics.mean(step_entries), 1) if step_entries else None,
+            "max_turns": max(turns) if turns else None,
+            "mean_turns": round(statistics.mean(turns), 1) if turns else None,
         },
         "time_s": {"total_wall": round(time.time() - started, 1),
                    "qa_wall": round(sum(times), 1),
@@ -452,9 +458,11 @@ def main() -> int:
     log(f"  citation warnings                 {summary['citation_warnings_total']}")
     steps = summary.get("agent_steps") or {}
     if steps:
-        log(f"  agent steps                       max entries {steps['max_entries']}, "
-            f"mean {steps['mean_entries']}, forced finals {steps['forced_final']}"
-            + (f"  (AGENT_MAX_STEPS={steps['max_steps_env']})" if steps['max_steps_env'] else ""))
+        log(f"  agent turns                       max {steps.get('max_turns')}, "
+            f"mean {steps.get('mean_turns')}, forced finals {steps['forced_final']}"
+            + (f"  (cap AGENT_MAX_STEPS={steps['max_steps_env']})" if steps['max_steps_env'] else ""))
+        log(f"  step entries                      max {steps['max_entries']}, "
+            f"mean {steps['mean_entries']}  (thoughts + tool calls + final; not the cap)")
     rubric = summary.get("rubric")
     if rubric:
         log(f"  rubric (judge-scored)             {rubric['mean_points']}/"

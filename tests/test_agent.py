@@ -158,5 +158,56 @@ class TestCitationParsing(unittest.TestCase):
         self.assertEqual(cits, ["policy_a § 2"])
 
 
+class TestTurnAccounting(unittest.TestCase):
+    """AGENT_MAX_STEPS caps turns (model calls), not step entries.
+
+    The benchmark used to report only `step_entries`, so a question that made 37 tool
+    calls across parallel turns looked like it had used 38 steps against a cap of 20.
+    These tests pin the two numbers apart so the reporting cannot drift back.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = Database(Path(self.tmp.name) / "t.db")
+        emb = FakeEmbedder()
+        text = "Employees may work remotely for up to 3 days per calendar week."
+        did = self.db.add_document("policy_a", "policy_a.txt", "txt", 10, "ready")
+        self.db.add_chunk(did, 0, "2. Allowance", "policy_a > 2", text,
+                          emb.embed_documents([text])[0])
+        self.registry = ToolRegistry(self.db, RAGEngine(self.db, emb))
+
+    def tearDown(self):
+        self.db.close()
+        self.tmp.cleanup()
+
+    def test_one_turn_with_three_parallel_calls_is_one_step_and_three_entries(self):
+        fake = FakeLLM([
+            LLMResponse(content="", tool_calls=[
+                ToolCall("c1", "list_policy_documents", "{}"),
+                ToolCall("c2", "list_policy_documents", "{}"),
+                ToolCall("c3", "list_policy_documents", "{}"),
+            ]),
+            LLMResponse(content="Three days [policy_a § 2. Allowance]."),
+        ])
+        result = ReactAgent(fake, self.registry, max_steps=4).run(
+            "How many days can I work remotely?")
+        self.assertEqual(result.turns, 2, "two model calls = two steps consumed")
+        self.assertEqual(result.tool_calls, 3)
+        self.assertEqual(result.parallel_turns, 1)
+        # 3 tool entries + 1 final, and no thought entries (the model sent no prose)
+        self.assertEqual(len(result.steps), 4)
+        self.assertGreater(len(result.steps), result.turns)
+        self.assertEqual(result.to_dict()["turns"], 2)
+
+    def test_the_forced_final_counts_as_a_turn(self):
+        fake = FakeLLM([LLMResponse(content="", tool_calls=[
+            ToolCall("c1", "list_policy_documents", "{}")]) for _ in range(6)]
+            + [LLMResponse(content="The documents do not cover this question.")])
+        result = ReactAgent(fake, self.registry, max_steps=6).run("Anything?")
+        self.assertEqual(result.turns, 7, "6 loop turns plus the forced final call")
+        self.assertTrue(any(str(s.get("note", "")).startswith("forced")
+                            for s in result.steps))
+
+
 if __name__ == "__main__":
     unittest.main()

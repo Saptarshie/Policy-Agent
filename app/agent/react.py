@@ -44,6 +44,7 @@ class AgentResult:
     declined_parts: List[str] = field(default_factory=list)
     scratch_notes: int = 0                   # notes the agent kept while working
     parallel_turns: int = 0                  # turns that carried more than one tool call
+    turns: int = 0                           # model calls = loop steps consumed (the cap)
     unsupported_claims: List[str] = field(default_factory=list)
     tool_calls: int = 0
     elapsed_s: float = 0.0
@@ -64,6 +65,7 @@ class AgentResult:
             "answer_shape": self.answer_shape,
             "scratch_notes": self.scratch_notes,
             "parallel_turns": self.parallel_turns,
+            "turns": self.turns,
             "declined_parts": self.declined_parts,
             "unsupported_claims": self.unsupported_claims,
             "tool_calls": self.tool_calls,
@@ -199,6 +201,7 @@ class ReactAgent:
         steps: List[Dict[str, Any]] = []
         n_tool_calls = 0
         parallel_turns = 0
+        turns = 0
         # working memory for THIS question only (in memory, never persisted)
         scratch = Scratchpad()
         error: Optional[str] = None
@@ -212,6 +215,7 @@ class ReactAgent:
                     seen_chunk_ids.append(cid)
 
         for _step in range(self.max_steps):
+            turns += 1
             _emit("turn", {"n": _step + 1})
             try:
                 resp = self.llm.chat(messages, tools=self.registry.specs)
@@ -276,6 +280,7 @@ class ReactAgent:
                 ),
             })
             try:
+                turns += 1          # the forced final is its own model call
                 resp = self.llm.chat(messages)
                 answer = (resp.content or "").strip()
                 steps.append({"type": "final", "content": answer[:400],
@@ -294,6 +299,7 @@ class ReactAgent:
             tool_calls=n_tool_calls,
             scratch_notes=len(scratch.notes),
             parallel_turns=parallel_turns,
+            turns=turns,
             elapsed_s=time.time() - t0,
             error=error,
         )

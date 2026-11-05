@@ -1045,6 +1045,7 @@ one. Run `benchmark_20261105_114833`, fresh index in `data_bench_adv`.
 | rubric | 9.35/10 = 3.70 / 2.75 / 2.00 / 0.90 |
 | forced finals | 1 (AX-03, 38 tool calls, 104.5s — and still correct) |
 | agent steps | max 39 entries, mean 12.7 (at `AGENT_MAX_STEPS=20`) |
+| agent turns | not recorded in this run - `step_entries` counts thoughts + one entry per tool call + final, so it is not the cap. Re-running AX-13 with the model calls counted showed 10 turns and 20 tool calls over 21 entries; runs now report `turns` as well |
 | indexing | 59.8s for 4 documents |
 | wall clock | 222.1s total; 834.2s of summed per-question time |
 | per question | mean 41.7s, p50 27.3s, p95 113.1s, max 126.1s |

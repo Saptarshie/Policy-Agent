@@ -365,7 +365,7 @@ it is populated only by the offline audit harness, so a client must not read a
 | `MAX_OUTPUT_TOKENS` | `65536` | output ceiling for every LLM call (agent, triage, parser, offline judge); a ceiling only - it never lengthens a reply, it prevents truncation. Auto-halved if an endpoint caps it |
 | `TEMPERATURE` | `0.1` | low temperature for grounded answers |
 | `LLM_REASONING_EFFORT` / `INTENT_REASONING_EFFORT` | *(default)* / `off` | the real cost lever: the classifier runs with reasoning off (4.1s vs 5.2s per call, same decisions) |
-| `AGENT_MAX_STEPS` / `AGENT_MAX_OBS_CHARS` | `12` / `4000` | tool-call budget per question, and the observation truncation point |
+| `AGENT_MAX_STEPS` / `AGENT_MAX_OBS_CHARS` | `12` / `4000` | loop turns per question (one model call each - a turn may carry several parallel tool calls), and the observation truncation point |
 | `EMBED_BATCH_SIZE` | `32` | passages embedded per Ollama batch |
 | `OLLAMA_BASE_URL` / `EMBED_MODEL` | `…:11434` / `embeddinggemma` | embeddings backend |
 | `EMBED_QUERY_PREFIX` / `EMBED_DOC_PREFIX` | EmbeddingGemma task prefixes | keep quoted! Ollama does not add them itself |
@@ -446,7 +446,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 290 offline tests: pytest OR python run.py selftest
+├── tests/                      # 292 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -523,7 +523,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (290 tests in 28 files, offline, no keys) covers: schema repair + feedback,
+The suite (292 tests in 28 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (including the parallel-window pool and its merge call), the

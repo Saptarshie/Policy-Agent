@@ -109,7 +109,11 @@ injection are refused, everything about the documents goes to the ReAct loop. Th
 question plus the triage query plan as a second system message, thinks, emits one
 or more tool calls (parallel when they do not depend on each other), **reads the
 observations and decides the next action** (refine the query, open a full chunk,
-or answer) — up to `AGENT_MAX_STEPS`, then a forced grounded final answer.
+or answer) — up to `AGENT_MAX_STEPS` **turns**, then a forced grounded final answer. A
+turn is one model call and may carry several parallel tool calls, so the step budget
+and the tool-call count are different numbers: benchmarks report both (`turns`, and
+`step_entries` = thoughts + one entry per tool call + final) because reporting only
+entries made a 37-call question look like it had used 38 steps against a cap of 20.
 Citations are resolved against the store deterministically (`citation_warnings`,
 never silent) and the same resolver is what the UI opens when a reader clicks a
 chip; there is **no post-answer judge in this path** — grounding is the prompt
