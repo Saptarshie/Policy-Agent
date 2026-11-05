@@ -148,10 +148,11 @@ class StubIntentRouter:
         self.default = default
         self.calls: List[str] = []
 
-    def classify(self, question: str, corpus=None):
+    def classify(self, question: str, corpus=None, history=None):
         q = (question or "").strip()
         self.calls.append(q)
         self.corpus = corpus
+        self.history = history
         for needle, plan in self.plans.items():
             if needle in q.lower():
                 return plan

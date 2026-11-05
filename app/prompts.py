@@ -457,6 +457,33 @@ assert "## How to work (ReAct loop)" in AGENT_SYSTEM_V3
 assert '"conditions"' in INTENT_SYSTEM_V3
 assert INTENT_SYSTEM_V3.count("### 3.5") == 1
 
+FOLLOW_UP_SECTION_INTENT = """### 3.6 FOLLOW-UPS AND CONTINUATIONS
+
+A CONVERSATION block precedes the input when this session already has turns. Use it only to
+resolve what the input refers to, never as evidence about policy.
+
+If QUESTION is a continuation - "tell me more", "why?", "and the Plus tier?", "what about the
+second one", "is that per year?" - rewrite it into the complete standalone question the user
+means, in the terms of the earlier turn, and classify THAT question (its intent, its
+de_noised_question, its search_queries). A continuation of a question about the documents is
+about the documents: it is never CHITCHAT_OR_OUT_OF_SCOPE and it is never META_DOCUMENTS just
+because it says "more" or "documents". Refusing a follow-up that has a live referent is the
+worst outcome available to you, because the user has already told you what they want.
+
+If QUESTION changes subject completely, classify it on its own - do not carry the earlier
+turn's intent across a new topic.
+
+With no CONVERSATION block, or an empty one, judge QUESTION on its own as usual.
+
+"""
+
+INTENT_SYSTEM_V4 = INTENT_SYSTEM_V3.replace(
+    "### 4. OUTPUT", FOLLOW_UP_SECTION_INTENT + "### 4. OUTPUT", 1
+)
+assert INTENT_SYSTEM_V4 != INTENT_SYSTEM_V3
+assert INTENT_SYSTEM_V4.count("### 3.6 FOLLOW-UPS") == 1
+
+
 # =====================================================================
 # INTENT prompt v2 - tuned after the first measurement round.
 # Change 1: requires_table_check was firing on ANY number (24% of inputs),

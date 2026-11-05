@@ -5,7 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from app.agent.intent import CATEGORY_TO_ROUTE, IntentRouter, plan_from_obj
+from app.agent.intent import (CATEGORY_TO_ROUTE, IntentRouter, format_conversation,
+                              plan_from_obj)
 from app.agent.intent_legacy import classify_intent_legacy
 from app.llm import LLMResponse
 from tests.fakes import FakeLLM, StubLLM
@@ -244,3 +245,72 @@ class TestPlanConditions(unittest.TestCase):
         self.assertEqual(plan.prompt_block(), "")
         # ...but it is still recorded for the audit trail
         self.assertEqual(plan.to_dict()["conditions"], ["a stated condition"])
+
+
+class TestFollowUps(unittest.TestCase):
+    """A follow-up is a question whose referent is the previous turn.
+
+    The agent was always given the conversation; the classifier was not, so "tell me more"
+    arrived with nothing to resolve against and was routed as chit-chat - refused before
+    retrieval, one turn after a good answer. These pin the plumbing; whether the model
+    resolves a particular continuation is a prompt question, measured live.
+    """
+
+    def test_conversation_reaches_the_classifier(self):
+        r = RouterBase()
+        r.setUp()
+        self.addCleanup(r.tearDown)
+        router = r.router([LLMResponse(content=intent_json())])
+        router.classify("tell me more", corpus=None, history=[
+            {"role": "user", "content": "What is my out-of-pocket on Premium implants?"},
+            {"role": "assistant", "content": "$600, assuming the deductible does not apply."},
+        ])
+        user = router.llm.json_received[-1]["messages"][-1]["content"]
+        self.assertIn("CONVERSATION", user)
+        self.assertIn("USER: What is my out-of-pocket", user)
+        self.assertIn("ASSISTANT: $600", user)
+        self.assertIn("QUESTION:\ntell me more", user)
+
+    def test_no_history_says_so_instead_of_inventing_one(self):
+        block, fp = format_conversation(None)
+        self.assertIn("none", block)
+        self.assertEqual(fp, "none")
+        self.assertEqual(format_conversation([])[1], "none")
+        self.assertEqual(format_conversation([{"role": "system", "content": "x"}])[1], "none")
+
+    def test_the_block_is_bounded_on_both_axes(self):
+        history = [{"role": "user", "content": f"turn {i}"} for i in range(20)]
+        block, _ = format_conversation(history)
+        self.assertNotIn("turn 13", block)          # only the last six messages survive
+        self.assertIn("turn 19", block)
+        long_answer = [{"role": "assistant", "content": "y" * 2000}]
+        block, _ = format_conversation(long_answer)
+        self.assertIn("y" * 480, block)
+        self.assertNotIn("y" * 481, block)
+
+    def test_a_cached_verdict_is_not_replayed_across_conversations(self):
+        r = RouterBase()
+        r.setUp()
+        self.addCleanup(r.tearDown)
+        router = r.router([LLMResponse(content=intent_json(intent="POLICY_DIRECT_LOOKUP")),
+                           LLMResponse(content=intent_json(intent="POLICY_DIRECT_LOOKUP"))])
+        first = {"role": "user", "content": "How many casual leave days carry forward?"}
+        second = {"role": "user", "content": "Does Standard cover dental implants?"}
+        router.classify("tell me more", corpus=None, history=[first])
+        router.classify("tell me more", corpus=None, history=[second])
+        self.assertEqual(len(router.llm.json_received), 2,
+                         "the same words after a different turn must be classified again")
+        router.classify("tell me more", corpus=None, history=[first])
+        self.assertEqual(len(router.llm.json_received), 2, "same conversation is cached")
+
+    def test_a_continuation_can_route_into_the_agent(self):
+        r = RouterBase()
+        r.setUp()
+        self.addCleanup(r.tearDown)
+        router = r.router([LLMResponse(content=intent_json(
+            intent="POLICY_DIRECT_LOOKUP", de_noised_question="What is my out-of-pocket "
+            "on Premium dental implants?"))])
+        plan = router.classify("tell me more", corpus=None, history=[
+            {"role": "assistant", "content": "Dental implants are covered at 80% on Premium."}])
+        self.assertEqual(plan.route, "REACT_LOOP")
+        self.assertNotEqual(plan.route, "FAST_REFUSE")

@@ -29,7 +29,7 @@ from .llm import OpenAICompatClient
 from .prompts import (
     AGENT_SYSTEM, AGENT_SYSTEM_V2, ESCALATION_NOTE, FAITHFULNESS_SYSTEM,
     AGENT_SYSTEM_V3, FAITHFULNESS_SYSTEM_V2, GREETING_REPLY, INTENT_SYSTEM,
-    INTENT_SYSTEM_V2, INTENT_SYSTEM_V3,
+    INTENT_SYSTEM_V2, INTENT_SYSTEM_V3, INTENT_SYSTEM_V4,
     REFUSAL_TEXT,
 )
 from .rag import RAGEngine
@@ -154,7 +154,8 @@ class AdminAPI:
                 model=self.cfg.intent_model or self.cfg.llm_model,
                 cache_path=cache_path,
                 prompt={"v2": INTENT_SYSTEM_V2,
-                        "v3": INTENT_SYSTEM_V3}.get(variant, INTENT_SYSTEM),
+                        "v3": INTENT_SYSTEM_V3,
+                        "v4": INTENT_SYSTEM_V4}.get(variant, INTENT_SYSTEM),
                 prompt_version=variant,
                 max_tokens=self.cfg.intent_max_tokens,
                 reasoning_effort=self.cfg.intent_reasoning_effort,
@@ -333,7 +334,8 @@ class AdminAPI:
                 log.debug("event listener failed", exc_info=True)
 
         _emit("stage", {"name": "triage"})
-        plan = self.intent_router.classify(question, corpus=self.corpus_briefs())
+        plan = self.intent_router.classify(question, corpus=self.corpus_briefs(),
+                                           history=history)
         plan_dict = plan.to_dict()
         _emit("stage", {"name": "routed", "intent": plan.intent,
                         "route": plan.route,

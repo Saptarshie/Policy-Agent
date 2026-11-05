@@ -142,7 +142,8 @@ class Config:
     prompt_agent: str = "v3"           # v1 | v2 | v3 (v3 = v1 + conditions; the
                                     # default since the ABLATION 21 measurements)            # v1 | v2
     prompt_judge: str = "v1"            # v1 | v2
-    prompt_intent: str = "v3"           # v1 | v2 | v3 (v3 = v1 + conditions)
+    prompt_intent: str = "v4"           # v1 | v2 | v3 | v4 (v3 adds conditions,
+                                    # v4 resolves follow-ups with the conversation)
     # performance tuning only - defaults are the measured values, so a
     # fixture that does not care about scanning need not set them
     # ingestion tuning (performance only; the stored chunks do not depend on it)

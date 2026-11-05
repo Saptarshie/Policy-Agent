@@ -170,6 +170,43 @@ _CORPUS_MAX_DOCS = 8
 _CORPUS_MAX_CHARS = 240
 
 
+_CONV_MAX_MESSAGES = 6      # last three exchanges
+_CONV_MAX_CHARS = 480       # per message; an answer can be a page long
+
+
+def format_conversation(history: Optional[List[Dict[str, str]]]) -> tuple[str, str]:
+    """Render the CONVERSATION block shown to the classifier, plus its fingerprint.
+
+    The agent has always been given the conversation; the classifier was not, so a
+    follow-up ("tell me more", "why?", "and for the Plus tier?") arrived with no
+    referent and was routed as chit-chat - refused before retrieval, with a
+    perfectly good answer sitting one turn earlier. Continuations are the cheapest
+    kind of question to get wrong, because the user has already said what they want.
+
+    Bounded on both axes for the same reason as the corpus block: the prompt must not
+    grow with the conversation, and an answer can be long while the question it
+    answered is the part that matters.
+    """
+    turns = []
+    for m in (history or []):
+        if not isinstance(m, dict):
+            continue
+        role = str(m.get("role") or "").strip().lower()
+        content = " ".join(str(m.get("content") or "").split())
+        if role not in ("user", "assistant") or not content:
+            continue
+        turns.append(f"{role.upper()}: {content[:_CONV_MAX_CHARS]}")
+    turns = turns[-_CONV_MAX_MESSAGES:]
+    if not turns:
+        block = ("CONVERSATION (none - this is the first question of the session; "
+                 "judge INPUT on its own)")
+        return block, "none"
+    block = ("CONVERSATION (earlier turns of this session, oldest first - context for "
+             "INPUT, not evidence):\n" + "\n".join(turns))
+    fp = hashlib.sha256(block.encode("utf-8")).hexdigest()[:10]
+    return block, fp
+
+
 def format_corpus(corpus: Optional[List[Dict[str, str]]]) -> tuple[str, str]:
     """Render the CORPUS block shown to the classifier, plus its fingerprint.
 
@@ -273,7 +310,8 @@ class IntentCache:
 
     @staticmethod
     def key(model: str, prompt_version: str, question: str,
-            prompt_fingerprint: str = "", corpus_fingerprint: str = "") -> str:
+            prompt_fingerprint: str = "", corpus_fingerprint: str = "",
+            conversation_fingerprint: str = "") -> str:
         """Cache key. The prompt FINGERPRINT is part of it on purpose: editing the
         routing prompt under the same version label used to replay the old
         verdict forever, which is exactly the situation during prompt tuning.
@@ -283,7 +321,8 @@ class IntentCache:
         changes the answer it would give for the same question. Without this,
         every verdict decided before the upload would be replayed forever.
         """
-        raw = (f"{prompt_version}|{prompt_fingerprint}|{corpus_fingerprint}|{model}|"
+        raw = (f"{prompt_version}|{prompt_fingerprint}|{corpus_fingerprint}|"
+               f"{conversation_fingerprint}|{model}|"
                f"{' '.join((question or '').split())}")
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
@@ -352,7 +391,8 @@ class IntentRouter:
     # ------------------------------------------------------------------ api
 
     def classify(self, question: str,
-                 corpus: Optional[List[Dict[str, str]]] = None) -> IntentPlan:
+                 corpus: Optional[List[Dict[str, str]]] = None,
+                 history: Optional[List[Dict[str, str]]] = None) -> IntentPlan:
         """Classify one input. ``corpus`` is [{name, brief}] - orientation only.
 
         The briefs change *how* the input is classified (vocabulary, which
@@ -372,10 +412,11 @@ class IntentRouter:
             )
 
         corpus_block, corpus_fp = format_corpus(corpus)
-        user_text = f"{corpus_block}\n\nQUESTION:\n{q}"
+        conv_block, conv_fp = format_conversation(history)
+        user_text = f"{conv_block}\n\n{corpus_block}\n\nQUESTION:\n{q}"
 
         key = IntentCache.key(self.model, self._version_tag, q,
-                              self.prompt_fingerprint, corpus_fp)
+                              self.prompt_fingerprint, corpus_fp, conv_fp)
         cached = self.cache.get(key)
         if cached is not None:
             plan = self._from_cache(cached.get("plan") or {}, q)

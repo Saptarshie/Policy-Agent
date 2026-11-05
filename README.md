@@ -277,7 +277,9 @@ each was verified — are in `dev_docs/UI_VERIFICATION.md`.
    commercial questions before retrieval). It also de-noises the question, proposes the
    search queries, and lists the **conditions the question states** - amounts, dates,
    durations, headcounts, tiers, what was done and by whom, explicit provisos - as facts it
-   must not turn into conclusions.
+   must not turn into conclusions. It is also given the last three exchanges, so a follow-up
+   ("tell me more", "why?", "and for the Plus tier?") is rewritten into the standalone question
+   it refers to instead of being refused as chit-chat by a stateless classifier.
 2. **Grounding prompt** — answer only from tool output; one canonical refusal
    sentence ("the ingested documents do not cover this question" — and who to ask:
    the document owner, HR for HR policies) quoted verbatim by both agent prompts and
@@ -423,7 +425,7 @@ it is populated only by the offline audit harness, so a client must not read a
 | `INTENT_REASONING_EFFORT` | `off` | reasoning budget for the classifier; JSON extraction needs none |
 | `INTENT_CACHE_PATH` | *(empty)* | decision cache; empty = `DATA_DIR/intent_cache.json` |
 | `JUDGE_CACHE` | `true` | replay a verdict for an identical (question, answer, contexts, prompt) — verdicts vary run to run even at temperature 0 |
-| `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v3` / `v3` / `v1` | prompt variants. v1 and v2 tie end-to-end; `v3` adds the conditions list - triage returns what the question states, the agent applies each - and fixed both systematic condition failures (LC-08 and MH-12, 0/4 → 4/4; ABLATION 21) |
+| `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v4` / `v3` / `v1` | prompt variants. v1 and v2 tie end-to-end; `v3` adds the conditions list - triage returns what the question states, the agent applies each - and fixed both systematic condition failures (LC-08 and MH-12, 0/4 → 4/4; ABLATION 21) |
 | `RAG_TOP_K` | `12` | passages per `search_policy_docs` call (6 was too shallow: reference sections rank 8-12 for the question that needs them) |
 | `RETRIEVAL_MODE` | `hybrid` | `vector` / `keyword` / `hybrid` (RRF fusion of cosine + FTS5/BM25) |
 | `RRF_K` | `60` | RRF damping constant (higher = flatter rank weights) |
@@ -476,7 +478,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 321 offline tests: pytest OR python run.py selftest
+├── tests/                      # 326 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -554,7 +556,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (321 tests in 29 files, offline, no keys) covers: schema repair + feedback,
+The suite (326 tests in 29 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (the parallel-window pool and the per-document brief), the

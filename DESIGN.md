@@ -508,6 +508,15 @@ Cheap layers first, expensive last:
    between the shipped prompt and the pre-change prompt is this rule. That keeps the ablation
    honest and lets v1 stay byte-identical, which is why a reviewer can diff them.
 
+   *Follow-ups (prompt v4).* The triage layer is also shown the last three exchanges, bounded
+   per message, labelled "context, not evidence". A continuation is rewritten into the
+   standalone question it refers to and classified as that - never refused as chit-chat while a
+   referent is live, and never carried across a change of subject. The agent was always given
+   the conversation; the classifier was not, so "tell me more" used to be answered by a
+   stateless gate that saw a two-word input and nothing else. The cache key includes a
+   fingerprint of the conversation block for the same reason it includes the corpus one: the
+   same words after a different turn are a different question.
+
    *Why not a deterministic extractor.* Amounts, dates and provisos look parseable, and that
    is exactly the trap: "six hours of properly noticed Sunday Scheduled Maintenance" is not a
    duration to a regex, it is a duration *plus* two conditions that decide which clause

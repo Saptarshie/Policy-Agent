@@ -1470,3 +1470,47 @@ one question - MH-12 - which is precisely the condition failure the rule targets
 Caveat on attribution: the v3 pair changes triage *and* the agent at once, so a gain belongs
 to the pair. The v1-vs-v3 diff is small enough to split later (agent-only v3) if a reviewer
 wants the agent rule isolated.
+
+## 22. Follow-ups: the triage layer was stateless
+
+Not an ablation but a defect found by using the app: a second turn of "tell me more" came back
+with a refusal and `CHITCHAT_OR_OUT_OF_SCOPE -> FAST_REFUSE`, `0 tool calls`, one turn after a
+good answer to the question it refers to. The cause is structural, not a prompt tuning problem:
+
+    the agent receives `history` and replays it as messages;
+    the triage layer was called as classify(question, corpus=...) - no conversation at all.
+
+So every continuation was judged on its own words. Measured directly, before the change:
+
+    "tell me more"          -> META_DOCUMENTS         DIRECT_REPLY   (listing the corpus)
+    "why?"                  -> CHITCHAT_OR_OUT_OF_SCOPE FAST_REFUSE   (no answer, no retrieval)
+    "and for the Plus tier?"-> MULTI_HOP_COMPARISON   REACT_LOOP     (right by luck)
+
+### 22.1 The change
+
+`classify(question, corpus=..., history=...)` renders a bounded CONVERSATION block (last six
+messages, 480 chars each, labelled "context for QUESTION, not evidence") before the corpus
+block, and `INTENT_SYSTEM_V4` adds section 3.6: a continuation is rewritten into the complete
+standalone question it refers to and classified as that question - its intent, its
+de-noised_question, its search queries. A continuation of a document question is never
+CHITCHAT and never META_DOCUMENTS; a change of subject is classified on its own. The cache key
+gains a conversation fingerprint, because "tell me more" after one question and after another
+are different questions and the deterministic cache would otherwise replay the first verdict.
+
+No regex, no "is this a follow-up?" detector: the block is presented and the model decides.
+
+### 22.2 Live check, four turns on one session
+
+Same seven sample documents, real endpoint, prompt v4:
+
+| turn | question | triage | de-noised into | turns / time |
+|---|---|---|---|---|
+| 1 | Premium, 13 months, pre-authorised, $3,000 implant - out-of-pocket? | MULTI_HOP_COMPARISON | the full out-of-pocket question | 9 / 48.7s |
+| 2 | "tell me more" | POLICY_DIRECT_LOOKUP | "full coverage terms, limits, deductible, co-insurance and exclusions for Premium implants" | 4 / 29.3s |
+| 3 | "why?" | POLICY_DIRECT_LOOKUP | "the policy basis for the Premium implant terms - waiting period, pre-authorisation, co-insurance" | 3 / 21.3s |
+| 4 | "and for the Plus tier?" | MULTI_HOP_COMPARISON | "the Plus tier implant terms" | 3 / 22.1s |
+
+All four answered with citations; none refused. What this does not fix: if the referent is
+older than the window (six messages), or the user's continuation depends on a detail that was
+in the *documents* rather than the conversation, the rewrite has less to work from - the block
+is a recency window, not a summary.
