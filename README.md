@@ -154,7 +154,7 @@ path, nothing from the pack is baked into a prompt):
 |---|---|---|---|
 | `Benchmark/hr_rag_policy_pack_and_benchmark` | 4 | 20 | multi-hop HR policy: caps, eligibility windows, worked examples, plus out-of-corpus refusals |
 | `Benchmark/complex_contract_reasoning_pack` | 4 | 20 | commercial contract / SLA arithmetic: credits, caps, proration, and definitions that change a clause's scope |
-| `Benchmark/adversarial_policy_arbitrage_pack` | 4 | 20 | adversarial arbitrage: questions whose obvious reading is the wrong one (a definition elsewhere in the pack flips it), a fictional jurisdiction, and asks whose honest answer is a qualified one. Scored: **16/20**, 19/20 with partials, section recall 76.2% (see ABLATION 15 and `eval/FAILURES.md`) |
+| `Benchmark/adversarial_policy_arbitrage_pack` | 4 | 20 | adversarial arbitrage: questions whose obvious reading is the wrong one (a definition elsewhere in the pack flips it), a fictional jurisdiction, and asks whose honest answer is a qualified one. Scored: **15/20**, 19/20 with partials, section recall 88% with citation recovery on (see ABLATION 15 and 17, and `eval/FAILURES.md`) |
 
 ```bash
 python eval/run_benchmark.py --pack Benchmark/hr_rag_policy_pack_and_benchmark --data-dir data_bench
@@ -170,7 +170,7 @@ document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
 |---|---|---|---|---|---|
 | HR policy | **19/20 (95%)** | **20/20 (100%)** | 28/29 (97%) · 27/29 (93%) | 22.1 / 21.8 / 30.5 s | 441.0 s; **67.8 s** at `--workers 10` |
 | contract | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 39/42 (93%) | 30.6 / 28.0 / 45.0 s | 611.9 s |
-| adversarial | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 32/42 (76%) | 41.7 / 27.3 / 113.1 s | 222.1 s at `--workers 10` (834.2 s of agent time) |
+| adversarial | **15/20 (75%)** | 19/20 (95%) | 41/42 (98%) · 37/42 (88%) | 33.4 / 26.9 / 77.5 s | 142.1 s at `--workers 10` |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The 3.60 is the honest number — four
@@ -372,6 +372,12 @@ it is populated only by the offline audit harness, so a client must not read a
 | `INGEST_WINDOW_CHARS` | `6000` | rolling-window size for read+parse |
 | `INGEST_LLM_ENABLED` | `true` | set `false` for heuristic-only ingestion |
 | `INGEST_HEURISTIC_MAX_CHARS` | `0` | documents at or below this size skip the LLM parse anyway (`0` = never); metadata only |
+| `CITATION_RECOVERY` | `1` | after parsing, one decision-model request asks which sections the agent **read but did not cite** are sources for the answer; they are appended (never edits the answer, never invents one) |
+| `CITATION_RECOVERY_THRESHOLD` | `0.3` | the score at or above which a candidate section is appended |
+| `CITATION_RECOVERY_MAX_ADDED` | `3` | cap on additions per answer, highest score first |
+| `CITATION_RECOVERY_MAX_CANDIDATES` | `24` | sections offered to the model in that one request |
+| `CITATION_RECOVERY_SNIPPET_CHARS` | `400` | characters of each candidate shown to the model |
+| `CITATION_RECOVERY_TIMEOUT` | `20` | seconds before the recovery request is abandoned (the answer is unaffected) |
 | `INGEST_BRIEF_WORDS` | `1000` | opening words the per-document brief reads (the brief is the triage layer's and the agent's view of what a document is about; at most 3 sentences out) |
 | `INGEST_REASONING_EFFORT` | `off` | effort for the window parser — structured extraction, measured 4.2× faster at `off` with the same metadata shape |
 | `INGEST_MAX_TOKENS` | `3000` | output cap for one window-parse call |
@@ -428,6 +434,7 @@ policy-rag-agent/
 │   ├── ingest.py               # window parse (parallel pool / chained), metadata, chunks
 │   ├── rag.py                  # dense + sparse retrieval, RRF fusion, threshold search
 │   ├── naming.py               # document-name resolution (unique match or nothing)
+│   ├── citation_recovery.py   # the sources the answer read but forgot to cite
 │   ├── citations.py            # parse_citation + CitationResolver (for warnings AND the UI)
 │   ├── admin.py                # facade: triage -> agent -> citation check (no judge)
 │   ├── cli.py                  # command line interface
@@ -446,7 +453,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 292 offline tests: pytest OR python run.py selftest
+├── tests/                      # 311 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -524,7 +531,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (292 tests in 28 files, offline, no keys) covers: schema repair + feedback,
+The suite (311 tests in 29 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (including the parallel-window pool and its merge call), the

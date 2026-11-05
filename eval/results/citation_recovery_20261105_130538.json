@@ -1,0 +1,2544 @@
+{
+ "pack": "adversarial_policy_arbitrage_pack",
+ "cap": 24,
+ "snippet": 400,
+ "questions": 20,
+ "rows": [
+  {
+   "id": "AX-01",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.2 Personal service entities",
+     "section": "3.2 Personal service entities",
+     "score": 0.97,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.4 Bed-and-spouse rule",
+     "section": "6.4 Bed-and-spouse rule",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.1 General rule",
+     "section": "4.1 General rule",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 2. Progressive individual tax",
+     "section": "2. Progressive individual tax",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.5 Family payments",
+     "section": "4.5 Family payments",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.3 Related persons",
+     "section": "1.3 Related persons",
+     "score": 0.24,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.2 Retained earnings surcharge",
+     "section": "5.2 Retained earnings surcharge",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.3 Deferred compensation",
+     "section": "3.3 Deferred compensation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 5. Dependent-care benefit",
+     "section": "5. Dependent-care benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 6. Export Readiness Voucher",
+     "section": "6. Export Readiness Voucher",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 7. Application integrity",
+     "section": "7. Application integrity",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.4 Home workspace",
+     "section": "4.4 Home workspace",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.3 Small-asset allowance",
+     "section": "4.3 Small-asset allowance",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.2 Indicators",
+     "section": "9.2 Indicators",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.1 Family Investment Company",
+     "section": "5.1 Family Investment Company",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 3.2 personal service entities"
+   ]
+  },
+  {
+   "id": "AX-02",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 2. Progressive individual tax",
+     "section": "2. Progressive individual tax",
+     "score": 0.93,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.1 Employee remuneration",
+     "section": "3.1 Employee remuneration",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.2 Personal service entities",
+     "section": "3.2 Personal service entities",
+     "score": 0.92,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.2 Retained earnings surcharge",
+     "section": "5.2 Retained earnings surcharge",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.1 Family Investment Company",
+     "section": "5.1 Family Investment Company",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.5 Family payments",
+     "section": "4.5 Family payments",
+     "score": 0.93,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.1 General rule",
+     "section": "4.1 General rule",
+     "score": 0.1,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.2 Change in control",
+     "section": "8.2 Change in control",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.4 Exercise funding",
+     "section": "8.4 Exercise funding",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.11,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.1 Abusive arrangement",
+     "section": "9.1 Abusive arrangement",
+     "score": 0.95,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.14,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.3 Safe tax planning",
+     "section": "9.3 Safe tax planning",
+     "score": 0.83,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 Republic of Norland Consolidated Revenue Code 2032",
+     "section": "Republic of Norland Consolidated Revenue Code 2032",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.3 Related persons",
+     "section": "1.3 Related persons",
+     "score": 0.96,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 1. Beneficial owner",
+     "section": "1. Beneficial owner",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 1. Eligibility and household aggregation",
+     "section": "1. Eligibility and household aggregation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.3 Related-party research",
+     "section": "5.3 Related-party research",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.09,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 1.3 related persons",
+    "01_fictional_revenue_code 2. progressive individual tax",
+    "01_fictional_revenue_code 3.1 employee remuneration",
+    "01_fictional_revenue_code 3.2 personal service entities",
+    "01_fictional_revenue_code 4.5 family payments",
+    "01_fictional_revenue_code 9.1 abusive arrangement",
+    "01_fictional_revenue_code 9.3 safe tax planning"
+   ]
+  },
+  {
+   "id": "AX-03",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.3 Small-asset allowance",
+     "section": "4.3 Small-asset allowance",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.2 Capital items",
+     "section": "4.2 Capital items",
+     "score": 0.91,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 6. Export Readiness Voucher",
+     "section": "6. Export Readiness Voucher",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.1 General rule",
+     "section": "4.1 General rule",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.4 Home workspace",
+     "section": "4.4 Home workspace",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.3 Tax interaction",
+     "section": "8.3 Tax interaction",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.5 Family payments",
+     "section": "4.5 Family payments",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.1 Employee remuneration",
+     "section": "3.1 Employee remuneration",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.25,
+     "is_expected": true,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.55,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 Republic of Norland Consolidated Revenue Code 2032",
+     "section": "Republic of Norland Consolidated Revenue Code 2032",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.2 Personal service entities",
+     "section": "3.2 Personal service entities",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.3 Related persons",
+     "section": "1.3 Related persons",
+     "score": 0.37,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.56,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 8. Programme look-through",
+     "section": "8. Programme look-through",
+     "score": 0.1,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 1. Beneficial owner",
+     "section": "1. Beneficial owner",
+     "score": 0.07,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 2. Progressive individual tax",
+     "section": "2. Progressive individual tax",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.1 Abusive arrangement",
+     "section": "9.1 Abusive arrangement",
+     "score": 0.64,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.3 Exclusions",
+     "section": "3.3 Exclusions",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 1.3 related persons",
+    "01_fictional_revenue_code 4.2 capital items",
+    "01_fictional_revenue_code 4.3 small-asset allowance",
+    "01_fictional_revenue_code 9.1 abusive arrangement",
+    "01_fictional_revenue_code 9.2 indicators",
+    "02_enterprise_incentives_and_grants_act 2. common control",
+    "02_enterprise_incentives_and_grants_act 3.4 connected acquisitions"
+   ]
+  },
+  {
+   "id": "AX-04",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.1 Family Investment Company",
+     "section": "5.1 Family Investment Company",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 6. Debt and control",
+     "section": "6. Debt and control",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.4 Exercise funding",
+     "section": "8.4 Exercise funding",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 1. Beneficial owner",
+     "section": "1. Beneficial owner",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 2. Indirect ownership",
+     "section": "2. Indirect ownership",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.2 Retained earnings surcharge",
+     "section": "5.2 Retained earnings surcharge",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 5.3 shareholder loans"
+   ]
+  },
+  {
+   "id": "AX-05",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.41,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.23,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.4 Exercise funding",
+     "section": "8.4 Exercise funding",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.1 Family Investment Company",
+     "section": "5.1 Family Investment Company",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 6. Debt and control",
+     "section": "6. Debt and control",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 11. Recovery and penalties",
+     "section": "11. Recovery and penalties",
+     "score": 0.12,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.2 Retained earnings surcharge",
+     "section": "5.2 Retained earnings surcharge",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.4 Bed-and-spouse rule",
+     "section": "6.4 Bed-and-spouse rule",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.1 Abusive arrangement",
+     "section": "9.1 Abusive arrangement",
+     "score": 0.88,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.09,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.4 Burden and disclosure",
+     "section": "9.4 Burden and disclosure",
+     "score": 0.87,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 10. Timing, notices, and corrections",
+     "section": "10. Timing, notices, and corrections",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 2. Indirect ownership",
+     "section": "2. Indirect ownership",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 5.3 shareholder loans",
+    "01_fictional_revenue_code 6.3 loss harvesting",
+    "01_fictional_revenue_code 8. startup investment relief",
+    "01_fictional_revenue_code 9.1 abusive arrangement",
+    "01_fictional_revenue_code 9.4 burden and disclosure"
+   ]
+  },
+  {
+   "id": "AX-06",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.4 Bed-and-spouse rule",
+     "section": "6.4 Bed-and-spouse rule",
+     "score": 0.9,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.07,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.3 Exclusions",
+     "section": "3.3 Exclusions",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 5. Temporary transfers",
+     "section": "5. Temporary transfers",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 11. Claims and appeals",
+     "section": "11. Claims and appeals",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 7. Disclosure timing",
+     "section": "7. Disclosure timing",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.1 Abusive arrangement",
+     "section": "9.1 Abusive arrangement",
+     "score": 0.92,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.1,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 6.3 loss harvesting",
+    "01_fictional_revenue_code 6.4 bed-and-spouse rule",
+    "01_fictional_revenue_code 9.1 abusive arrangement"
+   ]
+  },
+  {
+   "id": "AX-07",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.2 Capital items",
+     "section": "4.2 Capital items",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.3 Related persons",
+     "section": "1.3 Related persons",
+     "score": 0.95,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.4 Exercise funding",
+     "section": "8.4 Exercise funding",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.4 Bed-and-spouse rule",
+     "section": "6.4 Bed-and-spouse rule",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.48,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 5. Dependent-care benefit",
+     "section": "5. Dependent-care benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 1.3 related persons",
+    "01_fictional_revenue_code 6.3 loss harvesting",
+    "01_fictional_revenue_code 6.4 bed-and-spouse rule",
+    "04_ownership_trusts_and_disclosure_rules 3. family attribution"
+   ]
+  },
+  {
+   "id": "AX-08",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 7. Donations and public-benefit credits",
+     "section": "7. Donations and public-benefit credits",
+     "score": 0.94,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.2 Prohibited duplication",
+     "section": "8.2 Prohibited duplication",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.3 Tax interaction",
+     "section": "8.3 Tax interaction",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 9. Change of ownership",
+     "section": "9. Change of ownership",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.2 Accessibility accommodation",
+     "section": "3.2 Accessibility accommodation",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.4 Burden and disclosure",
+     "section": "9.4 Burden and disclosure",
+     "score": 0.15,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 5. Temporary transfers",
+     "section": "5. Temporary transfers",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 1. Beneficial owner",
+     "section": "1. Beneficial owner",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 2. Indirect ownership",
+     "section": "2. Indirect ownership",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 7. donations and public-benefit credits"
+   ]
+  },
+  {
+   "id": "AX-09",
+   "rows": [
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.2 Retained earnings surcharge",
+     "section": "5.2 Retained earnings surcharge",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 1. Programs",
+     "section": "1. Programs",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.1 Family Investment Company",
+     "section": "5.1 Family Investment Company",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.5 Family payments",
+     "section": "4.5 Family payments",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 7. Donations and public-benefit credits",
+     "section": "7. Donations and public-benefit credits",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.3 Shareholder loans",
+     "section": "5.3 Shareholder loans",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.4 Exercise funding",
+     "section": "8.4 Exercise funding",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 8. startup investment relief"
+   ]
+  },
+  {
+   "id": "AX-10",
+   "rows": [
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.89,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.97,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 1. Programs",
+     "section": "1. Programs",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.3 Small-asset allowance",
+     "section": "4.3 Small-asset allowance",
+     "score": 0.07,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.2 Eligibility",
+     "section": "3.2 Eligibility",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 7. Innovation awards",
+     "section": "7. Innovation awards",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 9. Business expense interaction",
+     "section": "9. Business expense interaction",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.94,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 11. Claims and appeals",
+     "section": "11. Claims and appeals",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.1 Benefit",
+     "section": "5.1 Benefit",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.2 Capital items",
+     "section": "4.2 Capital items",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.3 Exclusions",
+     "section": "3.3 Exclusions",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "02_enterprise_incentives_and_grants_act 10. anti-fragmentation and principal-purpose test",
+    "02_enterprise_incentives_and_grants_act 2. common control",
+    "02_enterprise_incentives_and_grants_act 3.1 benefit",
+    "02_enterprise_incentives_and_grants_act 3.4 connected acquisitions"
+   ]
+  },
+  {
+   "id": "AX-11",
+   "rows": [
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 1. Programs",
+     "section": "1. Programs",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.94,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.93,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.1 Benefit",
+     "section": "5.1 Benefit",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.95,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.2 Eligibility",
+     "section": "3.2 Eligibility",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 Republic of Norland Enterprise Incentives and Grants Act 2032",
+     "section": "Republic of Norland Enterprise Incentives and Grants Act 2032",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 7. Innovation awards",
+     "section": "7. Innovation awards",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 9. Business expense interaction",
+     "section": "9. Business expense interaction",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.1 Tax year",
+     "section": "1.1 Tax year",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.2 Accessibility accommodation",
+     "section": "3.2 Accessibility accommodation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 6. Debt and control",
+     "section": "6. Debt and control",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 5. Temporary transfers",
+     "section": "5. Temporary transfers",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "02_enterprise_incentives_and_grants_act 10. anti-fragmentation and principal-purpose test",
+    "02_enterprise_incentives_and_grants_act 2. common control",
+    "02_enterprise_incentives_and_grants_act 3.1 benefit",
+    "02_enterprise_incentives_and_grants_act 3.4 connected acquisitions"
+   ]
+  },
+  {
+   "id": "AX-12",
+   "rows": [
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 1. Programs",
+     "section": "1. Programs",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.97,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.19,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.93,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 1. Eligibility and household aggregation",
+     "section": "1. Eligibility and household aggregation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.3 Transfers and replacements",
+     "section": "4.3 Transfers and replacements",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.2 Qualifying job",
+     "section": "4.2 Qualifying job",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.13,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.97,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 9. Business expense interaction",
+     "section": "9. Business expense interaction",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 6. Export Readiness Voucher",
+     "section": "6. Export Readiness Voucher",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.96,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.12,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.1 Abusive arrangement",
+     "section": "9.1 Abusive arrangement",
+     "score": 0.15,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 Norland Ownership, Trusts, and Beneficial Disclosure Rules 2032",
+     "section": "Norland Ownership, Trusts, and Beneficial Disclosure Rules 2032",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 7. Application integrity",
+     "section": "7. Application integrity",
+     "score": 0.92,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 Policy ID: NG-BEN-2032",
+     "section": "Policy ID: NG-BEN-2032",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.2 Change in control",
+     "section": "8.2 Change in control",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.2 Capital items",
+     "section": "4.2 Capital items",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "02_enterprise_incentives_and_grants_act 10 anti-fragmentation and principal-purpose test",
+    "02_enterprise_incentives_and_grants_act 2. common control",
+    "02_enterprise_incentives_and_grants_act 4.1 benefit",
+    "02_enterprise_incentives_and_grants_act 4.2 qualifying job",
+    "02_enterprise_incentives_and_grants_act 4.3 transfers and replacements",
+    "02_enterprise_incentives_and_grants_act 4.4 clawback",
+    "02_enterprise_incentives_and_grants_act 7 application integrity"
+   ]
+  },
+  {
+   "id": "AX-13",
+   "rows": [
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 1. Programs",
+     "section": "1. Programs",
+     "score": 0.49,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.95,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.13,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.2 Eligibility",
+     "section": "3.2 Eligibility",
+     "score": 0.86,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.3 Small-asset allowance",
+     "section": "4.3 Small-asset allowance",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.2 Prohibited duplication",
+     "section": "8.2 Prohibited duplication",
+     "score": 0.98,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.1 Benefit",
+     "section": "5.1 Benefit",
+     "score": 0.97,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.4 Background intellectual property",
+     "section": "5.4 Background intellectual property",
+     "score": 0.06,
+     "is_expected": true,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.3 Tax interaction",
+     "section": "8.3 Tax interaction",
+     "score": 0.91,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 7. Innovation awards",
+     "section": "7. Innovation awards",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.1 Permitted stacking",
+     "section": "8.1 Permitted stacking",
+     "score": 0.94,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 7. Application integrity",
+     "section": "7. Application integrity",
+     "score": 0.96,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.3 Related-party research",
+     "section": "5.3 Related-party research",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.3 Exclusions",
+     "section": "3.3 Exclusions",
+     "score": 0.07,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.2 Eligible research",
+     "section": "5.2 Eligible research",
+     "score": 0.85,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.4 Home workspace",
+     "section": "4.4 Home workspace",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.1 General rule",
+     "section": "4.1 General rule",
+     "score": 0.86,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.2 Capital items",
+     "section": "4.2 Capital items",
+     "score": 0.13,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.2 Short holding and business activity",
+     "section": "6.2 Short holding and business activity",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 7. Donations and public-benefit credits",
+     "section": "7. Donations and public-benefit credits",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 5. Dependent-care benefit",
+     "section": "5. Dependent-care benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 4.1 general rule",
+    "02_enterprise_incentives_and_grants_act 11 recovery and penalties",
+    "02_enterprise_incentives_and_grants_act 3.1 benefit",
+    "02_enterprise_incentives_and_grants_act 3.2 eligibility",
+    "02_enterprise_incentives_and_grants_act 5.1 benefit",
+    "02_enterprise_incentives_and_grants_act 5.2 eligible research",
+    "02_enterprise_incentives_and_grants_act 7 application integrity",
+    "02_enterprise_incentives_and_grants_act 8.1 permitted stacking",
+    "02_enterprise_incentives_and_grants_act 8.2 prohibited duplication",
+    "02_enterprise_incentives_and_grants_act 8.3 tax interaction"
+   ]
+  },
+  {
+   "id": "AX-14",
+   "rows": [
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 5. Dependent-care benefit",
+     "section": "5. Dependent-care benefit",
+     "score": 0.97,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 1. Eligibility and household aggregation",
+     "section": "1. Eligibility and household aggregation",
+     "score": 0.97,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 9. Change of ownership",
+     "section": "9. Change of ownership",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.2 Accessibility accommodation",
+     "section": "3.2 Accessibility accommodation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.2 Prohibited duplication",
+     "section": "8.2 Prohibited duplication",
+     "score": 0.09,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.92,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.4 Bed-and-spouse rule",
+     "section": "6.4 Bed-and-spouse rule",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.3 Related persons",
+     "section": "1.3 Related persons",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.07,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "03_employee_benefits_and_equity_policy 1. eligibility and household aggregation",
+    "03_employee_benefits_and_equity_policy 10. anti-abuse rule",
+    "03_employee_benefits_and_equity_policy 5. dependent-care benefit"
+   ]
+  },
+  {
+   "id": "AX-15",
+   "rows": [
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 4. Commuter and remote-work support",
+     "section": "4. Commuter and remote-work support",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 1. Eligibility and household aggregation",
+     "section": "1. Eligibility and household aggregation",
+     "score": 0.83,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 5. Dependent-care benefit",
+     "section": "5. Dependent-care benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 3.1 Employee remuneration",
+     "section": "3.1 Employee remuneration",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.96,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.1 Options",
+     "section": "8.1 Options",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.2 Accessibility accommodation",
+     "section": "3.2 Accessibility accommodation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.2 Prohibited duplication",
+     "section": "8.2 Prohibited duplication",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.2 Qualifying job",
+     "section": "4.2 Qualifying job",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.5 Family payments",
+     "section": "4.5 Family payments",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.1 Benefit",
+     "section": "3.1 Benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.1 Permitted stacking",
+     "section": "8.1 Permitted stacking",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.3 Transfers and replacements",
+     "section": "4.3 Transfers and replacements",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.1 Benefit",
+     "section": "5.1 Benefit",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 1. Programs",
+     "section": "1. Programs",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.4 Home workspace",
+     "section": "4.4 Home workspace",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.1 Wellness wallet",
+     "section": "3.1 Wellness wallet",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 11. Recovery and penalties",
+     "section": "11. Recovery and penalties",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 Policy ID: NG-BEN-2032",
+     "section": "Policy ID: NG-BEN-2032",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 6. Referral awards",
+     "section": "6. Referral awards",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 2. Progressive individual tax",
+     "section": "2. Progressive individual tax",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "03_employee_benefits_and_equity_policy 1. eligibility and household aggregation",
+    "03_employee_benefits_and_equity_policy 10. anti-abuse rule",
+    "03_employee_benefits_and_equity_policy 4. commuter and remote-work support"
+   ]
+  },
+  {
+   "id": "AX-16",
+   "rows": [
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.1 General rule",
+     "section": "4.1 General rule",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.97,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.4 Background intellectual property",
+     "section": "5.4 Background intellectual property",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 9. Business expense interaction",
+     "section": "9. Business expense interaction",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.2 Accessibility accommodation",
+     "section": "3.2 Accessibility accommodation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 7. Innovation awards",
+     "section": "7. Innovation awards",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.1 Options",
+     "section": "8.1 Options",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.2 Change in control",
+     "section": "8.2 Change in control",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 11. Recovery and penalties",
+     "section": "11. Recovery and penalties",
+     "score": 0.1,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 6. Export Readiness Voucher",
+     "section": "6. Export Readiness Voucher",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 5. Dependent-care benefit",
+     "section": "5. Dependent-care benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.4 Connected acquisitions",
+     "section": "3.4 Connected acquisitions",
+     "score": 0.17,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.3 Small-asset allowance",
+     "section": "4.3 Small-asset allowance",
+     "score": 0.12,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 8.2 Prohibited duplication",
+     "section": "8.2 Prohibited duplication",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.17,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 8. Programme look-through",
+     "section": "8. Programme look-through",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 1. Eligibility and household aggregation",
+     "section": "1. Eligibility and household aggregation",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 7. Donations and public-benefit credits",
+     "section": "7. Donations and public-benefit credits",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 11. Claims and appeals",
+     "section": "11. Claims and appeals",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.1 Benefit",
+     "section": "4.1 Benefit",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.1 Wellness wallet",
+     "section": "3.1 Wellness wallet",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "03_employee_benefits_and_equity_policy 10. anti-abuse rule",
+    "03_employee_benefits_and_equity_policy 2. professional development account"
+   ]
+  },
+  {
+   "id": "AX-17",
+   "rows": [
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 6. Referral awards",
+     "section": "6. Referral awards",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 1. Eligibility and household aggregation",
+     "section": "1. Eligibility and household aggregation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 6. Export Readiness Voucher",
+     "section": "6. Export Readiness Voucher",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 3.2 Eligibility",
+     "section": "3.2 Eligibility",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 5.2 Eligible research",
+     "section": "5.2 Eligible research",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 7. Innovation awards",
+     "section": "7. Innovation awards",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 11. Claims and appeals",
+     "section": "11. Claims and appeals",
+     "score": 0.86,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 11. Penalties and correction",
+     "section": "11. Penalties and correction",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 10. Timing, notices, and corrections",
+     "section": "10. Timing, notices, and corrections",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "03_employee_benefits_and_equity_policy 11. claims and appeals",
+    "03_employee_benefits_and_equity_policy 6. referral awards"
+   ]
+  },
+  {
+   "id": "AX-18",
+   "rows": [
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.2 Change in control",
+     "section": "8.2 Change in control",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 3.2 Accessibility accommodation",
+     "section": "3.2 Accessibility accommodation",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.1 Abusive arrangement",
+     "section": "9.1 Abusive arrangement",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 4.5 Family payments",
+     "section": "4.5 Family payments",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.3 Transfers and replacements",
+     "section": "4.3 Transfers and replacements",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 4. Commuter and remote-work support",
+     "section": "4. Commuter and remote-work support",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.1 Options",
+     "section": "8.1 Options",
+     "score": 0.97,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 9. Change of ownership",
+     "section": "9. Change of ownership",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.3 Transfers",
+     "section": "8.3 Transfers",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 2. Indirect ownership",
+     "section": "2. Indirect ownership",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 4.4 Clawback",
+     "section": "4.4 Clawback",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 2. Professional Development Account",
+     "section": "2. Professional Development Account",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 10. Timing, notices, and corrections",
+     "section": "10. Timing, notices, and corrections",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.1 Tax year",
+     "section": "1.1 Tax year",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 7. Disclosure timing",
+     "section": "7. Disclosure timing",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 5.2 Retained earnings surcharge",
+     "section": "5.2 Retained earnings surcharge",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 10. Anti-abuse rule",
+     "section": "10. Anti-abuse rule",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 11. Claims and appeals",
+     "section": "11. Claims and appeals",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 6.3 Loss harvesting",
+     "section": "6.3 Loss harvesting",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 8. Startup investment relief",
+     "section": "8. Startup investment relief",
+     "score": 0.01,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "03_employee_benefits_and_equity_policy 8.1 options",
+    "03_employee_benefits_and_equity_policy 8.2 change in control"
+   ]
+  },
+  {
+   "id": "AX-19",
+   "rows": [
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 1. Beneficial owner",
+     "section": "1. Beneficial owner",
+     "score": 0.71,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.91,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 1.3 Related persons",
+     "section": "1.3 Related persons",
+     "score": 0.78,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 Norland Ownership, Trusts, and Beneficial Disclosure Rules 2032",
+     "section": "Norland Ownership, Trusts, and Beneficial Disclosure Rules 2032",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 10. Confidential nominees and advisers",
+     "section": "10. Confidential nominees and advisers",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.07,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 8. Programme look-through",
+     "section": "8. Programme look-through",
+     "score": 0.15,
+     "is_expected": true,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 2. Indirect ownership",
+     "section": "2. Indirect ownership",
+     "score": 0.11,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 5. Temporary transfers",
+     "section": "5. Temporary transfers",
+     "score": 0.98,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.3 Transfers",
+     "section": "8.3 Transfers",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.25,
+     "is_expected": true,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "01_fictional_revenue_code 1.3 related persons",
+    "04_ownership_trusts_and_disclosure_rules 3. family attribution",
+    "04_ownership_trusts_and_disclosure_rules 3. family attribution; 1. beneficial owner",
+    "04_ownership_trusts_and_disclosure_rules 5. temporary transfers",
+    "04_ownership_trusts_and_disclosure_rules 9. anti-circumvention"
+   ]
+  },
+  {
+   "id": "AX-20",
+   "rows": [
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 5. Temporary transfers",
+     "section": "5. Temporary transfers",
+     "score": 0.99,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 10. Confidential nominees and advisers",
+     "section": "10. Confidential nominees and advisers",
+     "score": 0.95,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 9. Anti-circumvention",
+     "section": "9. Anti-circumvention",
+     "score": 0.97,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 1. Beneficial owner",
+     "section": "1. Beneficial owner",
+     "score": 0.21,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 Norland Ownership, Trusts, and Beneficial Disclosure Rules 2032",
+     "section": "Norland Ownership, Trusts, and Beneficial Disclosure Rules 2032",
+     "score": 0.06,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY \u00a7 8.3 Transfers",
+     "section": "8.3 Transfers",
+     "score": 0.03,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 2. Indirect ownership",
+     "section": "2. Indirect ownership",
+     "score": 0.94,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 10. Timing, notices, and corrections",
+     "section": "10. Timing, notices, and corrections",
+     "score": 0.04,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 8. Programme look-through",
+     "section": "8. Programme look-through",
+     "score": 0.88,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 2. Common control",
+     "section": "2. Common control",
+     "score": 0.66,
+     "is_expected": false,
+     "already_cited": true
+    },
+    {
+     "citation": "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES \u00a7 3. Family attribution",
+     "section": "3. Family attribution",
+     "score": 0.02,
+     "is_expected": false,
+     "already_cited": false
+    },
+    {
+     "citation": "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT \u00a7 10. Anti-fragmentation and principal-purpose test",
+     "section": "10. Anti-fragmentation and principal-purpose test",
+     "score": 0.85,
+     "is_expected": true,
+     "already_cited": true
+    },
+    {
+     "citation": "01_FICTIONAL_REVENUE_CODE \u00a7 9.4 Burden and disclosure",
+     "section": "9.4 Burden and disclosure",
+     "score": 0.05,
+     "is_expected": false,
+     "already_cited": false
+    }
+   ],
+   "cited": [
+    "02_enterprise_incentives_and_grants_act 10. anti-fragmentation and principal-purpose test",
+    "02_enterprise_incentives_and_grants_act 2. common control",
+    "04_ownership_trusts_and_disclosure_rules 10. confidential nominees and advisers",
+    "04_ownership_trusts_and_disclosure_rules 2. indirect ownership",
+    "04_ownership_trusts_and_disclosure_rules 5. temporary transfers",
+    "04_ownership_trusts_and_disclosure_rules 8. programme look-through",
+    "04_ownership_trusts_and_disclosure_rules 9. anti-circumvention"
+   ]
+  }
+ ]
+}

@@ -5,7 +5,10 @@ the *aggregate* numbers; this file records what the system actually got wrong, o
 answer at a time, and what the mechanism of each error was.
 
 Collected from three runs on the shipped code (document brief, no rolling summary,
-triage shown the corpus block), 60 questions in total:
+triage shown the corpus block), 60 questions in total. The adversarial row is the run
+before citation recovery was switched on; a later run of the same pack (`ABLATION` §17)
+swapped three verdicts and produced no new failure mechanism, which is the sampling
+already documented in §13 — so this file stays tied to the run it analyses:
 
 | pack | run | correct | partial | incorrect |
 |---|---|---|---|---|

@@ -147,6 +147,14 @@ class Config:
     ingest_parallel_windows: int = 4       # 1 = the sequential chained parse
     ingest_heuristic_max_chars: int = 0    # >0: documents this small skip the LLM
     ingest_brief_words: int = 1000         # opening words the document brief reads
+    # citation recovery: after the answer is parsed, ask the decision model which
+    # passages the agent READ but the answer did not cite are nonetheless sources
+    citation_recovery: bool = True
+    citation_recovery_threshold: float = 0.3   # low on purpose: a miss costs a point
+    citation_recovery_max_candidates: int = 24  # cheap: one request scores all
+    citation_recovery_max_added: int = 3      # a noisy tail is capped, not trusted
+    citation_recovery_snippet_chars: int = 400
+    citation_recovery_timeout: float = 20.0
     scan_workers: int = 4             # concurrent model/verifier requests
     decision_batch_size: int = 6      # pairs per batched request
     decision_recheck_band: float = 0.15  # re-ask pairs this near the threshold
@@ -218,6 +226,12 @@ def get_config() -> Config:
             scan_min_similarity=_float("SCAN_MIN_SIMILARITY", 0.65),
             scan_max_candidates=_int("SCAN_MAX_CANDIDATES", 200),
             scan_cross_doc_only=_bool("SCAN_CROSS_DOC_ONLY", False),
+            citation_recovery=_bool("CITATION_RECOVERY", True),
+            citation_recovery_threshold=_float("CITATION_RECOVERY_THRESHOLD", 0.3),
+            citation_recovery_max_candidates=_int("CITATION_RECOVERY_MAX_CANDIDATES", 24),
+            citation_recovery_max_added=_int("CITATION_RECOVERY_MAX_ADDED", 3),
+            citation_recovery_snippet_chars=_int("CITATION_RECOVERY_SNIPPET_CHARS", 400),
+            citation_recovery_timeout=_float("CITATION_RECOVERY_TIMEOUT", 20.0),
             decision_model_base_url=_str(
                 "DECISION_MODEL_BASE_URL", "").rstrip("/"),
             decision_model_api_key=_str("DECISION_MODEL_API_KEY", ""),

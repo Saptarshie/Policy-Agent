@@ -78,6 +78,7 @@ class AdminAPI:
         self._agent: Optional[ReactAgent] = None
         self._tracker: Optional[ContradictionTracker] = None
         self._injected_gate = gate
+        self._citation_asker: Any = False      # False = not built yet, None = unavailable
 
 
     # ------------------------------------------------------------- components
@@ -375,12 +376,65 @@ class AdminAPI:
         # ------------------------------------------------------------- the agent
         result = self.agent.run(plan.de_noised_question or question,
                                history=history, plan=plan, on_event=on_event)
+
+        # the answer cites what it quoted; this adds what it read and relied on
+        self.recover_citations(result)
         result.intent = plan.intent
         result.intent_route = plan.route
         result.intent_plan = plan_dict
 
         if plan.intent == "SENSITIVE_HR_ESCALATION":
             result.answer = ESCALATION_NOTE + (result.answer or "")
+        return result
+
+    # ------------------------------------------------------- citation recovery
+
+    def citation_asker(self):
+        """The decision-model ask function, built once. None when unavailable."""
+        if self._citation_asker is False:
+            from .citation_recovery import build_asker
+            self._citation_asker = (build_asker(self.cfg)
+                                    if getattr(self.cfg, "citation_recovery", True) else None)
+        return self._citation_asker
+
+    def recover_citations(self, result: Any) -> Any:
+        """Append the sources the agent read but the answer did not cite.
+
+        Mutates *result* (citations plus an audit step) and returns it. Silent no-op when
+        recovery is off, when the decision model is not configured, or when the agent read
+        nothing. It can only add citations that resolve to real sections: candidates come
+        from chunk ids the agent saw, never from the model's imagination.
+        """
+        if not getattr(self.cfg, "citation_recovery", True):
+            return result
+        ask = self.citation_asker()
+        if ask is None:
+            return result
+        seen = getattr(result, "seen_chunk_ids", None) or []
+        if not seen or not (result.answer or "").strip():
+            return result
+        from .citation_recovery import build_candidates, recover
+        candidates = build_candidates(
+            self.db, seen, result.citations or [],
+            max_candidates=int(getattr(self.cfg, "citation_recovery_max_candidates", 12)),
+            snippet_chars=int(getattr(self.cfg, "citation_recovery_snippet_chars", 700)),
+        )
+        if not candidates:
+            return result
+        added, scores = recover(
+            ask, result.answer, candidates,
+            threshold=float(getattr(self.cfg, "citation_recovery_threshold", 0.4)),
+            max_added=int(getattr(self.cfg, "citation_recovery_max_added", 3)),
+        )
+        if added:
+            result.citations = list(result.citations or []) + added
+        result.steps.append({
+            "type": "citations_recovered",
+            "candidates": len(candidates),
+            "added": added,
+            "threshold": float(getattr(self.cfg, "citation_recovery_threshold", 0.4)),
+            "scores": scores,
+        })
         return result
 
     # ---------------------------------------------------------- contradictions

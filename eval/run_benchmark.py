@@ -313,6 +313,10 @@ def main() -> int:
             # thought + one entry per tool call + final, so a parallel turn adds several
             "turns": payload.get("turns"),
             "step_entries": len(payload.get("steps") or []),   # entries, not turns
+            # what citation recovery added (the answer model never sees these)
+            "citations_recovered": next(
+                (st.get("added") or [] for st in (payload.get("steps") or [])
+                 if isinstance(st, dict) and st.get("type") == "citations_recovered"), []),
             "forced_final": any(isinstance(s, dict) and
                                 str(s.get("note", "")).startswith("forced")
                                 for s in (payload.get("steps") or [])),
@@ -366,6 +370,7 @@ def main() -> int:
     step_entries = [r["step_entries"] for r in results
                     if r.get("step_entries") is not None]
     turns = [r["turns"] for r in results if r.get("turns") is not None]
+    recovered = [len(r.get("citations_recovered") or []) for r in results]
 
     scored = [r for r in results if r.get("rubric_points") is not None]
     rubric_summary = None
@@ -411,7 +416,12 @@ def main() -> int:
         "citation_recall": {"expected": exp_cites,
                             "doc_level_pct": pct(doc_hits, exp_cites),
                             "section_level_pct": pct(sec_hits, exp_cites)},
-        "citation_warnings_total": sum(len(r["citation_warnings"]) for r in results),
+        "citation_recovery": {
+        "answers_with_additions": sum(1 for n in recovered if n),
+        "citations_added": sum(recovered),
+        "max_added_in_one_answer": max(recovered) if recovered else 0,
+    },
+    "citation_warnings_total": sum(len(r["citation_warnings"]) for r in results),
         "rubric": rubric_summary,
         "agent_steps": {
             "max_steps_env": os.getenv("AGENT_MAX_STEPS", ""),
@@ -456,6 +466,11 @@ def main() -> int:
     log(f"  citation recall (doc + section)   {sec_hits}/{exp_cites}  "
         f"({summary['citation_recall']['section_level_pct']}%)")
     log(f"  citation warnings                 {summary['citation_warnings_total']}")
+    rec = summary.get("citation_recovery") or {}
+    if rec:
+        log(f"  citations recovered               {rec['citations_added']} added across "
+            f"{rec['answers_with_additions']} answer(s) "
+            f"(max {rec['max_added_in_one_answer']} in one) - read but not cited")
     steps = summary.get("agent_steps") or {}
     if steps:
         log(f"  agent turns                       max {steps.get('max_turns')}, "

@@ -1,0 +1,62 @@
+{
+  "benchmark": "adversarial_policy_arbitrage_pack",
+  "workers": 10,
+  "timing_note": "10 concurrent: times include contention, not comparable",
+  "questions": 20,
+  "index_wall_s": 54.7,
+  "index_per_doc_s": {
+    "01_FICTIONAL_REVENUE_CODE": 17.5,
+    "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT": 13.3,
+    "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY": 12.8,
+    "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES": 10.3
+  },
+  "answer_accuracy_pct": 0.0,
+  "strict_or_partial_pct": 0.0,
+  "verdicts": {
+    "correct": 0,
+    "partial": 0,
+    "incorrect": 0,
+    "unjudged": 20
+  },
+  "answerable": {
+    "n": 20,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "refusals": {
+    "n": 0,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "citation_recall": {
+    "expected": 42,
+    "doc_level_pct": 100.0,
+    "section_level_pct": 81.0
+  },
+  "citation_recovery": {
+    "answers_with_additions": 6,
+    "citations_added": 7,
+    "max_added_in_one_answer": 2
+  },
+  "citation_warnings_total": 0,
+  "rubric": null,
+  "agent_steps": {
+    "max_steps_env": "20",
+    "forced_final": 0,
+    "forced_ids": [],
+    "max_entries": 37,
+    "mean_entries": 11.7,
+    "max_turns": 18,
+    "mean_turns": 5.7
+  },
+  "time_s": {
+    "total_wall": 169.1,
+    "qa_wall": 731.0,
+    "mean": 36.5,
+    "p50": 25.6,
+    "p95": 84.7,
+    "max": 114.4,
+    "min": 17.5
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261105_131141.jsonl"
+}

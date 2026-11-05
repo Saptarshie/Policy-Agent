@@ -1127,3 +1127,90 @@ compare as it finds it, for questions with two or more quantities, and see wheth
 `calculate` calls (19 here) start consuming scratch notes instead of re-reading chunks
 (63 here). If usage stays at zero with an explicit instruction, the honest move is to
 delete the tools rather than keep paying for the schemas.
+
+## 17. Citation recovery: one decision-model request for what the answer read but did not cite
+
+The complaint was concrete: the agent reads a passage, uses it, and does not list it, so
+the citation list is shorter than the evidence the answer actually rests on. The fix is
+not a rule about which section supports which sentence - there is no such rule - but one
+decision-model request per answer, over the sections the agent *itself* marked as read.
+
+Mechanism (`app/citation_recovery.py`, §3 item 10 in DESIGN): candidates are the unique
+(doc, section) pairs among `seen_chunk_ids` minus what the answer already cites, capped at
+`CITATION_RECOVERY_MAX_CANDIDATES`; one SystemOne request carries the final answer plus all
+candidates as one state, and one yes/no question per candidate ("does this passage state a
+rule, condition, number or definition the answer relies on?"). Candidates at or above
+`CITATION_RECOVERY_THRESHOLD` are appended, highest score first, at most
+`CITATION_RECOVERY_MAX_ADDED`. The answer text is never touched, a hallucinated name in the
+reply matches nothing, and a model failure is a no-op.
+
+### 17.1 Can the decision model tell a source from a coincidence?
+
+`eval/calibrate_citation_recovery.py`, adversarial pack, 20 questions, every seen section
+scored against the reference's own citation list
+(`eval/results/citation_recovery_20261105_130538.json`):
+
+| group | n | mean | median | max |
+|---|---|---|---|---|
+| sections the reference expects | 38 | **0.871** | 0.975 | 0.99 |
+| every other section the agent read | 293 | 0.155 | 0.030 | 0.98 |
+
+Separation in the mean is strong, and the tail is not: some irrelevant sections score 0.98,
+which is why the number added is capped. The sweep over thresholds, counting every seen
+section (including the ones the answer already cited):
+
+| threshold | sections added | true | false | precision | recall of expected |
+|---|---|---|---|---|---|
+| 0.2 | 82 | 36 | 46 | 43.9% | 94.7% |
+| 0.4 | 76 | 34 | 42 | 44.7% | 89.5% |
+| 0.6 | 71 | 33 | 38 | 46.5% | 86.8% |
+| 0.7 | 69 | 33 | 36 | 47.8% | 86.8% |
+
+### 17.2 What it actually changed end to end
+
+Two runs of the adversarial pack on the shipped code, `--workers 10`:
+
+| run | judged | accuracy | cite doc | cite doc+section | added | answers with additions |
+|---|---|---|---|---|---|---|
+| `20261105_114833` (recovery off, §15) | yes | 16/20 | 41/42 | 32/42 (76.2%) | — | — |
+| `20261105_130704` (recovery on) | yes | 15/20 | 41/42 | **37/42 (88.1%)** | not recorded | not recorded |
+| `20261105_131141` (recovery on) | no | — | 42/42 | 34/42 (81.0%) | **7** | 6/20 |
+
+In the unjudged run, which records what was added, every one of the seven additions was a
+section the reference does **not** list:
+
+```
+AX-01  other  01_FICTIONAL_REVENUE_CODE § 1.3 Related persons
+AX-19  other  02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT § 2. Common control
+AX-12  other  02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT § 4.4 Clawback
+AX-20  other  04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES § Norland Ownership ... 2032
+AX-13  other  02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT § 1. Programs
+AX-13  other  02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT § 11. Recovery and penalties
+AX-03  other  04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES § 8. Programme look-through
+```
+
+They are real sections from the right documents, and several are defensible sources for
+the answer that cited them (`1.3 Related persons` for a related-persons question; `2. Common
+control` for an aggregation question). They are simply not what the rubric asked for.
+
+### 17.3 The finding that matters more than the feature
+
+The premise was that citations were being **dropped** from answers. On this pack they were
+not. Of the 42 sections the references expect, the agent read 38, and it cited **37 of those
+38** without any help; the four it never cited were sections it never read (`9.2 Indicators`,
+`9.3 Safe tax planning`, `8. Stacking and double funding`, `10. Anti-abuse rule`). Those are
+retrieval misses, and no post-processing can cite a passage that was never retrieved.
+
+So the section-recall gap on this pack (32/42 in the unassisted run) is roughly: 4 sections
+never retrieved, ~4 retrieved but judged by the decision model not to support the answer
+(scores 0.06-0.25), and the rest a matter of which of several plausible sections the rubric
+happens to list.
+
+Consequences recorded rather than acted on:
+
+* Recovery stays on by default because it is what was asked for and it costs one bounded
+  request; it never edits the answer and never invents a section. Anyone who cares more
+  about citation precision than completeness should set `CITATION_RECOVERY=0`.
+* The lever that would actually move section recall is retrieval, not post-processing: the
+  4 never-read sections are the ones the grader wanted. That is a search problem (§2.1), and
+  it is the honest next experiment, not another pass over the answer.
