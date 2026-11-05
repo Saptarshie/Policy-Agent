@@ -1397,3 +1397,61 @@ adversarial pack (0 flags - it has no true pairs), 22.3s on the contract pack (2
 indexes that take 60-90s to build and 150-600s to answer. Any future run therefore measures
 the tool as production ships it, and a pack whose questions depend on it can no longer pass
 on a technically-correct refusal to guess.
+
+## 21. Conditions first: the prompt change that moved the mechanism-A failures
+
+Every non-retrieval failure in FAILURES.md had one shape: the answer restates a rule that
+carries a condition and never establishes the condition's value. LC-08 answered a six-hour
+maintenance event with the policy's four-hour window (`4 − 4 = 0`); MH-12 held ₹28,000 and
+₹25,000 in front of itself and never compared them; LC-10 declared a confirmation time
+unknown that the question states. v1 already says "apply the figures you are given" (rule 8)
+and the model still does not, because the instruction arrives after it has decided what the
+question is about.
+
+v3 makes the conditions an artefact *before* the answer exists:
+
+- **triage** (`INTENT_SYSTEM_V3`, section 3.5 + one schema field) lists the conditions the
+  INPUT states - amounts, dates, durations, headcounts, tiers, what the person did, explicit
+  provisos - as facts, in the user's own terms, and is told not to decide the answer there;
+- `IntentPlan.conditions` carries them into the plan block the agent already receives;
+- **the agent** (`AGENT_SYSTEM_V3`, rule 9) must treat them as inputs, search the clause that
+  operates on each (including caps, allowances, exclusions, notice periods, precedence and
+  anti-abuse rules the question does not name), compare a rule's constant against the
+  question's value instead of substituting one for the other, and say so in the first
+  sentence when a needed condition is established by neither.
+
+Prompt only, plus the plumbing to carry one list. v3 is composed from v1 by string
+substitution, so v1 stays byte-identical for the ablation and the diff is one rule, one
+section and one field. No new model call, no new tool, no detector, no threshold.
+
+### 21.1 Repeated A/B (`eval/repeat_question.py`, judge on, 4 or 3 repeats each)
+
+| question | what it tests | v1 | v3 |
+|---|---|---|---|
+| LC-08 | six-hour maintenance vs the four-hour cap | **0/4 incorrect** | **4/4 correct** |
+| MH-12 | lower-of two fares, company pays which | **0/4 partial** | **4/4 correct** |
+| LC-10 | 30 hours after confirmation, late or not | 4/4 correct | 4/4 correct |
+| LC-01 | overage arithmetic (control) | 3/4 correct | 4/4 correct |
+| AX-20 | nominee as real owner (control) | 3/3 correct | 3/3 correct |
+| AX-13 | rebate vs double funding | 0/3 partial | 1/3 correct, 2 partial |
+
+Both systematic failures went from never-right to always-right across repeats, and neither
+control regressed. AX-13 barely moved, which is the honest boundary of the idea: its missing
+fact is an *unstated* eligibility precondition, and a list of the conditions the question
+states cannot supply one the question never states.
+
+**Triage parity check** (67 labelled cases, `eval/run_intent_eval.py --variant v3 --hard`):
+intent 98.5%, route 100%, false refusals 0, missed refusals 1 - identical to v1. Asking the
+classifier for one more field did not cost routing accuracy.
+
+### 21.2 End-to-end
+
+| pack | v1 (k=12, reported in §18) | v3 |
+|---|---|---|
+| adversarial | 16/20, 19/20 partials, rubric 9.45, sec 35/42 (38 parent) | **17/20**, 19/20 partials, **rubric 9.55**, sec 36/42 (37 parent) |
+| contract | 17/20, 19/20 partials, rubric 9.45, sec 39/42 (40 parent) | see below |
+| HR | 19/20, 20/20 partials, doc 29/29 | see below |
+
+Caveat on attribution: the v3 pair changes triage *and* the agent at once, so a gain belongs
+to the pair. The v1-vs-v3 diff is small enough to split later (agent-only v3) if a reviewer
+wants the agent rule isolated.

@@ -193,3 +193,54 @@ class TestLegacyBaseline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPlanConditions(unittest.TestCase):
+    """The conditions list is what makes "special cases" survive the handoff.
+
+    Triage sees the raw question; the agent only sees the plan. If the conditions the
+    question states are not in the plan, the agent is answering a paraphrase and cannot
+    apply the values it was given (the failure recorded in FAILURES.md, mechanism A).
+    """
+
+    def test_conditions_are_parsed_capped_and_rendered(self):
+        plan = plan_from_obj({
+            "intent": "POLICY_DIRECT_LOOKUP", "action_route": "REACT_LOOP",
+            "de_noised_question": "How many hours count as Unavailable?",
+            "search_queries": ["scheduled maintenance exclusion"],
+            "conditions": ["6 hours of maintenance in one Sunday window",
+                           "service unavailable throughout"],
+        }, "How many hours?", "v3")
+        self.assertEqual(plan.conditions, ["6 hours of maintenance in one Sunday window",
+                                           "service unavailable throughout"])
+        block = plan.prompt_block()
+        self.assertIn("conditions the question states", block)
+        self.assertIn("6 hours of maintenance in one Sunday window", block)
+        self.assertEqual(plan.to_dict()["conditions"][1], "service unavailable throughout")
+
+    def test_a_plan_without_conditions_renders_no_conditions_line(self):
+        plan = plan_from_obj({
+            "intent": "POLICY_DIRECT_LOOKUP", "action_route": "REACT_LOOP",
+            "de_noised_question": "How many casual leave days carry forward?",
+            "search_queries": ["casual leave carry forward"],
+        }, "carry forward?", "v3")
+        self.assertEqual(plan.conditions, [])
+        self.assertNotIn("conditions the question states", plan.prompt_block())
+
+    def test_the_list_is_bounded_and_junk_is_dropped(self):
+        plan = plan_from_obj({
+            "intent": "POLICY_DIRECT_LOOKUP", "action_route": "REACT_LOOP",
+            "de_noised_question": "q", "search_queries": ["q"],
+            "conditions": [f"condition {i}" for i in range(12)] + [None, 42, ""],
+        }, "q", "v3")
+        self.assertEqual(len(plan.conditions), 8)
+        self.assertTrue(all(isinstance(c, str) and c for c in plan.conditions))
+
+    def test_a_non_loop_plan_renders_nothing_at_all(self):
+        plan = plan_from_obj({
+            "intent": "CHITCHAT_OR_OUT_OF_SCOPE", "action_route": "FAST_REFUSE",
+            "conditions": ["a stated condition"],
+        }, "hello", "v3")
+        self.assertEqual(plan.prompt_block(), "")
+        # ...but it is still recorded for the audit trail
+        self.assertEqual(plan.to_dict()["conditions"], ["a stated condition"])

@@ -47,3 +47,40 @@ def test_prompts_do_not_contain_fenced_tool_calls():
     for name in ("AGENT_SYSTEM", "AGENT_SYSTEM_V2"):
         prompt = getattr(prompts, name)
         assert not re.search(r"```(?:json)?\s*\{\s*\"name\"", prompt), name
+
+
+def test_v3_is_v1_plus_the_conditions_rule_and_nothing_else():
+    """v3 exists to test one idea, so it must not quietly become a rewrite.
+
+    The ablation compares v1 against v3; if v3 also changed the refusal text, rule
+    numbering or the tool-format fallback, a difference in the results could not be
+    attributed to the conditions rule.
+    """
+    assert "9. CONDITIONS AND SPECIAL CASES" in prompts.AGENT_SYSTEM_V3
+    assert "9. CONDITIONS" not in prompts.AGENT_SYSTEM, "v1 must stay byte-identical"
+    # everything else survives, including the rules v1 ships
+    for marker in ("1. GROUNDING", "6. CONFLICTS", "8. NUMBERS YOU DERIVE",
+                   "## How to work (ReAct loop)", "## Final answer format",
+                   "## Tool-call format fallback"):
+        assert marker in prompts.AGENT_SYSTEM_V3, marker
+    assert prompts.REFUSAL_TEXT in prompts.AGENT_SYSTEM_V3
+    # and the rule lands before the loop instructions, not after the answer format
+    assert (prompts.AGENT_SYSTEM_V3.index("9. CONDITIONS")
+            < prompts.AGENT_SYSTEM_V3.index("## How to work (ReAct loop)"))
+    # v3 is a superset, not a replacement
+    assert len(prompts.AGENT_SYSTEM_V3) > len(prompts.AGENT_SYSTEM)
+
+
+def test_v3_intent_prompt_asks_for_conditions_without_asking_for_conclusions():
+    text = prompts.INTENT_SYSTEM_V3
+    assert "### 3.5 CONDITIONS AND SPECIAL CASES" in text
+    assert '"conditions"' in text
+    assert "### 3.5" not in prompts.INTENT_SYSTEM, "v1 must stay byte-identical"
+    # the instruction must forbid deciding the answer in triage
+    assert "do NOT decide the answer here" in text  # triage classifies, it does not answer
+    # the schema stays valid JSON with the new field present once
+    body = text[text.index("{\n  \"intent\""):]
+    body = body[:body.index("\n}") + 2]
+    import json
+    parsed = json.loads(body)
+    assert "conditions" in parsed

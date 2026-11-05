@@ -395,6 +395,69 @@ Rules:
 - refusal_reason must be "" for anything except FAST_REFUSE."""
 
 # =====================================================================
+# PROMPT v3 - v1 plus "conditions and special cases", by composition.
+#
+# The measurement behind it: the failures that are not retrieval are almost all one shape -
+# the answer restates a rule that carries a condition and never establishes the condition's
+# value (a 6-hour maintenance event answered as if it were the policy's 4-hour window; a
+# confirmation time the question states treated as unknown). v1 rule 8 already says "apply
+# the figures you are given", and the model still does not, because the instruction arrives
+# after it has already decided what the question is about. v3 makes the conditions an
+# explicit artefact first (triage) and then a checklist the agent must clear.
+#
+# Composed rather than copied so v1 and v2 stay byte-identical for the ablations.
+# =====================================================================
+
+CONDITIONS_RULE_AGENT = """9. CONDITIONS AND SPECIAL CASES: the question's own facts are \
+inputs, not background. Before searching, list the conditions it states - amounts, dates, \
+durations, headcounts, tiers, what was done and by whom, and any proviso ("only if", \
+"provided that", "unless") - and carry them into the answer. For each, search the clause \
+that operates on it, including ones the question does not name: a cap, a monthly \
+allowance, an exclusion, a notice period, a precedence rule, an anti-abuse rule. Two \
+failures this rule exists to prevent: (a) quoting a rule that has a condition without \
+establishing the condition's value, and (b) answering with the rule's illustrative figure \
+where the question supplied its own - when a policy says four hours and the question \
+describes six, compare the two explicitly and say which governs; never quietly substitute \
+one for the other. If a condition needed to decide the answer is established by neither \
+the question nor the documents, say so in the first sentence instead of assuming a value.
+
+"""
+
+CONDITIONS_SECTION_INTENT = """### 3.5 CONDITIONS AND SPECIAL CASES (before the queries)
+
+Separately from the intent, list the concrete conditions the INPUT states, because the \
+answering agent applies them and cannot see the raw text. One short phrase each, in the \
+user's own terms: amounts, dates, durations, headcounts, tiers; what the person did or \
+plans to do ("uploaded health data", "works remotely 8 days"); explicit provisos in the \
+input ("only if my manager agrees", "after the deadline"). Do NOT list general background \
+or emotions, do NOT list what the documents would have to supply, and do NOT decide the \
+answer here. Write each as a fact ("6 hours of maintenance in one window", "confirmation \
+at 10:00 Monday"), never as a conclusion ("exceeds the cap", "is late"). Empty list when \
+the input states no conditions.
+
+"""
+
+AGENT_SYSTEM_V3 = AGENT_SYSTEM.replace(
+    "\n## How to work (ReAct loop)",
+    "\n" + CONDITIONS_RULE_AGENT + "## How to work (ReAct loop)",
+    1,
+)
+
+INTENT_SYSTEM_V3 = INTENT_SYSTEM.replace(
+    "### 4. OUTPUT", CONDITIONS_SECTION_INTENT + "### 4. OUTPUT", 1
+).replace(
+    '  "requires_table_check": false,',
+    '  "conditions": ["the concrete conditions the input states, as facts, not conclusions"],\n'
+    '  "requires_table_check": false,',
+    1,
+)
+
+assert AGENT_SYSTEM_V3 != AGENT_SYSTEM, "agent v3 did not change"
+assert "## How to work (ReAct loop)" in AGENT_SYSTEM_V3
+assert '"conditions"' in INTENT_SYSTEM_V3
+assert INTENT_SYSTEM_V3.count("### 3.5") == 1
+
+# =====================================================================
 # INTENT prompt v2 - tuned after the first measurement round.
 # Change 1: requires_table_check was firing on ANY number (24% of inputs),
 #           so it is now defined narrowly as a two-dimensional lookup.

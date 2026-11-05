@@ -80,6 +80,7 @@ class IntentPlan:
     de_noised_question: str = ""
     search_queries: List[str] = field(default_factory=list)
     entities: List[str] = field(default_factory=list)
+    conditions: List[str] = field(default_factory=list)   # what the QUESTION states
     requires_table_check: bool = False
     tone_guidance: str = ""
     refusal_reason: str = ""
@@ -99,6 +100,7 @@ class IntentPlan:
             "de_noised_question": self.de_noised_question,
             "search_queries": list(self.search_queries),
             "entities": list(self.entities),
+            "conditions": list(self.conditions),
             "requires_table_check": self.requires_table_check,
             "tone_guidance": self.tone_guidance,
             "refusal_reason": self.refusal_reason,
@@ -122,6 +124,10 @@ class IntentPlan:
         ]
         if self.entities:
             lines.append("- entities/terms: " + ", ".join(self.entities))
+        if self.conditions:
+            lines.append("- conditions the question states (apply every one of these; "
+                         "they are facts, not claims, so they need no citation): "
+                         + " | ".join(self.conditions))
         if self.requires_table_check:
             lines.append("- table check: REQUIRED (read the exact row+column cell)")
         if self.tone_guidance:
@@ -236,6 +242,7 @@ def plan_from_obj(obj: Dict[str, Any], question: str,
         de_noised_question=de_noised,
         search_queries=queries,
         entities=_clean_list(obj.get("extracted_entities"), _MAX_ENTITIES, 80),
+        conditions=_clean_list(obj.get("conditions"), 8, 160),
         requires_table_check=_as_bool(obj.get("requires_table_check")),
         tone_guidance=_as_str(obj.get("tone_guidance"), 240),
         refusal_reason=refusal_reason if route == "FAST_REFUSE" else "",

@@ -139,9 +139,9 @@ class Config:
     hybrid_keyword_weight: float = 0.5
     intent_max_tokens: int = 1500
     intent_cache_path: str = ""         # empty -> data_dir/intent_cache.json
-    prompt_agent: str = "v1"            # v1 | v2
+    prompt_agent: str = "v1"           # v1 | v2 | v3 (v3 = v1 + conditions)            # v1 | v2
     prompt_judge: str = "v1"            # v1 | v2
-    prompt_intent: str = "v1"           # v1 | v2
+    prompt_intent: str = "v1"           # v1 | v2 | v3 (v3 = v1 + conditions)
     # performance tuning only - defaults are the measured values, so a
     # fixture that does not care about scanning need not set them
     # ingestion tuning (performance only; the stored chunks do not depend on it)

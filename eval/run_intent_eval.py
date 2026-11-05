@@ -42,6 +42,7 @@ VARIANTS = {
     "legacy": None,          # regex baseline, no prompt
     "v1": INTENT_SYSTEM,
     "v2": None,              # filled in from prompts.INTENT_SYSTEM_V2 when present
+    "v3": None,              # v1 + the conditions list (prompts.INTENT_SYSTEM_V3)
 }
 
 
@@ -82,11 +83,11 @@ def append_result(row: dict) -> None:
 def build_router(variant: str, cfg):
     if variant == "legacy":
         return None
-    if variant == "v2":
+    if variant in ("v2", "v3"):
         import app.prompts as prompts
-        prompt = getattr(prompts, "INTENT_SYSTEM_V2", None)
+        prompt = getattr(prompts, f"INTENT_SYSTEM_{variant.upper()}", None)
         if prompt is None:
-            raise SystemExit("INTENT_SYSTEM_V2 is not defined yet")
+            raise SystemExit(f"INTENT_SYSTEM_{variant.upper()} is not defined yet")
     else:
         prompt = VARIANTS[variant]
     llm = OpenAICompatClient(

@@ -469,6 +469,31 @@ Cheap layers first, expensive last:
    bounded request — but the honest lever for the metric is search (§2.1), not a second pass
    over the answer. §9 says so too.
 
+11. **Conditions first (prompt v3)** — the non-retrieval failures are one shape: a rule
+   that carries a condition, applied without establishing the condition's value. Two examples
+   from the suite: a six-hour maintenance event answered with the policy's four-hour window
+   (`4 − 4 = 0` instead of `6 − 4 = 2`), and two fares in the question compared in prose but
+   never in numbers. Rule 8 already said "apply the figures you are given"; the instruction
+   arrives after the model has decided what the question is about, which is why v1 keeps
+   failing it. v3 makes the conditions an artefact *before* the answer exists:
+
+   triage returns `conditions[]` — the amounts, dates, durations, headcounts, tiers, actions
+   and explicit provisos the INPUT states, written as facts ("6 hours of maintenance in one
+   window"), never as conclusions, with an explicit instruction not to decide the answer
+   there (`INTENT_SYSTEM_V3` §3.5); `IntentPlan.conditions` carries them in the plan block
+   the agent already receives; and agent rule 9 tells the agent to search the clause that
+   operates on each condition — including caps, allowances, exclusions, notice periods,
+   precedence and anti-abuse rules the question does not name — to compare a rule's constant
+   against the question's value rather than substitute one for the other, and to lead with
+   the indeterminacy when a needed condition is established by neither the question nor the
+   documents.
+
+   Measured (`eval/ABLATION.md` §21): LC-08 **0/4 → 4/4**, MH-12 **0/4 → 4/4** across repeats,
+   controls unchanged, triage parity identical (98.5% intent / 100% route / 0 false refusals on
+   67 cases), adversarial pack 16/20 → **17/20** with rubric 9.45 → **9.55**. Prompt only, with
+   one field of plumbing; v3 is composed from v1 so v1 stays byte-identical. Opt-in via
+   `PROMPT_AGENT`/`PROMPT_INTENT=v3` until the other two packs are re-run on it.
+
 ### 3.10 When retrieval is weak
 
 "Grounded" is only tested by the case where nothing relevant exists, so that case

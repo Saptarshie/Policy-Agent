@@ -28,7 +28,8 @@ from .ingest import IngestPipeline
 from .llm import OpenAICompatClient
 from .prompts import (
     AGENT_SYSTEM, AGENT_SYSTEM_V2, ESCALATION_NOTE, FAITHFULNESS_SYSTEM,
-    FAITHFULNESS_SYSTEM_V2, GREETING_REPLY, INTENT_SYSTEM, INTENT_SYSTEM_V2,
+    AGENT_SYSTEM_V3, FAITHFULNESS_SYSTEM_V2, GREETING_REPLY, INTENT_SYSTEM,
+    INTENT_SYSTEM_V2, INTENT_SYSTEM_V3,
     REFUSAL_TEXT,
 )
 from .rag import RAGEngine
@@ -152,7 +153,8 @@ class AdminAPI:
                                  and self.cfg.llm_configured) else None,
                 model=self.cfg.intent_model or self.cfg.llm_model,
                 cache_path=cache_path,
-                prompt=INTENT_SYSTEM_V2 if variant == "v2" else INTENT_SYSTEM,
+                prompt={"v2": INTENT_SYSTEM_V2,
+                        "v3": INTENT_SYSTEM_V3}.get(variant, INTENT_SYSTEM),
                 prompt_version=variant,
                 max_tokens=self.cfg.intent_max_tokens,
                 reasoning_effort=self.cfg.intent_reasoning_effort,
@@ -163,7 +165,8 @@ class AdminAPI:
     def agent(self) -> ReactAgent:
         if self._agent is None:
             variant = self._agent_prompt or self.cfg.prompt_agent
-            prompt = AGENT_SYSTEM_V2 if variant == "v2" else AGENT_SYSTEM
+            prompt = {"v2": AGENT_SYSTEM_V2,
+                      "v3": AGENT_SYSTEM_V3}.get(variant, AGENT_SYSTEM)
             self._agent = ReactAgent(self.llm, self.registry,
                                      max_steps=self.cfg.agent_max_steps,
                                      system_prompt=prompt)
