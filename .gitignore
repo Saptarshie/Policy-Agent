@@ -14,3 +14,6 @@ venv/
 
 # evaluation churn: keep the harness + the written report, not every run row
 eval/results/intent_cache*.json
+
+# the take-home brief: kept locally, never committed (removed from history too)
+ASSIGNMENT.pdf
