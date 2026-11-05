@@ -1,0 +1,80 @@
+{
+  "benchmark": "complex_contract_reasoning_pack",
+  "workers": 5,
+  "timing_note": "5 concurrent: times include contention, not comparable",
+  "questions": 20,
+  "index_wall_s": 0.7,
+  "index_per_doc_s": {
+    "01_MASTER_SERVICES_AGREEMENT": 0.0,
+    "02_ENTERPRISE_ORDER_FORM_AND_CHANGE_ORDERS": 0.0,
+    "03_SERVICE_LEVEL_AND_SUPPORT_SCHEDULE": 0.0,
+    "04_DATA_PROCESSING_AND_SECURITY_ADDENDUM": 0.0
+  },
+  "answer_accuracy_pct": 85.0,
+  "strict_or_partial_pct": 95.0,
+  "verdicts": {
+    "correct": 17,
+    "partial": 2,
+    "incorrect": 1,
+    "unjudged": 0
+  },
+  "answerable": {
+    "n": 20,
+    "correct": 17,
+    "accuracy_pct": 85.0
+  },
+  "refusals": {
+    "n": 0,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "citation_recall": {
+    "expected": 42,
+    "doc_level_pct": 97.6,
+    "section_level_pct": 92.9,
+    "section_parent_level_pct": 95.2
+  },
+  "citation_recovery": {
+    "answers_with_additions": 11,
+    "citations_added": 21,
+    "max_added_in_one_answer": 3
+  },
+  "citation_warnings_total": 0,
+  "rubric": {
+    "cases": 20,
+    "max_points": 10,
+    "mean_points": 9.45,
+    "mean_pct": 94.5,
+    "by_dimension": {
+      "answer_correctness": 3.7,
+      "reasoning": 2.85,
+      "citations": 1.95,
+      "uncertainty": 0.95
+    },
+    "by_dimension_max": {
+      "answer_correctness": 4,
+      "reasoning": 3,
+      "citations": 2,
+      "uncertainty": 1
+    }
+  },
+  "agent_steps": {
+    "max_steps_env": "20",
+    "forced_final": 0,
+    "forced_ids": [],
+    "max_entries": 23,
+    "mean_entries": 10.2,
+    "max_turns": 13,
+    "mean_turns": 4.8
+  },
+  "time_s": {
+    "total_wall": 176.1,
+    "qa_wall": 673.2,
+    "mean": 33.7,
+    "p50": 28.6,
+    "p95": 52.5,
+    "max": 85.5,
+    "min": 16.1
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261105_180356.jsonl"
+}

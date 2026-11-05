@@ -159,7 +159,9 @@ path, nothing from the pack is baked into a prompt):
 ```bash
 python eval/run_benchmark.py --pack Benchmark/hr_rag_policy_pack_and_benchmark --data-dir data_bench
 python eval/run_benchmark.py --pack Benchmark/complex_contract_reasoning_pack --data-dir data_bench_legal
-#   --limit N  --reuse (skip re-index)  --index-only  --no-judge  --workers N
+#   --limit N  --reuse (skip re-index)  --index-only  --no-scan  --no-judge  --workers N
+#   (the contradiction scan runs after indexing by default: a benchmark on an unscanned
+#    index makes list_contradictions return nothing for every question)
 ```
 
 Run of record, sequential, both packs indexed and answered on the code with the

@@ -244,6 +244,11 @@ def main() -> int:
                          "clean per-question latency for wall time)")
     ap.add_argument("--index-only", action="store_true",
                     help="ingest the documents and stop (timing the index)")
+    ap.add_argument("--scan", dest="scan", action="store_true", default=True,
+                    help="run the contradiction cascade after indexing (default: on, "
+                         "because production does - an unscanned index makes "
+                         "list_contradictions return nothing for every question)")
+    ap.add_argument("--no-scan", dest="scan", action="store_false")
     args = ap.parse_args()
 
     pack = Path(args.pack)
@@ -258,8 +263,17 @@ def main() -> int:
 
     started = time.time()
     log(f"benchmark: {len(rows)} question(s) from {pack.name}")
-    log("indexing (no contradiction scan, so timings reflect the QA path):")
+    log("indexing (contradiction scan %s):" % ("on" if args.scan else "OFF"))
     api, index_times = prepare_index(pack, Path(args.data_dir), args.reuse)
+    if args.scan:
+        existing = api.db.list_contradictions()
+        if existing:
+            log(f"  scan: {len(existing)} flag(s) already in this index")
+        else:
+            t_scan = time.time()
+            api.scan(blocking=True)
+            flags = api.db.list_contradictions()
+            log(f"  scan: {len(flags)} flag(s) in {time.time() - t_scan:.1f}s")
     index_wall = time.time() - started
     docs = api.db.list_documents()
     log(f"  corpus: {len(docs)} document(s), "
@@ -405,6 +419,8 @@ def main() -> int:
     summary = {
         "benchmark": pack.name,
         "workers": args.workers,
+        "index_scanned": bool(args.scan),
+        "contradiction_flags": len(api.db.list_contradictions()),
         "timing_note": ("sequential: per-question times are single-request latency"
                         if args.workers <= 1 else
                         f"{args.workers} concurrent: times include contention, not comparable"),

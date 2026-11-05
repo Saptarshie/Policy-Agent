@@ -38,25 +38,25 @@ question that was actually asked of the system, the answer the measurement gave,
 where the evidence lives. Wrong answers are analysed one at a time in
 [`eval/FAILURES.md`](FAILURES.md); this file is about *aggregates and mechanisms*.
 
-| section | question it answers | headline result |
-|---|---|---|
-| 1 | why the regex intent gate was removed | legacy gate: 74.6% route, 50.7% intent, 15 missed refusals — replaced, kept as baseline |
-| 2 | which triage prompt to ship (67 labelled cases) | legacy 74.6% -> v1 100% route, 98.5% intent, false refusals 0; v2 identical on route |
-| 3 | does `reasoning_effort` buy the classifier accuracy | no: 20/20 accept-match at `off`, p90 8.0s -> 5.7s; ships at `off` |
-| 4 | dense vs sparse vs hybrid retrieval | identical at k>=3 on 7 documents (corpus saturates the metric); sparse +1 exact-token at k=1; found an FTS backfill bug |
-| 5 | which layer moves end-to-end accuracy (A/B/C/D, 23 cases) | A 87.0% -> B/C/D 100%; the front door is +13 points, the prompts are +-0, the judge costs 6.6s p50 |
-| 6 | are the judge's flags trustworthy | table claim P=50% -> v2 P=86%; flags are a ranking signal, not a gate |
-| 7 | what the measurements changed in the code | table: finding -> change |
-| 8 | what would invalidate all of this | threats to validity |
-| 7a | does removing the answer verifier hurt | 12/12 shape-routing, no accuracy loss; verifier out of the answer path |
-| 8a | A/B/C/D after the verifier removal | 87.0 / 100 / 100 / 100, flag rates 8.7% / 13.0% / 4.3% / 0% |
-| 9 | the HR pack (20 multihop questions) | 19/20, citations 29/29, 67.8s for the pack at `--workers 10` |
-| 10 | where the 502 seconds of ingestion went | 501.7s -> 78.2s parallel, -> 67.8s at 10 workers; chunks byte-identical |
-| 11 | the contract pack (20 rubric-scored questions) | 13/20 -> 15/20 after refuse-by-shape; rubric 9.1/10 |
-| 12 | a generalised prompt rule, and why it was reverted | negative result: naming a failure mode made the model notice it and still fail |
-| 13 | how much a benchmark moves with no code change | 15/20 then 16/20 on identical code; LC-15 hit `AGENT_MAX_STEPS` |
-| 14 | does a bounded document brief improve triage | intent 98.5% -> 100%, route flat, false refusals 0; end to end flat |
-| 15 | does it survive adversarial, fictional-jurisdiction traps | 16/20, 19/20 with partials, rubric 9.35, section recall 76.2% |
+| section | question it answers                                       | headline result                                                                                                         |
+| ------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 1       | why the regex intent gate was removed                     | legacy gate: 74.6% route, 50.7% intent, 15 missed refusals — replaced, kept as baseline                                 |
+| 2       | which triage prompt to ship (67 labelled cases)           | legacy 74.6% -> v1 100% route, 98.5% intent, false refusals 0; v2 identical on route                                    |
+| 3       | does `reasoning_effort` buy the classifier accuracy       | no: 20/20 accept-match at `off`, p90 8.0s -> 5.7s; ships at `off`                                                       |
+| 4       | dense vs sparse vs hybrid retrieval                       | identical at k>=3 on 7 documents (corpus saturates the metric); sparse +1 exact-token at k=1; found an FTS backfill bug |
+| 5       | which layer moves end-to-end accuracy (A/B/C/D, 23 cases) | A 87.0% -> B/C/D 100%; the front door is +13 points, the prompts are +-0, the judge costs 6.6s p50                      |
+| 6       | are the judge's flags trustworthy                         | table claim P=50% -> v2 P=86%; flags are a ranking signal, not a gate                                                   |
+| 7       | what the measurements changed in the code                 | table: finding -> change                                                                                                |
+| 8       | what would invalidate all of this                         | threats to validity                                                                                                     |
+| 7a      | does removing the answer verifier hurt                    | 12/12 shape-routing, no accuracy loss; verifier out of the answer path                                                  |
+| 8a      | A/B/C/D after the verifier removal                        | 87.0 / 100 / 100 / 100, flag rates 8.7% / 13.0% / 4.3% / 0%                                                             |
+| 9       | the HR pack (20 multihop questions)                       | 19/20, citations 29/29, 67.8s for the pack at `--workers 10`                                                            |
+| 10      | where the 502 seconds of ingestion went                   | 501.7s -> 78.2s parallel, -> 67.8s at 10 workers; chunks byte-identical                                                 |
+| 11      | the contract pack (20 rubric-scored questions)            | 13/20 -> 15/20 after refuse-by-shape; rubric 9.1/10                                                                     |
+| 12      | a generalised prompt rule, and why it was reverted        | negative result: naming a failure mode made the model notice it and still fail                                          |
+| 13      | how much a benchmark moves with no code change            | 15/20 then 16/20 on identical code; LC-15 hit `AGENT_MAX_STEPS`                                                         |
+| 14      | does a bounded document brief improve triage              | intent 98.5% -> 100%, route flat, false refusals 0; end to end flat                                                     |
+| 15      | does it survive adversarial, fictional-jurisdiction traps | 16/20, 19/20 with partials, rubric 9.35, section recall 76.2%                                                           |
 
 Three numbers to keep in mind when reading any single run below: this corpus has 4-7
 documents per pack so retrieval saturates; 20 questions per pack means one verdict is
@@ -453,41 +453,41 @@ p50 18.0s, p95 29.2s, range 10.3-39.3s,
 judge included. The index is reused here; a fresh index of the four documents takes
 **78.2s** (§10). Total wall 462.5s.
 
-| # | id | verdict | wall s | tools | cites | judge |
-|---|---|---|---|---|---|---|
-| 1 | MH-01 | incorrect | 43.5 | 10 | 2/2 | The reference decisively answers ₹0 immediately because el |
-| 2 | MH-02 | correct | 21.3 | 3 | 1/1 | The answer correctly states ₹25,000, applying the 50% coin |
-| 3 | MH-03 | correct | 19.7 | 2 | 2/2 | The answer correctly states that August broadband is not c |
-| 4 | MH-04 | correct | 20.2 | 2 | 2/2 | The answer correctly states that the HR-assigned/home-base |
-| 5 | MH-05 | correct | 22.7 | 3 | 1/1 | The answer correctly states that Standard-tier dental impl |
-| 6 | MH-06 | correct | 19.0 | 2 | 2/2 | The answer states the full ₹1,400 is potentially reimbursa |
-| 7 | MH-07 | correct | 14.9 | 3 | 1/1 | The answer correctly states ₹60,000 repayment, applying th |
-| 8 | MH-08 | correct | 25.2 | 5 | 2/2 | The answer correctly states 5 Casual Leave days and 30 Ear |
-| 9 | MH-09 | correct | 21.6 | 4 | 2/2 | The answer correctly states Premier allows 20 insured ment |
-| 10 | MH-10 | correct | 21.4 | 3 | 2/2 | The answer correctly states that the hotel internet is a t |
-| 11 | MH-11 | correct | 13.8 | 2 | 1/1 | The answer correctly states that three blocks are not allo |
-| 12 | MH-12 | correct | 14.9 | 2 | 1/1 | The answer correctly applies the lower-of rule so the comp |
-| 13 | MH-13 | correct | 23.6 | 5 | 2/2 | The answer correctly concludes no reimbursement from eithe |
-| 14 | MH-14 | correct | 34.0 | 9 | 2/2 | The answer correctly states that a medical certificate is  |
-| 15 | MH-15 | correct | 13.8 | 2 | 1/1 | The answer correctly states no automatic extra-legroom bec |
-| 16 | MH-16 | correct | 20.9 | 3 | 1/1 | The answer states the ₹75,000 lifetime maximum per child f |
-| 17 | MH-17 | correct | 23.2 | 6 | 1/1 | The answer states ₹12,000 and correctly applies the 50% re |
-| 18 | MH-18 | correct | 23.5 | 4 | 3/3 | The answer correctly states that personal home-gym equipme |
-| 19 | MH-19 | correct | 42.3 | 6 | 0/0 | The assistant declines because the uploaded policies do no |
-| 20 | MH-20 | correct | 22.3 | 5 | 0/0 | The assistant declines to give a percentage because the in |
+| #   | id    | verdict   | wall s | tools | cites | judge                                                      |
+| --- | ----- | --------- | ------ | ----- | ----- | ---------------------------------------------------------- |
+| 1   | MH-01 | incorrect | 43.5   | 10    | 2/2   | The reference decisively answers ₹0 immediately because el |
+| 2   | MH-02 | correct   | 21.3   | 3     | 1/1   | The answer correctly states ₹25,000, applying the 50% coin |
+| 3   | MH-03 | correct   | 19.7   | 2     | 2/2   | The answer correctly states that August broadband is not c |
+| 4   | MH-04 | correct   | 20.2   | 2     | 2/2   | The answer correctly states that the HR-assigned/home-base |
+| 5   | MH-05 | correct   | 22.7   | 3     | 1/1   | The answer correctly states that Standard-tier dental impl |
+| 6   | MH-06 | correct   | 19.0   | 2     | 2/2   | The answer states the full ₹1,400 is potentially reimbursa |
+| 7   | MH-07 | correct   | 14.9   | 3     | 1/1   | The answer correctly states ₹60,000 repayment, applying th |
+| 8   | MH-08 | correct   | 25.2   | 5     | 2/2   | The answer correctly states 5 Casual Leave days and 30 Ear |
+| 9   | MH-09 | correct   | 21.6   | 4     | 2/2   | The answer correctly states Premier allows 20 insured ment |
+| 10  | MH-10 | correct   | 21.4   | 3     | 2/2   | The answer correctly states that the hotel internet is a t |
+| 11  | MH-11 | correct   | 13.8   | 2     | 1/1   | The answer correctly states that three blocks are not allo |
+| 12  | MH-12 | correct   | 14.9   | 2     | 1/1   | The answer correctly applies the lower-of rule so the comp |
+| 13  | MH-13 | correct   | 23.6   | 5     | 2/2   | The answer correctly concludes no reimbursement from eithe |
+| 14  | MH-14 | correct   | 34.0   | 9     | 2/2   | The answer correctly states that a medical certificate is  |
+| 15  | MH-15 | correct   | 13.8   | 2     | 1/1   | The answer correctly states no automatic extra-legroom bec |
+| 16  | MH-16 | correct   | 20.9   | 3     | 1/1   | The answer states the ₹75,000 lifetime maximum per child f |
+| 17  | MH-17 | correct   | 23.2   | 6     | 1/1   | The answer states ₹12,000 and correctly applies the 50% re |
+| 18  | MH-18 | correct   | 23.5   | 4     | 3/3   | The answer correctly states that personal home-gym equipme |
+| 19  | MH-19 | correct   | 42.3   | 6     | 0/0   | The assistant declines because the uploaded policies do no |
+| 20  | MH-20 | correct   | 22.3   | 5     | 0/0   | The assistant declines to give a percentage because the in |
 
 ### The failure is one moving question, not one broken question
 
 Six sequential runs of this pack (across four prompt builds) produced 19/20 every
 time — but not the *same* 19:
 
-| run | accuracy | the miss | what the miss was |
-|---|---|---|---|
-| 20:52:20 | 19/20 | MH-12 partial | stated the lower-of rule, never named ₹25,000 |
-| 21:43:34 | 19/20 | MH-12 partial | same shape, 8 tools |
-| 22:04:02 | 19/20 | MH-12 partial | same shape, 2 tools (third reproduction) |
-| 22:19:55 | 19/20 | MH-19 partial | correct refusal, omitted "contact People Operations" |
-| 22:21:21 | 19/20 | MH-01 incorrect | answered ₹25,000 (the caps) and said 20-day eligibility was uncovered |
+| run      | accuracy | the miss        | what the miss was                                                     |
+| -------- | -------- | --------------- | --------------------------------------------------------------------- |
+| 20:52:20 | 19/20    | MH-12 partial   | stated the lower-of rule, never named ₹25,000                         |
+| 21:43:34 | 19/20    | MH-12 partial   | same shape, 8 tools                                                   |
+| 22:04:02 | 19/20    | MH-12 partial   | same shape, 2 tools (third reproduction)                              |
+| 22:19:55 | 19/20    | MH-19 partial   | correct refusal, omitted "contact People Operations"                  |
+| 22:21:21 | 19/20    | MH-01 incorrect | answered ₹25,000 (the caps) and said 20-day eligibility was uncovered |
 
 So the pack sits at 19-20/20, and a single case is unstable enough to move the
 number by 5 points. Both of the spots that failed are worth reading:
@@ -738,40 +738,40 @@ under `--workers 10` (QA 509.0s summed over threads; the four documents index in
 
 Per-question (`eval/results/benchmark_20261104_221824.jsonl`):
 
-| # | id | verdict | wall s | tools | cites | judge |
-|---|---|---|---|---|---|---|
-| 1 | LC-08 | incorrect | 27.8 | 4 | 2/2 | The answer headlines 'Zero hours' when six hours of mainte |
-| 2 | LC-03 | correct | 28.6 | 4 | 1/1 | The answer correctly concludes the 4% increase cannot appl |
-| 3 | LC-02 | correct | 29.8 | 5 | 3/3 | The answer correctly concludes OF-7 renews because the 90- |
-| 4 | LC-09 | correct | 29.9 | 5 | 2/2 | The answer correctly concludes both availability and respo |
-| 5 | LC-05 | correct | 30.4 | 4 | 3/3 | The answer correctly concludes the customer owns the Rules |
-| 6 | LC-07 | partial | 32.5 | 5 | 1/2 | The answer correctly denies three separate credits and app |
-| 7 | LC-10 | correct | 33.0 | 5 | 2/2 | The answer correctly concludes the notice is late, applies |
-| 8 | LC-01 | correct | 40.0 | 6 | 2/2 | The answer correctly applies CO-2, computes 45 excess acco |
-| 9 | LC-06 | correct | 46.0 | 7 | 4/4 | The answer correctly applies the 20% credit to one-twelfth |
-| 10 | LC-11 | correct | 22.0 | 2 | 3/3 | The answer correctly concludes the costs are not barred, b |
-| 11 | LC-04 | partial | 53.8 | 5 | 1/1 | The answer identifies the 250-user/15-day threshold and th |
-| 12 | LC-12 | correct | 25.8 | 5 | 1/1 | The answer correctly concludes that an 18-day objection is |
-| 13 | LC-13 | correct | 25.0 | 4 | 3/3 | The answer correctly concludes the move is unauthorized be |
-| 14 | LC-17 | correct | 26.5 | 4 | 2/2 | The answer correctly concludes no extension applies becaus |
-| 15 | LC-14 | partial | 31.9 | 4 | 1/2 | The answer correctly identifies the Change Order requireme |
-| 16 | LC-19 | correct | 22.1 | 3 | 1/1 | The answer correctly states that the asset-sale assignment |
-| 17 | LC-16 | correct | 35.8 | 4 | 2/2 | The answer correctly concludes no immediate suspension, re |
-| 18 | LC-20 | correct | 24.1 | 3 | 3/3 | The answer correctly concludes that verbal CEO consent is  |
-| 19 | LC-18 | correct | 38.4 | 4 | 1/1 | The answer correctly concludes no because the 90-day reque |
-| 20 | LC-15 | partial | 49.0 | 11 | 2/2 | The answer correctly states the five-business-day exceptio |
+| #   | id    | verdict   | wall s | tools | cites | judge                                                      |
+| --- | ----- | --------- | ------ | ----- | ----- | ---------------------------------------------------------- |
+| 1   | LC-08 | incorrect | 27.8   | 4     | 2/2   | The answer headlines 'Zero hours' when six hours of mainte |
+| 2   | LC-03 | correct   | 28.6   | 4     | 1/1   | The answer correctly concludes the 4% increase cannot appl |
+| 3   | LC-02 | correct   | 29.8   | 5     | 3/3   | The answer correctly concludes OF-7 renews because the 90- |
+| 4   | LC-09 | correct   | 29.9   | 5     | 2/2   | The answer correctly concludes both availability and respo |
+| 5   | LC-05 | correct   | 30.4   | 4     | 3/3   | The answer correctly concludes the customer owns the Rules |
+| 6   | LC-07 | partial   | 32.5   | 5     | 1/2   | The answer correctly denies three separate credits and app |
+| 7   | LC-10 | correct   | 33.0   | 5     | 2/2   | The answer correctly concludes the notice is late, applies |
+| 8   | LC-01 | correct   | 40.0   | 6     | 2/2   | The answer correctly applies CO-2, computes 45 excess acco |
+| 9   | LC-06 | correct   | 46.0   | 7     | 4/4   | The answer correctly applies the 20% credit to one-twelfth |
+| 10  | LC-11 | correct   | 22.0   | 2     | 3/3   | The answer correctly concludes the costs are not barred, b |
+| 11  | LC-04 | partial   | 53.8   | 5     | 1/1   | The answer identifies the 250-user/15-day threshold and th |
+| 12  | LC-12 | correct   | 25.8   | 5     | 1/1   | The answer correctly concludes that an 18-day objection is |
+| 13  | LC-13 | correct   | 25.0   | 4     | 3/3   | The answer correctly concludes the move is unauthorized be |
+| 14  | LC-17 | correct   | 26.5   | 4     | 2/2   | The answer correctly concludes no extension applies becaus |
+| 15  | LC-14 | partial   | 31.9   | 4     | 1/2   | The answer correctly identifies the Change Order requireme |
+| 16  | LC-19 | correct   | 22.1   | 3     | 1/1   | The answer correctly states that the asset-sale assignment |
+| 17  | LC-16 | correct   | 35.8   | 4     | 2/2   | The answer correctly concludes no immediate suspension, re |
+| 18  | LC-20 | correct   | 24.1   | 3     | 3/3   | The answer correctly concludes that verbal CEO consent is  |
+| 19  | LC-18 | correct   | 38.4   | 4     | 1/1   | The answer correctly concludes no because the 90-day reque |
+| 20  | LC-15 | partial   | 49.0   | 11    | 2/2   | The answer correctly states the five-business-day exceptio |
 
 ### The first run's five incorrects, item by item
 
 `eval/results/benchmark_20261104_221246.jsonl`:
 
-| id | tools | points | what the answer did |
-|---|---|---|---|
-| LC-01 | 0 | 0/10 | refused before retrieval: "The ingested policy documents do not cover this question. Please contact your HR team for guidance." — while the reference is 45 excess accounts, 10 waived, 35 x ₹800 = ₹28,000/month |
-| LC-05 | 0 | 0/10 | same refusal; the reference is that the Customer owns the Rules Engine under CO-2 on payment of the allocated ₹18,00,000 |
-| LC-15 | 0 | 0/10 | same refusal; the reference applies the five-business-day PO exception and follows it to "the invoice stays valid, so the payment clock runs" |
-| LC-06 | 11 | 4/10 | read the credit table and bound 97.8% to the **5%** band (99.50-99.899%) instead of the lowest band (20%); it did correctly identify Chronic Failure. Scored 10/10 in the next run, so this is an unstable band-selection error |
-| LC-08 | 16 | 6/10 | read "Scheduled Maintenance is excluded, up to four hours per calendar month" and treated the four-hour cap as a property of the window rather than a limit on the exclusion, so six hours gave "zero hours". It computed 6 - 4 = 2 later in the same answer but as a hypothetical |
+| id    | tools | points | what the answer did                                                                                                                                                                                                                                                                |
+| ----- | ----- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| LC-01 | 0     | 0/10   | refused before retrieval: "The ingested policy documents do not cover this question. Please contact your HR team for guidance." — while the reference is 45 excess accounts, 10 waived, 35 x ₹800 = ₹28,000/month                                                                  |
+| LC-05 | 0     | 0/10   | same refusal; the reference is that the Customer owns the Rules Engine under CO-2 on payment of the allocated ₹18,00,000                                                                                                                                                           |
+| LC-15 | 0     | 0/10   | same refusal; the reference applies the five-business-day PO exception and follows it to "the invoice stays valid, so the payment clock runs"                                                                                                                                      |
+| LC-06 | 11    | 4/10   | read the credit table and bound 97.8% to the **5%** band (99.50-99.899%) instead of the lowest band (20%); it did correctly identify Chronic Failure. Scored 10/10 in the next run, so this is an unstable band-selection error                                                    |
+| LC-08 | 16    | 6/10   | read "Scheduled Maintenance is excluded, up to four hours per calendar month" and treated the four-hour cap as a property of the window rather than a limit on the exclusion, so six hours gave "zero hours". It computed 6 - 4 = 2 later in the same answer but as a hypothetical |
 
 Three mechanisms, not five:
 
@@ -866,11 +866,11 @@ recognising the benchmark's own chair/monitor case.
 
 **Measured** (`eval/repeat_question.py <id> <n> --judge`, same judge as the pack runs):
 
-| configuration | MH-01 | LC-08 | whole pack |
-|---|---|---|---|
-| before (rule absent) | 4/6 over six full-pack runs; ad-hoc runs split ~50/50 | consistently wrong ("zero hours") | 19/20 |
-| rule, no example | 3/9 opened with ₹0 (unjudged headline reads; a second set was cut at 3 runs) | - | - |
-| rule + worked example | **4/6** | **0/3** | **18/20** |
+| configuration         | MH-01                                                                        | LC-08                             | whole pack |
+| --------------------- | ---------------------------------------------------------------------------- | --------------------------------- | ---------- |
+| before (rule absent)  | 4/6 over six full-pack runs; ad-hoc runs split ~50/50                        | consistently wrong ("zero hours") | 19/20      |
+| rule, no example      | 3/9 opened with ₹0 (unjudged headline reads; a second set was cut at 3 runs) | -                                 | -          |
+| rule + worked example | **4/6**                                                                      | **0/3**                           | **18/20**  |
 
 The rule-only set is worth reading too: where it did not open with ₹0 it opened with
 "the ₹25,000 combined cap is the binding limit - and the timing is a problem: the
@@ -888,10 +888,10 @@ the added text diluted the "apply the figures you are given" rule.
 (`benchmark_20261104_222121`, 19/20) and the run with it (`benchmark_20261104_235232`,
 18/20); every other question kept its verdict:
 
-| id | without the rule | with the rule | what changed in the answer |
-|---|---|---|---|
-| MH-01 | incorrect, 10 tools, 43.5s | partial, 7 tools, 49.0s | gained "but not immediately", kept the wrong headline: "**Short answer: ₹25,000 — but not immediately.**" It now knows the condition and still answers the unconditional question |
-| MH-12 | correct, 2 tools, 14.9s | partial, 3 tools, 23.6s | lost the number: from "the lower figure is the actual combined itinerary, and that is the amount reimbursed" (₹25,000 named later) to "the company reimburses the actual combined itinerary — because the rule is ...", with no figure at all |
+| id    | without the rule           | with the rule           | what changed in the answer                                                                                                                                                                                                                    |
+| ----- | -------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MH-01 | incorrect, 10 tools, 43.5s | partial, 7 tools, 49.0s | gained "but not immediately", kept the wrong headline: "**Short answer: ₹25,000 — but not immediately.**" It now knows the condition and still answers the unconditional question                                                             |
+| MH-12 | correct, 2 tools, 14.9s    | partial, 3 tools, 23.6s | lost the number: from "the lower figure is the actual combined itinerary, and that is the amount reimbursed" (₹25,000 named later) to "the company reimburses the actual combined itinerary — because the rule is ...", with no figure at all |
 
 So the net -1 is entirely MH-12, and MH-01's move from incorrect to partial is a grade
 change, not a fix: "₹25,000 — but not immediately" is a self-contradicting headline for a
@@ -932,10 +932,10 @@ number, 15/20, came from a run at `--workers 10`). Both packs were re-run the sa
 night, sequentially, on the code that is now committed, because the README quotes
 these numbers and a table that mixes worker settings is not comparable to itself.
 
-| pack | run | questions | correct | + partial | cite doc | cite doc+sec | rubric | QA wall | p50 | p95 |
-|---|---|---|---|---|---|---|---|---|---|---|
-| HR policy | `20261105_012006` | 20 | **19 (95%)** | **20 (100%)** | 29/29 | 29/29 | — | 340.0s | 14.9s | 31.5s |
-| contract | `20261105_010648` | 20 | **16 (80%)** | 18 (90%) | 41/42 (98%) | 39/42 (93%) | **9.30/10** | 570.8s | 23.4s | 55.8s |
+| pack      | run               | questions | correct      | + partial     | cite doc    | cite doc+sec | rubric      | QA wall | p50   | p95   |
+| --------- | ----------------- | --------- | ------------ | ------------- | ----------- | ------------ | ----------- | ------- | ----- | ----- |
+| HR policy | `20261105_012006` | 20        | **19 (95%)** | **20 (100%)** | 29/29       | 29/29        | —           | 340.0s  | 14.9s | 31.5s |
+| contract  | `20261105_010648` | 20        | **16 (80%)** | 18 (90%)      | 41/42 (98%) | 39/42 (93%)  | **9.30/10** | 570.8s  | 23.4s | 55.8s |
 
 Contract rubric dimensions: answer 3.55/4, reasoning 2.80/3, citations 2.00/2,
 uncertainty 0.95/1. HR: 17/18 answerable, 2/2 refusals, 0 citation warnings, 0
@@ -974,10 +974,10 @@ on answerable questions and zero zero-tool-call answers. There was no false-refu
 to reduce. So the experiment was run on what the corpus block *can* move - classification
 accuracy - using the 67-case set with and without briefs.
 
-| variant | cases | intent accuracy | route accuracy | false refusals | missed refusals | p50 |
-|---|---|---|---|---|---|---|
-| v1 (no corpus block) | 67 | 98.5% | 100% | 0 | 1 | 5.22s |
-| v1+corpus | 67 | **100%** | 100% | 0 | 1 | 4.92s |
+| variant              | cases | intent accuracy | route accuracy | false refusals | missed refusals | p50   |
+| -------------------- | ----- | --------------- | -------------- | -------------- | --------------- | ----- |
+| v1 (no corpus block) | 67    | 98.5%           | 100%           | 0              | 1               | 5.22s |
+| v1+corpus            | 67    | **100%**        | 100%           | 0              | 1               | 4.92s |
 
 The one case the block fixed was `g05` ("I'm moving to another city next month - does
 that change my remote work…"), which had been read as `MULTI_HOP_COMPARISON` and is now
@@ -1005,12 +1005,12 @@ End to end, both packs re-indexed and answered on the brief code, sequentially
 (`benchmark_20261105_111219` HR in `data_bench_brief`, `…20261105_112329` contract in
 `data_bench_legal_brief`), against §13's pre-brief runs:
 
-| pack | correct | + partial | cite doc | cite doc+sec | rubric | QA wall | forced finals |
-|---|---|---|---|---|---|---|---|
-| HR, pre-brief (§13) | 19/20 | 20/20 | 29/29 | 29/29 | — | 340.0s | 0 |
-| HR, with brief | 19/20 | 20/20 | 28/29 | 27/29 | — | 441.0s | 0 |
-| contract, pre-brief (§13) | 16/20 | 18/20 | 41/42 | 39/42 | 9.30 | 570.8s | 1 |
-| contract, with brief | 16/20 | **19/20** | 41/42 | 39/42 | **9.40** | 611.9s | **0** |
+| pack                      | correct | + partial | cite doc | cite doc+sec | rubric   | QA wall | forced finals |
+| ------------------------- | ------- | --------- | -------- | ------------ | -------- | ------- | ------------- |
+| HR, pre-brief (§13)       | 19/20   | 20/20     | 29/29    | 29/29        | —        | 340.0s  | 0             |
+| HR, with brief            | 19/20   | 20/20     | 28/29    | 27/29        | —        | 441.0s  | 0             |
+| contract, pre-brief (§13) | 16/20   | 18/20     | 41/42    | 39/42        | 9.30     | 570.8s  | 1             |
+| contract, with brief      | 16/20   | **19/20** | 41/42    | 39/42        | **9.40** | 611.9s  | **0**         |
 
 Read honestly:
 
@@ -1035,20 +1035,20 @@ election rather than a prohibition, clause pairs that only look contradictory, a
 "what is the maximum defensible treatment" asks where the honest answer is a qualified
 one. Run `benchmark_20261105_114833`, fresh index in `data_bench_adv`.
 
-| metric | value |
-|---|---|
-| correct | 16/20 (80.0%) |
-| correct or partial | 19/20 (95.0%) |
-| verdicts | 16 correct, 3 partial, 1 incorrect |
-| citation recall (document) | 41/42 (97.6%) |
-| citation recall (doc + section) | 32/42 (76.2%) |
-| rubric | 9.35/10 = 3.70 / 2.75 / 2.00 / 0.90 |
-| forced finals | 1 (AX-03, 38 tool calls, 104.5s — and still correct) |
-| agent steps | max 39 entries, mean 12.7 (at `AGENT_MAX_STEPS=20`) |
-| agent turns | not recorded in this run - `step_entries` counts thoughts + one entry per tool call + final, so it is not the cap. Re-running AX-13 with the model calls counted showed 10 turns and 20 tool calls over 21 entries; runs now report `turns` as well |
-| indexing | 59.8s for 4 documents |
-| wall clock | 222.1s total; 834.2s of summed per-question time |
-| per question | mean 41.7s, p50 27.3s, p95 113.1s, max 126.1s |
+| metric                          | value                                                                                                                                                                                                                                               |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| correct                         | 16/20 (80.0%)                                                                                                                                                                                                                                       |
+| correct or partial              | 19/20 (95.0%)                                                                                                                                                                                                                                       |
+| verdicts                        | 16 correct, 3 partial, 1 incorrect                                                                                                                                                                                                                  |
+| citation recall (document)      | 41/42 (97.6%)                                                                                                                                                                                                                                       |
+| citation recall (doc + section) | 32/42 (76.2%)                                                                                                                                                                                                                                       |
+| rubric                          | 9.35/10 = 3.70 / 2.75 / 2.00 / 0.90                                                                                                                                                                                                                 |
+| forced finals                   | 1 (AX-03, 38 tool calls, 104.5s — and still correct)                                                                                                                                                                                                |
+| agent steps                     | max 39 entries, mean 12.7 (at `AGENT_MAX_STEPS=20`)                                                                                                                                                                                                 |
+| agent turns                     | not recorded in this run - `step_entries` counts thoughts + one entry per tool call + final, so it is not the cap. Re-running AX-13 with the model calls counted showed 10 turns and 20 tool calls over 21 entries; runs now report `turns` as well |
+| indexing                        | 59.8s for 4 documents                                                                                                                                                                                                                               |
+| wall clock                      | 222.1s total; 834.2s of summed per-question time                                                                                                                                                                                                    |
+| per question                    | mean 41.7s, p50 27.3s, p95 113.1s, max 126.1s                                                                                                                                                                                                       |
 
 What this pack adds to the picture:
 
@@ -1150,31 +1150,31 @@ reply matches nothing, and a model failure is a no-op.
 scored against the reference's own citation list
 (`eval/results/citation_recovery_20261105_130538.json`):
 
-| group | n | mean | median | max |
-|---|---|---|---|---|
-| sections the reference expects | 38 | **0.871** | 0.975 | 0.99 |
-| every other section the agent read | 293 | 0.155 | 0.030 | 0.98 |
+| group                              | n   | mean      | median | max  |
+| ---------------------------------- | --- | --------- | ------ | ---- |
+| sections the reference expects     | 38  | **0.871** | 0.975  | 0.99 |
+| every other section the agent read | 293 | 0.155     | 0.030  | 0.98 |
 
 Separation in the mean is strong, and the tail is not: some irrelevant sections score 0.98,
 which is why the number added is capped. The sweep over thresholds, counting every seen
 section (including the ones the answer already cited):
 
 | threshold | sections added | true | false | precision | recall of expected |
-|---|---|---|---|---|---|
-| 0.2 | 82 | 36 | 46 | 43.9% | 94.7% |
-| 0.4 | 76 | 34 | 42 | 44.7% | 89.5% |
-| 0.6 | 71 | 33 | 38 | 46.5% | 86.8% |
-| 0.7 | 69 | 33 | 36 | 47.8% | 86.8% |
+| --------- | -------------- | ---- | ----- | --------- | ------------------ |
+| 0.2       | 82             | 36   | 46    | 43.9%     | 94.7%              |
+| 0.4       | 76             | 34   | 42    | 44.7%     | 89.5%              |
+| 0.6       | 71             | 33   | 38    | 46.5%     | 86.8%              |
+| 0.7       | 69             | 33   | 36    | 47.8%     | 86.8%              |
 
 ### 17.2 What it actually changed end to end
 
 Two runs of the adversarial pack on the shipped code, `--workers 10`:
 
-| run | judged | accuracy | cite doc | cite doc+section | added | answers with additions |
-|---|---|---|---|---|---|---|
-| `20261105_114833` (recovery off, §15) | yes | 16/20 | 41/42 | 32/42 (76.2%) | — | — |
-| `20261105_130704` (recovery on) | yes | 15/20 | 41/42 | **37/42 (88.1%)** | not recorded | not recorded |
-| `20261105_131141` (recovery on) | no | — | 42/42 | 34/42 (81.0%) | **7** | 6/20 |
+| run                                   | judged | accuracy | cite doc | cite doc+section  | added        | answers with additions |
+| ------------------------------------- | ------ | -------- | -------- | ----------------- | ------------ | ---------------------- |
+| `20261105_114833` (recovery off, §15) | yes    | 16/20    | 41/42    | 32/42 (76.2%)     | —            | —                      |
+| `20261105_130704` (recovery on)       | yes    | 15/20    | 41/42    | **37/42 (88.1%)** | not recorded | not recorded           |
+| `20261105_131141` (recovery on)       | no     | —        | 42/42    | 34/42 (81.0%)     | **7**        | 6/20                   |
 
 In the unjudged run, which records what was added, every one of the seven additions was a
 section the reference does **not** list:
@@ -1260,13 +1260,13 @@ subsection citation counts for the parent.
 
 ### 18.2 End to end after both changes
 
-| pack | run | accuracy | cite doc | cite section (exact) | section (parent rule) | citations recovered |
-|---|---|---|---|---|---|---|
-| adversarial, before (§15) | `20261105_114833` | 16/20 | 41/42 | 32/42 (76.2%) | - | - |
-| adversarial, recovery only (§17) | `20261105_130704` | 15/20 | 41/42 | 37/42 (88.1%) | - | not recorded |
-| adversarial, k=12 + weights + recovery | `20261105_143738` | **16/20** | 41/42 | **35/42 (83.3%)** | **38/42 (90.5%)** | 11 across 8 answers |
-| HR, before | `20261105_111219` | 19/20 | 28/29 | 27/29 | - | - |
-| HR, k=12 + weights + recovery | `20261105_144029` | **19/20** | **29/29** | 28/29 | 28/29 | 15 across 10 answers |
+| pack                                   | run               | accuracy  | cite doc  | cite section (exact) | section (parent rule) | citations recovered  |
+| -------------------------------------- | ----------------- | --------- | --------- | -------------------- | --------------------- | -------------------- |
+| adversarial, before (§15)              | `20261105_114833` | 16/20     | 41/42     | 32/42 (76.2%)        | -                     | -                    |
+| adversarial, recovery only (§17)       | `20261105_130704` | 15/20     | 41/42     | 37/42 (88.1%)        | -                     | not recorded         |
+| adversarial, k=12 + weights + recovery | `20261105_143738` | **16/20** | 41/42     | **35/42 (83.3%)**    | **38/42 (90.5%)**     | 11 across 8 answers  |
+| HR, before                             | `20261105_111219` | 19/20     | 28/29     | 27/29                | -                     | -                    |
+| HR, k=12 + weights + recovery          | `20261105_144029` | **19/20** | **29/29** | 28/29                | 28/29                 | 15 across 10 answers |
 
 Rubric on the adversarial pack after the change: **9.45/10** (3.70 / 2.80 / 2.00 / 0.95),
 the best of the three runs. Wall 170.3s at `--workers 10` (719.4s of agent time); HR 413.6s,
@@ -1340,3 +1340,60 @@ Practical consequence for the benchmarks: every pack is measured on an unscanned
 `list_contradictions` is dead weight in a benchmark run. Either the harness scans (costs
 index time, adds real flags) or the question sets should not depend on it — right now they
 do, silently.
+
+## 20. A clean comparison: the same contract pack on an unscanned and a scanned index
+
+§19 said a benchmark runs on an unscanned index, so `list_contradictions` is inert. This is
+the paired test. Two indexes built from the same code and the same pack, identical chunks:
+
+```
+data_bench_legal_clean    index only, no cascade
+data_bench_legal_scan     index + api.scan(blocking=True)  -> 2 flags in 22.3s
+```
+
+Both then answered the same 20 questions, `--workers 5 --reuse`:
+
+| index | correct | + partial | rubric | cite doc | cite section | recovered |
+|---|---|---|---|---|---|---|
+| clean | 17/20 (85%) | 19/20 | 9.45/10 | 41/42 | 39/42 (40/42 parent) | 21 |
+| scanned | **18/20 (90%)** | 19/20 | **9.60/10** | 41/42 | 40/42 (40/42 parent) | 16 |
+
+Five verdicts flipped, and only one of them can be attributed to the flags:
+
+```
+LC-04   partial  -> correct    the precedence question; the only one whose answer can use a flag
+LC-07   partial  -> correct    "highest applicable fee" - no flag involved
+LC-08   correct  -> incorrect  the 6-hour/4-hour cap - no flag involved, and it also failed
+                               the other way round in the previous run
+LC-10   incorrect-> correct    the confirmation-time question - no flag involved
+LC-15   correct  -> partial    invoice/payment clock - no flag involved
+```
+
+A single flip in the predicted direction is not evidence, so LC-04 was repeated six times on
+each index (`eval/repeat_question.py LC-04 6 --judge`):
+
+| index | correct | verdicts |
+|---|---|---|
+| clean (no flags) | **1/6** | partial, partial, partial, correct, partial, partial |
+| scanned (2 flags) | **3/6** | correct, correct, correct, partial, partial, partial |
+
+The clean answers say why they abstain: "the documents contain two different productive-use
+thresholds ... I am flagging the discrepancy rather than silently choosing one", and one
+version goes further — "the documents do not contain an express 'supersedes' or precedence
+sentence" — which is wrong, §1.2 Order of Precedence exists and the scanned runs cite it.
+With the flags present the agent more often names the governing instrument ("CO-2 expressly
+amends OF-7 Section 3, and a signed Change Order ranks highest in the order of precedence").
+
+So: 1/6 vs 3/6 on the one question where the mechanism predicts an effect, n=6 either side,
+and the rest of the paired-run movement is sampling. Recorded as a weak positive, not a fix —
+and it does not change the 18.3 conclusion, because the flags still do not state a direction.
+
+### 20.1 The harness now scans by default
+
+`eval/run_benchmark.py` runs the cascade after indexing (`--scan`, default on; `--no-scan` to
+reproduce the older behaviour), logs `scan: N flag(s) in Xs`, and records
+`index_scanned` + `contradiction_flags` in the summary. Cost measured: 6.5s on the
+adversarial pack (0 flags - it has no true pairs), 22.3s on the contract pack (2 flags), on
+indexes that take 60-90s to build and 150-600s to answer. Any future run therefore measures
+the tool as production ships it, and a pack whose questions depend on it can no longer pass
+on a technically-correct refusal to guess.
