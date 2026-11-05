@@ -34,8 +34,9 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   decision-model judge (batched + threaded) → precision-biased verifier → admin
   flag with both passages and the reason.
 - **Anti-hallucination without a second opinion** — an **LLM triage layer** in
-  front of the agent (the old regex gate is kept only as an ablation baseline),
-  a strict grounding prompt contract, tool-call schema repair with error feedback,
+  front of the agent (the old regex gate is kept only as an ablation baseline) that
+  also extracts the **conditions the question states** so the agent applies each one
+  (LC-08 and MH-12 went 0/4 → 4/4), a strict grounding prompt contract, tool-call schema repair with error feedback,
   and deterministic citation resolution. There is **no post-answer judge**: it was
   built, calibrated and measured, then removed because at model parity it cost ~6s
   p50, changed no pass rate and flagged roughly one honest answer in five
@@ -43,9 +44,9 @@ A complete, self-contained **RAG-based policy document QA agent** with:
 - **Admin interface** — CLI + web UI to upload and delete `txt` / `md` / `pdf`,
   watch ingestion progress, read the live agent trace over SSE, open citations and
   triage conflicts.
-- **Measured, with a harness for every claim** — two scored benchmark packs
-  (multi-hop HR policy, commercial contract reasoning) plus an adversarial pack
-  (now scored: 17/20)
+- **Measured, with a harness for every claim** — three scored benchmark packs
+  (multi-hop HR policy 20/20, commercial contract reasoning 19/20, adversarial
+  arbitrage 17/20)
   awaiting its first run, a rubric judge with a per-dimension breakdown, and a
   labelled ablation set; every number in this README comes from a JSON run committed
   under `eval/results/`.
@@ -146,7 +147,7 @@ Uploading `sample_docs/amendments/leave_policy_2025_amendment.md` next to
 
 ## Benchmarks — what it actually scores
 
-Three external packs sit in `Benchmark/`; two are scored below. All are asked
+Three external packs sit in `Benchmark/`; all three are scored below. All are asked
 through the same `AdminAPI.ask` the UI calls (no special
 path, nothing from the pack is baked into a prompt):
 
@@ -164,9 +165,10 @@ python eval/run_benchmark.py --pack Benchmark/complex_contract_reasoning_pack --
 #    index makes list_contradictions return nothing for every question)
 ```
 
-Run of record, sequential, both packs indexed and answered on the code with the
-document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
-`…20261105_112329` (contract).
+Runs of record (2026-11-05, prompt **v3**, `RAG_TOP_K=12`, hybrid 1.5/0.5, contradiction scan
+on, `--reuse`): `eval/results/benchmark_20261105_190713` (HR), `…190344` (contract),
+`…190013` (adversarial). The same indexes at prompt v1 scored 19/20, 17/20 and 16/20 — that
+pair is the v3 measurement in `eval/ABLATION.md` §21.
 
 | pack | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95 | QA wall |
 |---|---|---|---|---|---|
@@ -175,14 +177,15 @@ document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
 | adversarial | **17/20 (85%)** | 19/20 (95%) | 41/42 (98%) · 36/42 (86%) · 37/42 with the parent rule | 33.9 / 25.2 / 86.4 s | 216.0 s at `--workers 5` |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
-**9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The 3.60 is the honest number — four
-answers are right in shape but incomplete, usually a clause that conditions the cap
-the reader would otherwise take whole.
+**9.95 / 10** = 3.95 · 3.00 · 2.00 · 1.00. One answer is still short of full marks (LC-15:
+correct analysis, and its opening "Yes" contradicts the rest); under prompt v1 the same pack
+scored 9.45 with four such answers, all of them a clause that conditions the cap.
 
 Every answer that was not fully correct is analysed one at a time in
-[`eval/FAILURES.md`](eval/FAILURES.md) — nine answers across the three runs, five
-mechanisms, with the decisive sentence quoted from each answer and from the reference. It
-also records the one case where the benchmark, not the agent, is wrong.
+[`eval/FAILURES.md`](eval/FAILURES.md) — **four** on the current prompt, one row each, after
+the pre-v3 nine that establish the five mechanisms. It also records the one case where the
+benchmark, not the agent, is wrong (AX-15: the reference asserts a hybrid commuter amount the
+policy never states).
 
 Latency is a property of the run, not of the system: the same contract pack has
 measured p50 18.9 s to 28.0 s across runs while the answers barely moved. Treat the
@@ -271,7 +274,10 @@ each was verified — are in `dev_docs/UI_VERIFICATION.md`.
    become a coverage outage. The corpus is whatever was uploaded - HR policies
    or contracts; the classifier refuses by *shape of request*, never by topic
    (see `eval/ABLATION.md` §11, where an HR-flavoured triage refused three
-   commercial questions before retrieval). It also de-noises the question and proposes the search queries.
+   commercial questions before retrieval). It also de-noises the question, proposes the
+   search queries, and lists the **conditions the question states** - amounts, dates,
+   durations, headcounts, tiers, what was done and by whom, explicit provisos - as facts it
+   must not turn into conclusions.
 2. **Grounding prompt** — answer only from tool output; one canonical refusal
    sentence ("the ingested documents do not cover this question" — and who to ask:
    the document owner, HR for HR policies) quoted verbatim by both agent prompts and
@@ -317,6 +323,21 @@ each was verified — are in `dev_docs/UI_VERIFICATION.md`.
    topical similarity only are explicitly *not* contradictions; uncertain →
    false. Unverifiable-but-strong gate hits are marked UNVERIFIED, not
    dropped and not silently confirmed.
+12. **Conditions first (prompt v3, the shipped default)** — the failures that are not
+   retrieval are one shape: a rule that carries a condition, applied without establishing
+   the condition's value (a six-hour maintenance event answered with the policy's four-hour
+   window, `4 − 4 = 0` instead of `6 − 4 = 2`). Rule 8 said "apply the figures you are given"
+   and the model still did not, so v3 makes the conditions an artefact *before* the answer:
+   triage returns `conditions[]`, the plan block carries them to the agent, and agent rule 9
+   requires it to search the clause operating on each (caps, allowances, exclusions, notice
+   periods, precedence, anti-abuse rules the question does not name), to compare a rule's
+   constant against the question's value instead of substituting one for the other, and to
+   lead with the indeterminacy when a needed condition is established by neither. Prompt
+   only plus one field of plumbing; no detector, no threshold.
+   Measured: LC-08 **0/4 → 4/4** and MH-12 **0/4 → 4/4** across repeats with the controls
+   flat, packs 52/60 → **56/60** (`eval/ABLATION.md` §21). It does not fix AX-13, whose
+   missing fact is one the question never states (`eval/FAILURES.md`).
+
 11. **Explainable gate** — the decision model's verdict is fully auditable:
    `decided_by` records which judge made the call (`heuristic` / `remote` /
    `hybrid(remote)` / `remote->heuristic`) and its signals are stored with
@@ -463,7 +484,7 @@ policy-rag-agent/
 │   ├── run_benchmark.py        # any pack: index, ask, judge, score, JSON + JSONL
 │   ├── repeat_question.py      # hit rate of one question over N repeats (--judge)
 │   ├── run_ablation.py / report_ablation.py      # prompt variants A-D on labelled cases
-│   ├── run_intent_eval.py      # triage ablation (legacy regex vs v1 vs v2)
+│   ├── run_intent_eval.py      # triage ablation (legacy regex vs v1 vs v2 vs v3)
 │   ├── measure_retrieval.py / measure_scan.py    # label-only, no LLM calls
 │   ├── compare_parse_modes.py  # sequential vs parallel ingest -> identical chunks?
 │   ├── scratch_usage.py       # does the agent actually use its working memory?
@@ -513,7 +534,7 @@ python eval/compare_parse_modes.py --doc <path.md>    # sequential vs parallel i
 
 # ablations
 python eval/run_eval.py             # 18-case eval against a live stack (legacy set)
-python eval/run_intent_eval.py --variant legacy,v1,v2 --hard   # triage ablation
+python eval/run_intent_eval.py --variant legacy,v1,v2,v3 --hard   # triage ablation
 python eval/run_intent_eval.py --variant v1 --hard --briefs-from data_bench  # + CORPUS block
 python eval/run_ablation.py --variant A,B,C,D                  # end-to-end prompts
 python eval/report_ablation.py      # merged comparison table
@@ -566,6 +587,7 @@ non-streaming fallback) and the HTTP API end-to-end.
 | 20 benchmark questions took 373.9s of wall clock | `--workers 10`: **67.8s**, same 19/20; the summary stamps `workers` + `timing_note`, because those timings include contention |
 | the triage prompt called the corpus "HR policy", so the contract pack got canned HR refusals in ~8s with **zero** tool calls (13/20) | refuse by *shape of request*, never by subject: **15/20**, false refusals 0, and the three refused contract questions now compute (LC-01 → ₹28,000) |
 | one benchmark miss, chased over six runs | the miss **moves** (MH-12, MH-19, MH-01) — it is sampling, not a broken router — so `eval/repeat_question.py` reports hit rates (`MH-01`: 4/6), never one verdict |
+| the answer restated a rule and never applied the question's own value (LC-08 answered `4 − 4 = 0` where `6 − 4 = 2` was asked) | the question's conditions are extracted in triage and applied per clause: **LC-08 0/4 → 4/4, MH-12 0/4 → 4/4**, controls flat, packs **52/60 → 56/60** |
 | the triage layer had to classify without knowing what the corpus holds | it is shown a bounded `CORPUS` block (one 300-char brief per ready document): intent accuracy **98.5% → 100%**, route 100%, false refusals still 0 — the one remaining misclassification was a question whose vocabulary only the document brief supplies. The brief never enters chunk text (`tests/test_corpus_brief.py`) |
 | a general "background is part of the question" prompt rule | measured and **reverted**: MH-01 4/6 → 3/6 with the rule, 4/6 with a worked example, pack 19/20 → 18/20. The model learned to *notice* the condition and still led with the wrong figure (`eval/ABLATION.md` §12) |
 | citation chips looked clickable and did nothing; the panel then dumped raw markdown (`##` headings, rows of pipe characters) | chips resolve against the store (`GET /api/citations/resolve`) and the passage is rendered with a `raw` toggle; a miss names the sections the document really has, and a section split across chunks returns all its parts |
