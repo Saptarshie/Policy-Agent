@@ -18,7 +18,7 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   and **the citations are clickable**: the UI asks `GET /api/citations/resolve` and
   renders the passage it points at — or says which sections the document really
   has when it does not resolve.
-- **Rolling-window ingestion, now parallel and cheap** — a document is never fed
+- **Windowed ingestion, now parallel and cheap** — a document is never fed
   whole to the parser LLM: paragraph windows → per-window structure extraction →
   structure-aware chunking. Windows are parsed **concurrently**
   (`INGEST_PARALLEL_WINDOWS`) at `reasoning_effort=off`: **501.7s → 78.2s** for the
@@ -62,7 +62,7 @@ agent's tool-calling discipline is what suffers first on a small model).
 ## The contradiction cascade (in execution order)
 
 ```
-admin uploads doc ──▶ rolling-window ingestion ──▶ chunks + embeddings
+admin uploads doc ──▶ windowed ingestion ──▶ chunks + embeddings
                                 │
                                 ▼  (background)
         ┌──────────────────────────────────────────────────────────────┐
@@ -204,7 +204,7 @@ Two caveats the harness records itself:
 
 | command | what it does |
 |---|---|
-| `python run.py upload <files...> [--name N]` | ingest txt/md/pdf (rolling-window pipeline, live progress bar) |
+| `python run.py upload <files...> [--name N]` | ingest txt/md/pdf (windowed ingestion, live progress bar) |
 | `python run.py list` | documents + status + chunk counts + open conflict counts |
 | `python run.py delete <name\|id>` | remove a document and all its chunks/flags |
 | `python run.py ask "<question>" [--trace]` | one-shot grounded answer; `--trace` shows the ReAct steps |
@@ -369,7 +369,7 @@ it is populated only by the offline audit harness, so a client must not read a
 | `EMBED_BATCH_SIZE` | `32` | passages embedded per Ollama batch |
 | `OLLAMA_BASE_URL` / `EMBED_MODEL` | `…:11434` / `embeddinggemma` | embeddings backend |
 | `EMBED_QUERY_PREFIX` / `EMBED_DOC_PREFIX` | EmbeddingGemma task prefixes | keep quoted! Ollama does not add them itself |
-| `INGEST_WINDOW_CHARS` | `6000` | rolling-window size for read+parse |
+| `INGEST_WINDOW_CHARS` | `6000` | window size for read+parse |
 | `INGEST_LLM_ENABLED` | `true` | set `false` for heuristic-only ingestion |
 | `INGEST_HEURISTIC_MAX_CHARS` | `0` | documents at or below this size skip the LLM parse anyway (`0` = never); metadata only |
 | `CITATION_RECOVERY` | `1` | after parsing, one decision-model request asks which sections the agent **read but did not cite** are sources for the answer; they are appended (never edits the answer, never invents one) |
@@ -534,7 +534,7 @@ python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pd
 The suite (311 tests in 29 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
-ingestion pipeline (including the parallel-window pool and its merge call), the
+ingestion pipeline (the parallel-window pool and the per-document brief), the
 store, the decision-model gate (batching, the re-threshold re-check, "unavailable"
 semantics), the full cascade (flag / gate-blocks-LLM / unverified fallback),
 document-name resolution (uniqueness required: v1 vs v2), citation parsing and

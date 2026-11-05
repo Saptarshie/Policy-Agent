@@ -1,7 +1,7 @@
 """Policy RAG Agent.
 
 Citation-grounded question answering over admin-managed policy documents,
-with a rolling-window ingestion pipeline and a staged background
+with a windowed ingestion pipeline and a staged background
 contradiction tracker (RAG retrieval -> JEV-style heuristic decision gate
 -> LLM verifier -> admin alert with citations).
 

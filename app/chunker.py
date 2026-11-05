@@ -9,7 +9,7 @@ NOT fixed-length cutting. Boundaries are chosen at, in order of preference:
 3. line boundaries inside oversized paragraph blocks;
 4. sentence boundaries inside oversized lines (with a hard-split fallback).
 
-Windows (for the rolling read+parse pipeline) are also built here, on
+Windows (for the read+parse pipeline) are also built here, on
 paragraph boundaries with a small carry-over so the LLM never sees the
 whole large document at once.
 """
@@ -256,7 +256,7 @@ def _tail_chars(s: str, n: int) -> str:
 
 def split_into_windows(text: str, window_chars: int = 6000,
                        overlap: int = 200) -> List[str]:
-    """Split a long document into rolling windows on paragraph boundaries.
+    """Split a long document into consecutive windows on paragraph boundaries.
 
     Each window starts with a small carry-over tail of the previous window,
     so the LLM parser always has a bit of context - but never the whole

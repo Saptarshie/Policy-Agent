@@ -57,9 +57,11 @@ REMOVED = [r"DECISION_MODE(?!_)", r"CONTRA_TOP_K",
            # lexical gate is no longer a decision maker
            r"GROUNDING VERIFIER", r"ZERO LLM",
            r"SCAN_MAX_PAIRS_PER_CHUNK", r"DECISION_BORDERLINE_BAND",
-           r"DECISION_FALLBACK_HEURISTIC", r"VERIFY_ANSWERS"]
+           r"DECISION_FALLBACK_HEURISTIC", r"VERIFY_ANSWERS",
+           # the ingestion pipeline: no cascade, no rolling carry, no merge call
+           r"rolling-window", r"rolling summary", r"merge call"]
 HISTORICAL = ("gone", "first version", "removed", "reversal", "used to",
-              "was a", "no longer")
+              "was a", "no longer", "any more", "replaced", "old design")
 for doc, text in (("README.md", README), ("DESIGN.md", DESIGN)):
     lines = text.splitlines()
     for pattern in REMOVED:
@@ -67,7 +69,8 @@ for doc, text in (("README.md", README), ("DESIGN.md", DESIGN)):
             if not re.search(pattern, line):
                 continue
             # a sentence about the removal may wrap: look one line back too
-            context = " ".join(lines[max(0, i - 2):i]).lower()
+            # a sentence about the removal may wrap either way
+            context = " ".join(lines[max(0, i - 2):i + 1]).lower()
             if any(h in context for h in HISTORICAL):
                 continue
             problems.append(f"{doc}:{i} still describes '{pattern}' as current: "

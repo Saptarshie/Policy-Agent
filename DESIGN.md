@@ -91,7 +91,7 @@ count past the suggested 2–4.
 
 **Data flow — upload → index.** The API validates type/size, stores the file
 and returns `200` immediately with a `doc_id`; a daemon thread runs the
-rolling-window pipeline (§2), persisting progress into a `jobs` row
+windowed ingestion pipeline (§2), persisting progress into a `jobs` row
 (`stage`, `window i/n`) that the CLI and web UI
 poll. On success a second daemon thread starts the contradiction cascade
 (§4) against every other ingested document.
@@ -120,7 +120,7 @@ chip; there is **no post-answer judge in this path** — grounding is the prompt
 contract plus that check (§3.7). The judge runs offline, in the ablation harness
 only.
 
-## 2. Chunking & rolling-window ingestion (big documents)
+## 2. Chunking & windowed ingestion (big documents)
 
 Documents can be huge; **nothing is ever fed whole** to the parser LLM.
 

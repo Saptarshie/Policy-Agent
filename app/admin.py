@@ -1,6 +1,6 @@
 """Admin facade: one object wiring db + embedder + llm + agent + tracker.
 
-Used by both the CLI and the FastAPI web app. Uploads run the rolling-window
+Used by both the CLI and the FastAPI web app. Uploads run the windowed
 ingestion pipeline (optionally in a background thread) and then trigger the
 staged contradiction scan in another background thread.  ``ask()`` routes
 through the deterministic intent gate first, runs the ReAct agent for real

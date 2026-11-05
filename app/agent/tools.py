@@ -88,8 +88,9 @@ TOOL_SPECS: List[Dict[str, Any]] = [
         "function": {
             "name": "get_document_summary",
             "description": (
-                "Return the rolling summary and key metadata (key terms, main "
-                "statements) of one policy document, by document name."
+                "Return the stored brief and key metadata (key terms, main "
+                "statements) of one policy document, by document name. The brief "
+                "is a short digest, not the document: never answer from it."
             ),
             "parameters": {
                 "type": "object",
@@ -416,7 +417,7 @@ class ToolRegistry:
             meta = {}
         parts = [f"Document: {doc['name']} (status: {doc['status']}, "
                  f"{doc.get('chunk_count', 0)} chunks)",
-                 f"Rolling summary: {doc.get('summary') or '(none)'}"]
+                 f"Brief: {doc.get('summary') or '(none)'}"]
         terms = meta.get("key_terms") or []
         if terms:
             parts.append("Key terms: " + ", ".join(terms[:30]))

@@ -1,4 +1,4 @@
-"""Cascading rolling-window ingestion pipeline for (possibly very large) docs.
+"""Windowed, parallel ingestion pipeline for (possibly very large) documents.
 
 Never feeds a whole document to the LLM. Instead:
 
