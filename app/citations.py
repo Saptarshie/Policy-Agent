@@ -8,7 +8,7 @@ invents a passage: when nothing matches it says so and lists the sections the
 document actually has.
 """
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 
 def _flat(s: str) -> str:
@@ -20,6 +20,16 @@ def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
 
 
+def section_number(text: str) -> str:
+    """Leading section number of a heading: "8.1 Permitted stacking" -> "8.1".
+
+    Structure, not meaning. It exists so "8." can be recognised as the parent of "8.1"
+    and "8.2" when a document only has subsections chunked.
+    """
+    m = re.match(r"\s*(\d+(?:\.\d+)*)\b", text or "")
+    return m.group(1) if m else ""
+
+
 def parse_citation(cite: str) -> Tuple[str, Optional[int], str]:
     """'[doc § section]' / 'doc #12' -> (doc part, chunk id or None, section part)."""
     text = (cite or "").strip().strip("[]").strip()
@@ -28,6 +38,26 @@ def parse_citation(cite: str) -> Tuple[str, Optional[int], str]:
         return text[: m.start()].strip(), int(m.group(1)), ""
     doc, sep, section = text.partition("§")
     return doc.strip(), None, (section.strip() if sep else "")
+
+
+def section_satisfied(expected: str, cited: Sequence[str]) -> bool:
+    """Does citing any of *cited* satisfy the reference's *expected* section?
+
+    Two ways: the section is named outright (substring, case-insensitive), or the
+    expected heading only has subsections and a subsection was cited. The second rule is
+    not a fudge - a chunker stores "8.1 Permitted stacking", never "8. Stacking and double
+    funding", so without it a correct citation looks like a miss.
+    """
+    want = re.sub(r"\s+", " ", (expected or "").lower()).strip()
+    if not want:
+        return False
+    have = [re.sub(r"\s+", " ", (c or "").lower()).strip() for c in (cited or []) if c]
+    if any(want in c for c in have):
+        return True
+    num = section_number(want)
+    if not num:
+        return False
+    return any((section_number(c) or "").startswith(num + ".") for c in have)
 
 
 class CitationResolver:
@@ -94,6 +124,21 @@ class CitationResolver:
                 ranked.append((2, ch))
             elif want and len(have) >= 6 and have in want:
                 ranked.append((3, ch))
+        # a heading that only exists as subsections ("8. Stacking and double funding"
+        # -> "8.1 Permitted stacking") is a real reference: a reader clicking it wants
+        # the subsections, and a chunker never stores the parent as its own section.
+        want_num = section_number(section)
+        if want_num and not ranked:
+            desc = [ch for ch in chunks
+                    if (section_number(ch.get("section") or "") or "").startswith(want_num + ".")]
+            if desc:
+                desc.sort(key=lambda c: c.get("chunk_index") or 0)
+                out.update(found=True, chunk_id=desc[0]["id"], section=section,
+                           breadcrumb=desc[0].get("breadcrumb"), how="descendant",
+                           parts=[{"chunk_id": c["id"], "text": c["text"]} for c in desc],
+                           text="\n\n".join(c["text"] for c in desc))
+                return out
+
         if ranked:
             ranked.sort(key=lambda p: (p[0], p[1].get("chunk_index") or 0))
             how = ["exact", "prefix", "contains", "contained-by"][ranked[0][0]]

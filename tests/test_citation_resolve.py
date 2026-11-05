@@ -7,7 +7,8 @@ model produces, never inventing a passage - and the endpoint the UI calls.
 
 import unittest
 
-from app.citations import CitationResolver, parse_citation
+from app.citations import (CitationResolver, parse_citation, section_number,
+                           section_satisfied)
 from app.db import Database
 
 DOC = ("# Northstar Benefits\n\n## 4.2 Dental implants\n\n"
@@ -110,6 +111,65 @@ class TestResolve(_Base):
         r = self.api.resolve_citation("[ ]")
         self.assertFalse(r["found"])
         self.assertEqual(r["reason"], "empty")
+
+
+class TestParentHeadings(unittest.TestCase):
+    """A heading that only has subsections must still resolve, and must still count.
+
+    Chunkers store "8.1 Permitted stacking"; the rubric (and a reader) says
+    "8. Stacking and double funding". Treating those as different things made correct
+    citations look like misses - in the UI panel and in the benchmark alike.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = Database(f"{self.tmp.name}/p.db")
+        self.doc_id = self.db.add_document(name="02_INCENTIVES_ACT", fmt="md", status="ready")
+        for i, (section, text) in enumerate([
+                ("8.1 Permitted stacking", "Programs may stack only if they fund distinct costs."),
+                ("8.2 Prohibited duplication", "One cost cannot support two benefits."),
+                ("9. Recovery", "Recovery applies to overpayments.")]):
+            self.db.add_chunk(doc_id=self.doc_id, index=i, section=section,
+                              breadcrumb=f"02_INCENTIVES_ACT > 8. Stacking and double funding > {section}"
+                              if section.startswith("8") else f"02_INCENTIVES_ACT > {section}",
+                              text=text, embedding=[0.0] * 8)
+        # CitationResolver is a mixin: it reads self.db from whoever implements the store
+        self.r = type("_Store", (CitationResolver,), {"__init__": lambda self, db: setattr(self, "db", db)})(self.db)
+
+    def tearDown(self):
+        self.db.close()
+        self.tmp.cleanup()
+
+    def test_a_parent_heading_returns_its_subsections(self):
+        out = self.r.resolve_citation("[02_INCENTIVES_ACT § 8. Stacking and double funding]")
+        self.assertTrue(out["found"])
+        self.assertEqual(out["how"], "descendant")
+        self.assertEqual([p["chunk_id"] for p in out["parts"]],
+                         [c["id"] for c in self.db.list_chunks(self.doc_id)][:2])
+        self.assertIn("distinct costs", out["text"])
+        self.assertIn("two benefits", out["text"], "both subsections, in document order")
+
+    def test_an_unrelated_number_is_not_a_parent(self):
+        out = self.r.resolve_citation("[02_INCENTIVES_ACT § 10. Nothing here]")
+        self.assertFalse(out["found"])
+        self.assertEqual(out["reason"], "no-section")
+
+    def test_section_numbers_are_structural(self):
+        self.assertEqual(section_number("8.1 Permitted stacking"), "8.1")
+        self.assertEqual(section_number("  Section 4"), "")
+        self.assertEqual(section_number("Example A: x"), "")
+
+    def test_a_subsection_citation_satisfies_the_parent_reference(self):
+        self.assertTrue(section_satisfied("8. Stacking and double funding",
+                                          ["8.1 Permitted stacking"]))
+        self.assertTrue(section_satisfied("8.1 Permitted stacking",
+                                          ["8.1 Permitted stacking"]))
+        self.assertFalse(section_satisfied("8. Stacking and double funding", ["9. Recovery"]))
+        self.assertFalse(section_satisfied("8. Stacking and double funding", []))
+        # a sibling is not a parent
+        self.assertFalse(section_satisfied("8.2 Prohibited duplication",
+                                           ["8.1 Permitted stacking"]))
 
 
 if __name__ == "__main__":

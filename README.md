@@ -8,7 +8,7 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   batched into one turn when the calls are independent. `search_policy_docs` takes
   **`top_k` OR `min_similarity`, never both** — a count for an ordinary lookup, a
   similarity floor when several documents may touch the question, neither for the
-  `RAG_TOP_K` default. The scratchpad is per-question working memory (never
+  `RAG_TOP_K` default (12). The scratchpad is per-question working memory (never
   evidence); `calculate` is an AST-whitelisted arithmetic evaluator, so a derived
   number has a traceable derivation. Both are optional by prompt rule: a
   single-passage question is answered without them.
@@ -168,9 +168,9 @@ document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
 
 | pack | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95 | QA wall |
 |---|---|---|---|---|---|
-| HR policy | **19/20 (95%)** | **20/20 (100%)** | 28/29 (97%) · 27/29 (93%) | 22.1 / 21.8 / 30.5 s | 441.0 s; **67.8 s** at `--workers 10` |
+| HR policy | **19/20 (95%)** | **20/20 (100%)** | 29/29 (100%) · 28/29 (97%) | 16.8 / 16.3 / 23.4 s | 413.6 s; **67.8 s** at `--workers 10` |
 | contract | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 39/42 (93%) | 30.6 / 28.0 / 45.0 s | 611.9 s |
-| adversarial | **15/20 (75%)** | 19/20 (95%) | 41/42 (98%) · 37/42 (88%) | 33.4 / 26.9 / 77.5 s | 142.1 s at `--workers 10` |
+| adversarial | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 35/42 (83%) · 38/42 with the parent rule | 36.0 / 24.6 / 103.8 s | 170.3 s at `--workers 10` |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The 3.60 is the honest number — four
@@ -401,10 +401,10 @@ it is populated only by the offline audit harness, so a client must not read a
 | `INTENT_CACHE_PATH` | *(empty)* | decision cache; empty = `DATA_DIR/intent_cache.json` |
 | `JUDGE_CACHE` | `true` | replay a verdict for an identical (question, answer, contexts, prompt) — verdicts vary run to run even at temperature 0 |
 | `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v1` / `v1` / `v1` | prompt variants; v1 and v2 tie end-to-end (see `eval/ABLATION.md`) |
-| `RAG_TOP_K` | `6` | passages per `search_policy_docs` call |
+| `RAG_TOP_K` | `12` | passages per `search_policy_docs` call (6 was too shallow: reference sections rank 8-12 for the question that needs them) |
 | `RETRIEVAL_MODE` | `hybrid` | `vector` / `keyword` / `hybrid` (RRF fusion of cosine + FTS5/BM25) |
 | `RRF_K` | `60` | RRF damping constant (higher = flatter rank weights) |
-| `HYBRID_VECTOR_WEIGHT` / `HYBRID_KEYWORD_WEIGHT` | `1.0` / `1.0` | per-retriever weight inside the fusion |
+| `HYBRID_VECTOR_WEIGHT` / `HYBRID_KEYWORD_WEIGHT` | `1.5` / `0.5` | per-retriever weight inside the fusion; equal weights let a keyword list that misses the section demote a strong vector hit |
 | `MAX_UPLOAD_MB` | `20` | upload ceiling; larger files get HTTP 413 |
 | `STALE_JOB_MINUTES` | `30` | a job untouched this long is marked `error` at startup (killed process), so its document cannot stay `ingesting` |
 | `DATA_DIR` | `./data` | SQLite DB + uploads |
@@ -453,7 +453,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 311 offline tests: pytest OR python run.py selftest
+├── tests/                      # 315 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -531,7 +531,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (311 tests in 29 files, offline, no keys) covers: schema repair + feedback,
+The suite (315 tests in 29 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (the parallel-window pool and the per-document brief), the

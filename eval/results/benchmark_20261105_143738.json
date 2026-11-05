@@ -1,0 +1,82 @@
+{
+  "benchmark": "adversarial_policy_arbitrage_pack",
+  "workers": 10,
+  "timing_note": "10 concurrent: times include contention, not comparable",
+  "questions": 20,
+  "index_wall_s": 0.7,
+  "index_per_doc_s": {
+    "01_FICTIONAL_REVENUE_CODE": 0.0,
+    "02_ENTERPRISE_INCENTIVES_AND_GRANTS_ACT": 0.0,
+    "03_EMPLOYEE_BENEFITS_AND_EQUITY_POLICY": 0.0,
+    "04_OWNERSHIP_TRUSTS_AND_DISCLOSURE_RULES": 0.0
+  },
+  "answer_accuracy_pct": 80.0,
+  "strict_or_partial_pct": 95.0,
+  "verdicts": {
+    "correct": 16,
+    "partial": 3,
+    "incorrect": 1,
+    "unjudged": 0
+  },
+  "answerable": {
+    "n": 20,
+    "correct": 16,
+    "accuracy_pct": 80.0
+  },
+  "refusals": {
+    "n": 0,
+    "correct": 0,
+    "accuracy_pct": 0.0
+  },
+  "citation_recall": {
+    "expected": 42,
+    "doc_level_pct": 97.6,
+    "section_level_pct": 83.3,
+    "section_parent_level_pct": 90.5
+  },
+  "citation_recovery": {
+    "answers_with_additions": 8,
+    "citations_added": 11,
+    "max_added_in_one_answer": 2
+  },
+  "citation_warnings_total": 0,
+  "rubric": {
+    "cases": 20,
+    "max_points": 10,
+    "mean_points": 9.45,
+    "mean_pct": 94.5,
+    "by_dimension": {
+      "answer_correctness": 3.7,
+      "reasoning": 2.8,
+      "citations": 2,
+      "uncertainty": 0.95
+    },
+    "by_dimension_max": {
+      "answer_correctness": 4,
+      "reasoning": 3,
+      "citations": 2,
+      "uncertainty": 1
+    }
+  },
+  "agent_steps": {
+    "max_steps_env": "20",
+    "forced_final": 1,
+    "forced_ids": [
+      "AX-13"
+    ],
+    "max_entries": 44,
+    "mean_entries": 11.8,
+    "max_turns": 21,
+    "mean_turns": 5.8
+  },
+  "time_s": {
+    "total_wall": 170.3,
+    "qa_wall": 719.4,
+    "mean": 36.0,
+    "p50": 24.6,
+    "p95": 103.8,
+    "max": 135.4,
+    "min": 14.9
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261105_143738.jsonl"
+}

@@ -218,6 +218,14 @@ def citation_hits(answer: str, expected: list) -> tuple[int, int]:
     return doc_hits, sec_hits
 
 
+def section_hits_parent(citations: List[str], expected: List[dict]) -> int:
+    """Section hits where a subsection citation satisfies a parent heading."""
+    from app.citations import parse_citation, section_satisfied
+    cited = [parse_citation(c)[2] for c in (citations or [])]
+    return sum(1 for e in (expected or [])
+               if section_satisfied(e.get("section") or "", cited))
+
+
 def pct(a: int, b: int) -> float:
     return round(100.0 * a / b, 1) if b else 0.0
 
@@ -296,6 +304,8 @@ def main() -> int:
             task_total = task
 
         doc_hits, sec_hits = citation_hits(answer, row["ground_truth_citations"])
+        sec_hits_parent = section_hits_parent(payload.get("citations") or [],
+                                              row["ground_truth_citations"])
         out = {
             "id": row["id"],
             "question": row["question"],
@@ -329,6 +339,7 @@ def main() -> int:
             "expected_citation_docs": len(row["ground_truth_citations"]),
             "citation_doc_hits": doc_hits,
             "citation_section_hits": sec_hits,
+            "citation_section_hits_parent": sec_hits_parent,
         }
         with open(jsonl_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(out, ensure_ascii=False) + "\n")
@@ -365,6 +376,7 @@ def main() -> int:
     exp_cites = sum(r["expected_citation_docs"] for r in results)
     doc_hits = sum(r["citation_doc_hits"] for r in results)
     sec_hits = sum(r["citation_section_hits"] for r in results)
+    sec_parent_hits = sum(r.get("citation_section_hits_parent") or 0 for r in results)
 
     forced = [r for r in results if r.get("forced_final")]
     step_entries = [r["step_entries"] for r in results
@@ -415,11 +427,14 @@ def main() -> int:
                                          len(refusals))},
         "citation_recall": {"expected": exp_cites,
                             "doc_level_pct": pct(doc_hits, exp_cites),
-                            "section_level_pct": pct(sec_hits, exp_cites)},
+                            "section_level_pct": pct(sec_hits, exp_cites),
+                            # same section rule, but a subsection citation satisfies a
+                            # parent heading - the granularity a chunker actually stores
+                            "section_parent_level_pct": pct(sec_parent_hits, exp_cites)},
         "citation_recovery": {
-        "answers_with_additions": sum(1 for n in recovered if n),
-        "citations_added": sum(recovered),
-        "max_added_in_one_answer": max(recovered) if recovered else 0,
+            "answers_with_additions": sum(1 for n in recovered if n),
+            "citations_added": sum(recovered),
+            "max_added_in_one_answer": max(recovered) if recovered else 0,
     },
     "citation_warnings_total": sum(len(r["citation_warnings"]) for r in results),
         "rubric": rubric_summary,
@@ -465,6 +480,8 @@ def main() -> int:
         f"({summary['citation_recall']['doc_level_pct']}%)")
     log(f"  citation recall (doc + section)   {sec_hits}/{exp_cites}  "
         f"({summary['citation_recall']['section_level_pct']}%)")
+    log(f"  ... subsection counts as parent   {sec_parent_hits}/{exp_cites}  "
+        f"({summary['citation_recall']['section_parent_level_pct']}%)")
     log(f"  citation warnings                 {summary['citation_warnings_total']}")
     rec = summary.get("citation_recovery") or {}
     if rec:

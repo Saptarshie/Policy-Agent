@@ -292,6 +292,33 @@ stated confidently). With a realistically sized corpus (hundreds of documents)
 the k=1 separation is the one that will grow, and this harness is how to check it
 before flipping the default.
 
+**Depth was the real ceiling, not the fusion.** On the adversarial pack the
+reference's own sections sit at vector ranks 5-32 for the question that needs them, and
+the tool asked for k=6 — so a correct section could exist in the index and never reach the
+observation. `eval/measure_retrieval.py --pack` scores the reference sections directly
+(no LLM), which is how this was measured rather than argued:
+
+```
+expected sections retrieved (adversarial pack, 42 expected sections over 20 questions)
+mode        sec@6    sec@12   sec@24    MRR
+vector      28/42    35/42    39/42     0.559
+keyword     27/42    32/42    36/42     0.484
+hybrid      28/42    35/42    39/42     0.561      (vector weight 1.5, keyword 0.5)
+```
+
+Two knobs changed because of that table: `RAG_TOP_K` 6 → **12**, and the fusion weights
+from equal to **vector 1.5 / keyword 0.5**. The weighting matters for a specific failure:
+with equal weights a keyword list that does not contain the section demotes a strong
+vector hit (vector rank 5 → hybrid rank 12; vector 8 → hybrid 26 on two questions), and
+equal-weight hybrid scored *worse* than vector alone at every k. Weighted, hybrid matches
+vector at k=12 and never loses to it.
+
+Three sections still never appear at k=24 (`1.3 Related persons`, `9.2 Indicators`,
+`8. Programme look-through`): their wording and the question's wording share almost
+nothing, which is a vocabulary problem, not a fusion problem — and the honest candidate
+for it is a section-heading index, not a graph database (the numbers behind that judgement
+are in ABLATION §18).
+
 The **contradiction cascade deliberately stays dense-only** (it passes
 `mode="vector"` explicitly): it asks "which passages are semantically adjacent",
 and keyword overlap there would surface the same clause twice instead of a
@@ -369,7 +396,11 @@ Cheap layers first, expensive last:
    `GET /api/citations/resolve`, so what the check believes and what a reader sees
    cannot drift apart: the UI opens the passage behind a chip, rendered from the
    stored markdown (raw toggle for the exact bytes) with its breadcrumb and chunk
-   id, or names the sections the document really has when the reference does not
+   id, or names the sections the document really has when the reference does not.
+   A reference to a *parent* heading ("8. Stacking and double funding" when the chunker
+   stored "8.1 Permitted stacking") resolves to every subsection, in document order,
+   because a heading that only exists as subsections is still a real target; the panel
+   labels that case `descendant` rather than pretending it matched exactly
    exist. A section split over several chunks returns **all** its parts (`parts[]`),
    because showing only the first chunk made a continuing table look truncated —
    the one way a verification panel could mislead the person verifying.
@@ -682,7 +713,7 @@ document brief (`benchmark_20261105_111219`, `…20261105_112329`):
 | ----------- | ------- | --------- | ----------------------------------- | --------------------- | ---------------------------------- |
 | HR policy   | 19/20   | 20/20     | 28/29 · 27/29                       | 22.1 / 21.8 / 30.5 s  | 441.0 s (67.8 s at `--workers 10`) |
 | contract    | 16/20   | 19/20     | 41/42 · 39/42                       | 30.6 / 28.0 / 45.0 s  | 611.9 s                            |
-| adversarial | 15/20   | 19/20     | 41/42 · 37/42                       | 33.4 / 26.9 / 77.5 s  | 142.1 s at `--workers 10`          |
+| adversarial | 16/20   | 19/20     | 41/42 · 35/42 (38/42 parent)        | 36.0 / 24.6 / 103.8 s | 170.3 s at `--workers 10`          |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The rubric is reported separately from

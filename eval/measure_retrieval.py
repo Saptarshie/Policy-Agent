@@ -68,6 +68,71 @@ def score(api, cases, ks):
     return out
 
 
+def _norm(text: str) -> str:
+    flat = re.sub(r"[§#]", " ", (text or "").lower())
+    return re.sub(r"\s+", " ", flat).strip(" .-")
+
+
+def pack_sections(api, cases, ks, modes=MODES, breadcrumb: bool = True):
+    """Rank the reference's own sections, per mode, at several k.
+
+    A hit means: one of the top-k passages IS that section - either the chunk's own
+    `section`, or (breadcrumb=True) a section on its breadcrumb path, which is how a
+    reference to a parent heading ("8. Stacking and double funding") can be satisfied by
+    the chunk that carries only the child ("8.1 Permitted stacking").
+    """
+    out = {}
+    for mode in modes:
+        hits = {k: 0 for k in ks}
+        mrr = 0.0
+        total = 0
+        missing_at_max = []
+        for c in cases:
+            expected = [e.get("section") or "" for e in c.get("ground_truth_citations", [])]
+            expected = [e for e in expected if e.strip()]
+            if not expected:
+                continue
+            total += len(expected)
+            top = api.rag.search(c["question"], top_k=max(ks), mode=mode)
+            ranks = []
+            for sec in expected:
+                want = _norm(sec)
+                rank = None
+                for i, h in enumerate(top, 1):
+                    own = _norm(h.section)
+                    crumb = _norm(getattr(h, "breadcrumb", "") or "")
+                    if own == want or (breadcrumb and want and f" {want} " in f" {crumb} "):
+                        rank = i
+                        break
+                ranks.append(rank)
+                if rank:
+                    mrr += 1.0 / rank
+                else:
+                    missing_at_max.append((c["id"], sec))
+            for k in ks:
+                hits[k] += sum(1 for r in ranks if r and r <= k)
+        out[mode] = (hits, total, mrr, missing_at_max)
+    return out
+
+
+def section_table(title, res, ks):
+    print()
+    print(title)
+    head = "mode".ljust(9) + "".join(("sec@%d" % k).rjust(9) for k in ks) + "     MRR"
+    print(head)
+    print("-" * len(head))
+    for mode, (hits, total, mrr, _missing) in res.items():
+        line = mode.ljust(9)
+        line += "".join(("%3d/%-5d" % (hits[k], total)) for k in ks)
+        line += ("   %.3f" % (mrr / total if total else 0.0))
+        print(line)
+    for mode, (_hits, _total, _mrr, missing) in res.items():
+        if missing:
+            print(f"\n  {mode}: never found at k={max(ks)}")
+            for qid, sec in missing:
+                print(f"    {qid}: {sec}")
+
+
 def table(title, res, ks):
     print()
     print(title)
@@ -85,6 +150,12 @@ def table(title, res, ks):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--k", default="1,3,6")
+    ap.add_argument("--pack", default="",
+                    help="score a benchmark pack's expected SECTIONS instead of the "
+                         "eval sets (needs the pack's documents indexed in DATA_DIR)")
+    ap.add_argument("--modes", default="vector,keyword,hybrid")
+    ap.add_argument("--exact-sections", action="store_true",
+                    help="match the chunk's own section only, not its breadcrumb path")
     args = ap.parse_args()
     ks = [int(x) for x in args.k.split(",")]
 
@@ -92,6 +163,23 @@ def main():
     if not api.db.list_documents():
         print("no documents ingested - run run.py upload first")
         return 2
+
+    if args.pack:
+        pack = Path(args.pack)
+        if not pack.is_absolute():
+            pack = ROOT / pack
+        cases = []
+        for f in sorted(pack.glob("*.jsonl")):
+            cases += [json.loads(l) for l in f.read_text(encoding="utf-8").splitlines()
+                      if l.strip()]
+        modes = tuple(m.strip() for m in args.modes.split(",") if m.strip())
+        print(f"pack {pack.name}: {len(cases)} questions, k={ks}, "
+              f"weights v={api.cfg.hybrid_vector_weight} k={api.cfg.hybrid_keyword_weight}, "
+              f"breadcrumb={'off' if args.exact_sections else 'on'}")
+        section_table("expected sections retrieved",
+                      pack_sections(api, cases, ks, modes,
+                                    breadcrumb=not args.exact_sections), ks)
+        return 0
 
     natural = load("eval_set.jsonl") + load("qa_extra.jsonl")
     probes = load("retrieval_probes.jsonl")

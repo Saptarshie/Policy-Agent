@@ -1214,3 +1214,85 @@ Consequences recorded rather than acted on:
 * The lever that would actually move section recall is retrieval, not post-processing: the
   4 never-read sections are the ones the grader wanted. That is a search problem (§2.1), and
   it is the honest next experiment, not another pass over the answer.
+
+## 18. Retrieval: k=6 was the ceiling, and equal-weight fusion was demoting good hits
+
+The four sections the adversarial pack never retrieved (§17.3) were the trigger for
+looking at retrieval itself. A label-only probe (`eval/measure_retrieval.py --pack`, no LLM
+calls) ranks the reference's own sections for each question, at several k:
+
+```
+expected sections retrieved (adversarial pack, 42 expected sections over 20 questions)
+
+weights v=1.0 k=1.0 (the shipped defaults until this change)
+mode        sec@6    sec@12   sec@24    MRR
+vector      28/42    35/42    39/42     0.559
+keyword     27/42    32/42    36/42     0.484
+hybrid      29/42    33/42    39/42     0.543
+
+weights v=1.5 k=0.5 (now shipped)
+hybrid      28/42    35/42    39/42     0.561
+```
+
+Two findings, both structural rather than semantic:
+
+1. **Depth.** At k=6 roughly a third of the reference's sections are outside the
+   observation even though the index contains them. The tool asked for 6 because 6 is a
+   reasonable number of passages to *read* — it is not a reasonable number to *search*, and
+   retrieval and reading are separate budgets. `RAG_TOP_K` is now 12.
+2. **Fusion was demoting strong vector hits.** Equal-weight RRF let a keyword list that
+   does not contain the section outvote vector rank 5 or 8: `hybrid` scored *worse* than
+   `vector` alone at every k (33 vs 35 at k=12), and two questions show the mechanism
+   directly — AX-06 `9.3 Safe tax planning` vector rank 8 → hybrid 26, AX-17
+   `10. Anti-abuse rule` vector 5 → hybrid 12. Vector now carries 1.5 and keywords 0.5, so
+   keywords add recall without overriding a confident dense hit. Weighted hybrid matches
+   vector at k=12 and never loses to it.
+
+### 18.1 Section labels: a subsection citation satisfies its parent heading
+
+AX-13's missing section, `8. Stacking and double funding`, is a *parent* heading; the
+chunker stored `8.1 Permitted stacking` and kept the parent only in the breadcrumb. No
+retrieval mode can return a section label no chunk carries, and the citation check could
+not see a correct subsection citation as satisfying the reference's parent. Both sides now
+understand the hierarchy (`app/citations.section_satisfied`, `CitationResolver`'s
+`descendant` match): a reference to a parent resolves to every subsection, and a
+subsection citation counts for the parent.
+
+### 18.2 End to end after both changes
+
+| pack | run | accuracy | cite doc | cite section (exact) | section (parent rule) | citations recovered |
+|---|---|---|---|---|---|---|
+| adversarial, before (§15) | `20261105_114833` | 16/20 | 41/42 | 32/42 (76.2%) | - | - |
+| adversarial, recovery only (§17) | `20261105_130704` | 15/20 | 41/42 | 37/42 (88.1%) | - | not recorded |
+| adversarial, k=12 + weights + recovery | `20261105_143738` | **16/20** | 41/42 | **35/42 (83.3%)** | **38/42 (90.5%)** | 11 across 8 answers |
+| HR, before | `20261105_111219` | 19/20 | 28/29 | 27/29 | - | - |
+| HR, k=12 + weights + recovery | `20261105_144029` | **19/20** | **29/29** | 28/29 | 28/29 | 15 across 10 answers |
+
+Rubric on the adversarial pack after the change: **9.45/10** (3.70 / 2.80 / 2.00 / 0.95),
+the best of the three runs. Wall 170.3s at `--workers 10` (719.4s of agent time); HR 413.6s,
+p50 16.3s.
+
+Read honestly: the accuracy differences (16, 15, 16) are sampling — §13 measured the same
+pack moving 15 → 16 on identical code. What is not sampling is the retrieval table: depth
+and weighting are properties of the retriever, and the section recall gain survives every
+run. On HR nothing regressed; document recall went 28/29 → 29/29.
+
+### 18.3 Still missing, and why a graph database would not fix it
+
+Three sections are absent even at k=24 with the best mode:
+
+```
+AX-02  1.3 Related persons
+AX-05  9.2 Indicators
+AX-19  8. Programme look-through
+```
+
+The questions and those headings share almost no vocabulary, and none of the three is
+reachable by a reference edge from a section that *is* retrieved — there is no phrase like
+"see § 9.2" to follow. A graph database would model the same corpus and return the same
+misses: the problem is lexical entry, not relational structure. The graph-shaped work that
+*would* pay is the one described in §17.3 and DESIGN §9: precedence/supersession edges
+(`CO-2 amends Order Form §2.3`) for "which clause governs" questions, and versioning. That
+is a `section_refs` table in the existing SQLite file, not a second database — and it is
+worth building only after a question set exists that fails on precedence rather than on
+wording.

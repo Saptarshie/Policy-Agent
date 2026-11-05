@@ -132,8 +132,11 @@ class Config:
     # (used by eval/measure_retrieval.py to justify the default).
     retrieval_mode: str = "hybrid"
     rrf_k: int = 60
-    hybrid_vector_weight: float = 1.0
-    hybrid_keyword_weight: float = 1.0
+    # measured on the adversarial pack: equal weights let a keyword list that misses the
+    # section demote a strong vector hit (vector rank 5 -> hybrid rank 12), so the vector
+    # list leads and keywords contribute without overriding it
+    hybrid_vector_weight: float = 1.5
+    hybrid_keyword_weight: float = 0.5
     intent_max_tokens: int = 1500
     intent_cache_path: str = ""         # empty -> data_dir/intent_cache.json
     prompt_agent: str = "v1"            # v1 | v2
@@ -208,13 +211,15 @@ def get_config() -> Config:
             embed_query_prefix=_str("EMBED_QUERY_PREFIX", "task: search result | query: "),
             embed_doc_prefix=_str("EMBED_DOC_PREFIX", "title: none | text: "),
             embed_batch_size=_int("EMBED_BATCH_SIZE", 32),
-            rag_top_k=_int("RAG_TOP_K", 6),
+            # 6 was too shallow: several reference sections rank 8-12 for the question
+            # that needs them, so the agent never saw them (ABLATION 18)
+            rag_top_k=_int("RAG_TOP_K", 12),
             max_upload_mb=_int("MAX_UPLOAD_MB", 20),
             stale_job_minutes=_int("STALE_JOB_MINUTES", 30),
             retrieval_mode=_str("RETRIEVAL_MODE", "hybrid").strip().lower(),
             rrf_k=_int("RRF_K", 60),
-            hybrid_vector_weight=_float("HYBRID_VECTOR_WEIGHT", 1.0),
-            hybrid_keyword_weight=_float("HYBRID_KEYWORD_WEIGHT", 1.0),
+            hybrid_vector_weight=_float("HYBRID_VECTOR_WEIGHT", 1.5),
+            hybrid_keyword_weight=_float("HYBRID_KEYWORD_WEIGHT", 0.5),
             ingest_window_chars=_int("INGEST_WINDOW_CHARS", 6000),
             ingest_llm_enabled=_bool("INGEST_LLM_ENABLED", True),
             chunk_target_chars=_int("CHUNK_TARGET_CHARS", 1400),
