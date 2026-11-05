@@ -31,6 +31,37 @@ All three table-producing scripts share one scoring implementation
 
 ---
 
+## 0. Index — every measurement in this file
+
+Sections are in the order the work happened, not in order of importance. Each row is a
+question that was actually asked of the system, the answer the measurement gave, and
+where the evidence lives. Wrong answers are analysed one at a time in
+[`eval/FAILURES.md`](FAILURES.md); this file is about *aggregates and mechanisms*.
+
+| section | question it answers | headline result |
+|---|---|---|
+| 1 | why the regex intent gate was removed | legacy gate: 74.6% route, 50.7% intent, 15 missed refusals — replaced, kept as baseline |
+| 2 | which triage prompt to ship (67 labelled cases) | legacy 74.6% -> v1 100% route, 98.5% intent, false refusals 0; v2 identical on route |
+| 3 | does `reasoning_effort` buy the classifier accuracy | no: 20/20 accept-match at `off`, p90 8.0s -> 5.7s; ships at `off` |
+| 4 | dense vs sparse vs hybrid retrieval | identical at k>=3 on 7 documents (corpus saturates the metric); sparse +1 exact-token at k=1; found an FTS backfill bug |
+| 5 | which layer moves end-to-end accuracy (A/B/C/D, 23 cases) | A 87.0% -> B/C/D 100%; the front door is +13 points, the prompts are +-0, the judge costs 6.6s p50 |
+| 6 | are the judge's flags trustworthy | table claim P=50% -> v2 P=86%; flags are a ranking signal, not a gate |
+| 7 | what the measurements changed in the code | table: finding -> change |
+| 8 | what would invalidate all of this | threats to validity |
+| 7a | does removing the answer verifier hurt | 12/12 shape-routing, no accuracy loss; verifier out of the answer path |
+| 8a | A/B/C/D after the verifier removal | 87.0 / 100 / 100 / 100, flag rates 8.7% / 13.0% / 4.3% / 0% |
+| 9 | the HR pack (20 multihop questions) | 19/20, citations 29/29, 67.8s for the pack at `--workers 10` |
+| 10 | where the 502 seconds of ingestion went | 501.7s -> 78.2s parallel, -> 67.8s at 10 workers; chunks byte-identical |
+| 11 | the contract pack (20 rubric-scored questions) | 13/20 -> 15/20 after refuse-by-shape; rubric 9.1/10 |
+| 12 | a generalised prompt rule, and why it was reverted | negative result: naming a failure mode made the model notice it and still fail |
+| 13 | how much a benchmark moves with no code change | 15/20 then 16/20 on identical code; LC-15 hit `AGENT_MAX_STEPS` |
+| 14 | does a bounded document brief improve triage | intent 98.5% -> 100%, route flat, false refusals 0; end to end flat |
+| 15 | does it survive adversarial, fictional-jurisdiction traps | 16/20, 19/20 with partials, rubric 9.35, section recall 76.2% |
+
+Three numbers to keep in mind when reading any single run below: this corpus has 4-7
+documents per pack so retrieval saturates; 20 questions per pack means one verdict is
+5 percentage points; and the same code has scored 15/20 and 16/20 on the same pack (§13).
+
 ## 1. Why the front door was replaced
 
 The original gate was a keyword classifier (`app/agent/intent_legacy.py`): a
@@ -315,7 +346,7 @@ degrades to `unknown` instead of becoming an accusation. v1 is the default
   construction; the honest claim is "v2 fixes specific observed failures", not
   "v2 is generally better".
 
-## 7. Verifier change (post-ablation) and the shape classifier
+## 7a. Verifier change (post-ablation) and the shape classifier
 
 Variant B/C were re-run after the refusal-detection rewrite, because the verifier
 now judges refusals and partial answers instead of skipping them on a phrase
@@ -351,7 +382,7 @@ Cost: ~1.5s per answered question against the decision model, ~2s more when the
 chat model has to be used as the fallback classifier (deployments without
 `DECISION_MODE=remote|hybrid`).
 
-## 8. Re-run after the verifier change (final numbers)
+## 8a. Re-run after the verifier change (final numbers)
 
 B and C were re-run on the final code (`DECISION_MODE=remote`, so the shape
 classifier is the decision model), with the judge prompt that now also states the
@@ -994,3 +1025,53 @@ Read honestly:
 3. **Wall clock grew on both packs** (340 -> 441s, 571 -> 612s). That is endpoint load
    during this session, not the change: the index step itself (which the brief does
    affect) took 65-67s per pack versus 78-87s before.
+
+## 15. The adversarial pack, 20 questions at `--workers 10`
+
+A fourth pack (`Benchmark/adversarial_policy_arbitrage_pack`, 4 documents, 20 questions)
+built to attack what the first three did not: a fictional jurisdiction with its own
+revenue code and incentives act, questions where the *favourable* answer is a lawful
+election rather than a prohibition, clause pairs that only look contradictory, and
+"what is the maximum defensible treatment" asks where the honest answer is a qualified
+one. Run `benchmark_20261105_114833`, fresh index in `data_bench_adv`.
+
+| metric | value |
+|---|---|
+| correct | 16/20 (80.0%) |
+| correct or partial | 19/20 (95.0%) |
+| verdicts | 16 correct, 3 partial, 1 incorrect |
+| citation recall (document) | 41/42 (97.6%) |
+| citation recall (doc + section) | 32/42 (76.2%) |
+| rubric | 9.35/10 = 3.70 / 2.75 / 2.00 / 0.90 |
+| forced finals | 1 (AX-03, 38 tool calls, 104.5s — and still correct) |
+| agent steps | max 39 entries, mean 12.7 (at `AGENT_MAX_STEPS=20`) |
+| indexing | 59.8s for 4 documents |
+| wall clock | 222.1s total; 834.2s of summed per-question time |
+| per question | mean 41.7s, p50 27.3s, p95 113.1s, max 126.1s |
+
+What this pack adds to the picture:
+
+1. **It is the slowest pack per question by a wide margin** — p95 113.1s against 30.5s
+   (HR) and 45.0s (contract). The questions invite many small lookups across documents
+   (AX-03 and AX-13 made 37-38 tool calls), and the agent spends steps on them rather
+   than widening a single search.
+2. **Document recall holds, section recall collapses** — 41/42 vs 32/42. The references
+   for this pack list two or more sections per answer, and the agent typically cites the
+   governing one plus supporting ones it found, not every section the rubric lists. That
+   makes section recall a measure of *citation completeness against a list*, not of
+   whether the citations support the claim; the honest reading is "the agent found the
+   right document reliably and the right exact section most of the time".
+3. **Concurrency buys less than the worker count** — 20 questions in parallel took
+   222.1s of wall clock against 834.2s of summed agent time, a 3.8x speedup at 10
+   workers, because the endpoint, not the harness, is the limit. The per-question
+   latencies in this run are inflated by contention and should not be compared to
+   sequential runs; §9 says the same about its `--workers 10` pass.
+4. **The four not-fully-correct answers are documented case by case in FAILURES.md**, and
+   one of them (AX-15) is a *benchmark* defect: the reference answer supplies a hybrid
+   commuter-support amount the document never states, while the agent read the section
+   literally and said so. Scored as an error; recorded as a disagreement.
+
+So the pack does its job — it produces the failure the other packs could not (a
+confidently wrong negative claim about what the documents cover) and it exposes that
+this agent's citation habit is "cite what supports the sentence", not "cite everything
+the grader expects".

@@ -45,6 +45,7 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   triage conflicts.
 - **Measured, with a harness for every claim** — two scored benchmark packs
   (multi-hop HR policy, commercial contract reasoning) plus an adversarial pack
+  (now scored: 16/20)
   awaiting its first run, a rubric judge with a per-dimension breakdown, and a
   labelled ablation set; every number in this README comes from a JSON run committed
   under `eval/results/`.
@@ -153,7 +154,7 @@ path, nothing from the pack is baked into a prompt):
 |---|---|---|---|
 | `Benchmark/hr_rag_policy_pack_and_benchmark` | 4 | 20 | multi-hop HR policy: caps, eligibility windows, worked examples, plus out-of-corpus refusals |
 | `Benchmark/complex_contract_reasoning_pack` | 4 | 20 | commercial contract / SLA arithmetic: credits, caps, proration, and definitions that change a clause's scope |
-| `Benchmark/adversarial_policy_arbitrage_pack` | 4 | 20 | adversarial arbitrage: questions whose obvious reading is the wrong one (a definition elsewhere in the pack flips it). **Not scored yet** — the harness will run it, no run of record exists |
+| `Benchmark/adversarial_policy_arbitrage_pack` | 4 | 20 | adversarial arbitrage: questions whose obvious reading is the wrong one (a definition elsewhere in the pack flips it), a fictional jurisdiction, and asks whose honest answer is a qualified one. Scored: **16/20**, 19/20 with partials, section recall 76.2% (see ABLATION 15 and `eval/FAILURES.md`) |
 
 ```bash
 python eval/run_benchmark.py --pack Benchmark/hr_rag_policy_pack_and_benchmark --data-dir data_bench
@@ -169,11 +170,17 @@ document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
 |---|---|---|---|---|---|
 | HR policy | **19/20 (95%)** | **20/20 (100%)** | 28/29 (97%) · 27/29 (93%) | 22.1 / 21.8 / 30.5 s | 441.0 s; **67.8 s** at `--workers 10` |
 | contract | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 39/42 (93%) | 30.6 / 28.0 / 45.0 s | 611.9 s |
+| adversarial | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 32/42 (76%) | 41.7 / 27.3 / 113.1 s | 222.1 s at `--workers 10` (834.2 s of agent time) |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The 3.60 is the honest number — four
 answers are right in shape but incomplete, usually a clause that conditions the cap
 the reader would otherwise take whole.
+
+Every answer that was not fully correct is analysed one at a time in
+[`eval/FAILURES.md`](eval/FAILURES.md) — nine answers across the three runs, five
+mechanisms, with the decisive sentence quoted from each answer and from the reference. It
+also records the one case where the benchmark, not the agent, is wrong.
 
 Latency is a property of the run, not of the system: the same contract pack has
 measured p50 18.9 s to 28.0 s across runs while the answers barely moved. Treat the
@@ -460,7 +467,8 @@ policy-rag-agent/
 │   ├── scoring.py              # rubric judging + citation recall
 │   ├── check_docs.py           # README/DESIGN vs code (env keys, tools, routes, scripts)
 │   ├── results/                # committed benchmark runs (JSON + JSONL)
-│   └── ABLATION.md             # every measurement, incl. the ones that failed
+│   ├── ABLATION.md             # every measurement, incl. the ones that failed
+│   └── FAILURES.md             # every answer that was not correct, and why
 ├── Benchmark/                  # external question packs (docs + questions + rubric)
 │   ├── hr_rag_policy_pack_and_benchmark/
 │   ├── complex_contract_reasoning_pack/

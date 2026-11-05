@@ -607,7 +607,7 @@ every citation it produced, and writes JSONL rows plus a summary JSON under
 |---|---|---|---|
 | `hr_rag_policy_pack_and_benchmark` | 4 | 20 | multi-hop HR policy: caps that bind, eligibility windows, worked examples, out-of-corpus refusals |
 | `complex_contract_reasoning_pack` | 4 | 20 | commercial contract / SLA arithmetic: credits, caps, proration, definitions that change a clause's scope |
-| `adversarial_policy_arbitrage_pack` | 4 | 20 | questions whose obvious reading is wrong once a definition elsewhere in the pack is applied — present, not yet scored |
+| `adversarial_policy_arbitrage_pack` | 4 | 20 | questions whose obvious reading is wrong once a definition elsewhere in the pack is applied, in a fictional jurisdiction — scored 16/20, section recall 76.2% |
 
 Run of record, both sequential, both indexed and answered on the code with the
 document brief (`benchmark_20261105_111219`, `…20261105_112329`):
@@ -616,6 +616,7 @@ document brief (`benchmark_20261105_111219`, `…20261105_112329`):
 |---|---|---|---|---|---|
 | HR policy | 19/20 | 20/20 | 28/29 · 27/29 | 22.1 / 21.8 / 30.5 s | 441.0 s (67.8 s at `--workers 10`) |
 | contract | 16/20 | 19/20 | 41/42 · 39/42 | 30.6 / 28.0 / 45.0 s | 611.9 s |
+| adversarial | 16/20 | 19/20 | 41/42 · 32/42 | 41.7 / 27.3 / 113.1 s | 222.1 s at `--workers 10` |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The rubric is reported separately from
