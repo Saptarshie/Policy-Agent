@@ -4,6 +4,7 @@ __pycache__/
 data/
 # benchmark indexes (rebuildable: eval/run_benchmark.py)
 data_bench/
+data_bench_*/
 data_bench_legal/
 *.sqlite3
 .venv/
