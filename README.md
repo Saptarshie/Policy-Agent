@@ -147,7 +147,8 @@ Uploading `sample_docs/amendments/leave_policy_2025_amendment.md` next to
 
 ## Benchmarks — what it actually scores
 
-Three external packs sit in `Benchmark/`; all three are scored below. All are asked
+Three evaluation packs sit in `Benchmark/`, authored for this repo (their documents are
+fictional; the questions are written against those documents). All three are scored below. All are asked
 through the same `AdminAPI.ask` the UI calls (no special
 path, nothing from the pack is baked into a prompt):
 

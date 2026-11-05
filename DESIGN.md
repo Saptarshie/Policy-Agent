@@ -752,7 +752,7 @@ operations exist in the CLI
 
 ## 6. Benchmarks — what is measured, on what, and what it misses
 
-Three external packs (two scored, one not yet), each a directory of documents plus
+Three packs authored for this repo (all three scored), each a directory of documents plus
 questions with expected behaviour. `eval/run_benchmark.py` indexes the pack into its own `DATA_DIR`, asks
 every question through `AdminAPI.ask` (the same path the UI uses — no test-only
 route, nothing from the pack embedded in a prompt), judges each answer, resolves
