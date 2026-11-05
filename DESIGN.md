@@ -492,7 +492,8 @@ Cheap layers first, expensive last:
    controls unchanged, triage parity identical (98.5% intent / 100% route / 0 false refusals on
    67 cases), adversarial pack 16/20 → **17/20** with rubric 9.45 → **9.55**. Prompt only, with
    one field of plumbing; v3 is composed from v1 so v1 stays byte-identical. Opt-in via
-   `PROMPT_AGENT`/`PROMPT_INTENT=v3` until the other two packs are re-run on it.
+   this is the shipped default (`PROMPT_AGENT`/`PROMPT_INTENT=v3`); `v1` selects the old
+   behaviour for comparison.
 
 ### 3.10 When retrieval is weak
 
@@ -729,16 +730,16 @@ every citation it produced, and writes JSONL rows plus a summary JSON under
 | ----------------------------------- | ---- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `hr_rag_policy_pack_and_benchmark`  | 4    | 20        | multi-hop HR policy: caps that bind, eligibility windows, worked examples, out-of-corpus refusals                                                             |
 | `complex_contract_reasoning_pack`   | 4    | 20        | commercial contract / SLA arithmetic: credits, caps, proration, definitions that change a clause's scope                                                      |
-| `adversarial_policy_arbitrage_pack` | 4    | 20        | questions whose obvious reading is wrong once a definition elsewhere in the pack is applied, in a fictional jurisdiction — scored 16/20, section recall 76.2% |
+| `adversarial_policy_arbitrage_pack` | 4    | 20        | questions whose obvious reading is wrong once a definition elsewhere in the pack is applied, in a fictional jurisdiction — scored 17/20, section recall 85.7% |
 
 Run of record, both sequential, both indexed and answered on the code with the
 document brief (`benchmark_20261105_111219`, `…20261105_112329`):
 
 | pack        | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95      | QA wall                            |
 | ----------- | ------- | --------- | ----------------------------------- | --------------------- | ---------------------------------- |
-| HR policy   | 19/20   | 20/20     | 28/29 · 27/29                       | 22.1 / 21.8 / 30.5 s  | 441.0 s (67.8 s at `--workers 10`) |
-| contract    | 16/20   | 19/20     | 41/42 · 39/42                       | 30.6 / 28.0 / 45.0 s  | 611.9 s                            |
-| adversarial | 16/20   | 19/20     | 41/42 · 35/42 (38/42 parent)        | 36.0 / 24.6 / 103.8 s | 170.3 s at `--workers 10`          |
+| HR policy   | 20/20   | 20/20     | 29/29 · 29/29                       | 27.7 / 24.1 / 45.5 s  | 164.8 s at `--workers 5`           |
+| contract    | 19/20   | 20/20     | 42/42 · 42/42                       | 36.4 / 30.9 / 66.7 s  | 185.3 s at `--workers 5`           |
+| adversarial | 17/20   | 19/20     | 41/42 · 36/42 (37/42 parent)        | 33.9 / 25.2 / 86.4 s  | 216.0 s at `--workers 5`           |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The rubric is reported separately from

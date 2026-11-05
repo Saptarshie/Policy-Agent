@@ -57,6 +57,10 @@ where the evidence lives. Wrong answers are analysed one at a time in
 | 13      | how much a benchmark moves with no code change            | 15/20 then 16/20 on identical code; LC-15 hit `AGENT_MAX_STEPS`                                                         |
 | 14      | does a bounded document brief improve triage              | intent 98.5% -> 100%, route flat, false refusals 0; end to end flat                                                     |
 | 15      | does it survive adversarial, fictional-jurisdiction traps | 16/20, 19/20 with partials, rubric 9.35, section recall 76.2%                                                           |
+| 16      | is the scratchpad used at all                              | no: 0 uses in 200 tool calls, so it is documented as offered-not-required                 |
+| 17      | does citation recovery help the sections the answer forgot | 0/7 additions matched; the 4 misses were never retrieved - a retrieval problem            |
+| 20      | does the contradiction cascade earn its keep               | 17/20 clean vs 18/20 scanned, 5 flips (4 unexplainable); LC-04 repeats 1/6 vs 3/6         |
+| 21      | do the condition/special-case failures move with a prompt  | **LC-08 0/4 -> 4/4, MH-12 0/4 -> 4/4**, controls flat; packs 52/60 -> 56/60              |
 
 Three numbers to keep in mind when reading any single run below: this corpus has 4-7
 documents per pack so retrieval saturates; 20 questions per pack means one verdict is
@@ -1446,11 +1450,22 @@ classifier for one more field did not cost routing accuracy.
 
 ### 21.2 End-to-end
 
-| pack | v1 (k=12, reported in §18) | v3 |
-|---|---|---|
-| adversarial | 16/20, 19/20 partials, rubric 9.45, sec 35/42 (38 parent) | **17/20**, 19/20 partials, **rubric 9.55**, sec 36/42 (37 parent) |
-| contract | 17/20, 19/20 partials, rubric 9.45, sec 39/42 (40 parent) | see below |
-| HR | 19/20, 20/20 partials, doc 29/29 | see below |
+| pack | v1 (k=12, §18) | v3 | citation recall (v3) | rubric (v3) |
+|---|---|---|---|---|
+| adversarial | 16/20, 19/20 partials, 9.45 | **17/20**, 19/20 partials | 41/42 · 36/42 (37 parent) | **9.55** |
+| contract | 17/20, 19/20 partials, 9.45 | **19/20**, 20/20 partials | **42/42 · 42/42** | **9.95** |
+| HR | 19/20, 20/20 partials, 29/29 · 28/29 | **20/20**, refusals 2/2 | **29/29 · 29/29** | — |
+
+56/60 correct against 52/60, and the contract pack now cites every section the rubric asks
+for - it is the pack where a condition drives every question. Wall clock did not worsen at
+`--workers 5`: adversarial 216.0s, contract 185.3s, HR 164.8s, and no forced finals on any
+pack (v1 had one on the adversarial pack).
+
+Two things this table does not claim. The contract pack has bounced between 15/20 and 19/20
+on identical code before (§13), so 19/20 is a sample, not a floor; the evidence that the
+change is real is the repeat table in 21.1, where the same two questions went 0/4 -> 4/4 with
+the controls untouched. And HR was already at ceiling for citations, so its 19/20 -> 20/20 is
+one question - MH-12 - which is precisely the condition failure the rule targets.
 
 Caveat on attribution: the v3 pair changes triage *and* the agent at once, so a gain belongs
 to the pair. The v1-vs-v3 diff is small enough to split later (agent-only v3) if a reviewer

@@ -45,7 +45,7 @@ A complete, self-contained **RAG-based policy document QA agent** with:
   triage conflicts.
 - **Measured, with a harness for every claim** — two scored benchmark packs
   (multi-hop HR policy, commercial contract reasoning) plus an adversarial pack
-  (now scored: 16/20)
+  (now scored: 17/20)
   awaiting its first run, a rubric judge with a per-dimension breakdown, and a
   labelled ablation set; every number in this README comes from a JSON run committed
   under `eval/results/`.
@@ -154,7 +154,7 @@ path, nothing from the pack is baked into a prompt):
 |---|---|---|---|
 | `Benchmark/hr_rag_policy_pack_and_benchmark` | 4 | 20 | multi-hop HR policy: caps, eligibility windows, worked examples, plus out-of-corpus refusals |
 | `Benchmark/complex_contract_reasoning_pack` | 4 | 20 | commercial contract / SLA arithmetic: credits, caps, proration, and definitions that change a clause's scope |
-| `Benchmark/adversarial_policy_arbitrage_pack` | 4 | 20 | adversarial arbitrage: questions whose obvious reading is the wrong one (a definition elsewhere in the pack flips it), a fictional jurisdiction, and asks whose honest answer is a qualified one. Scored: **15/20**, 19/20 with partials, section recall 88% with citation recovery on (see ABLATION 15 and 17, and `eval/FAILURES.md`) |
+| `Benchmark/adversarial_policy_arbitrage_pack` | 4 | 20 | adversarial arbitrage: questions whose obvious reading is the wrong one (a definition elsewhere in the pack flips it), a fictional jurisdiction, and asks whose honest answer is a qualified one. Scored: **17/20**, 19/20 with partials, section recall 86% (88% with the parent rule) on prompt v3 (see ABLATION 15, 17 and 21, and `eval/FAILURES.md`) |
 
 ```bash
 python eval/run_benchmark.py --pack Benchmark/hr_rag_policy_pack_and_benchmark --data-dir data_bench
@@ -170,9 +170,9 @@ document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
 
 | pack | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95 | QA wall |
 |---|---|---|---|---|---|
-| HR policy | **19/20 (95%)** | **20/20 (100%)** | 29/29 (100%) · 28/29 (97%) | 16.8 / 16.3 / 23.4 s | 413.6 s; **67.8 s** at `--workers 10` |
-| contract | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 39/42 (93%) | 30.6 / 28.0 / 45.0 s | 611.9 s |
-| adversarial | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 35/42 (83%) · 38/42 with the parent rule | 36.0 / 24.6 / 103.8 s | 170.3 s at `--workers 10` |
+| HR policy | **20/20 (100%)** | **20/20 (100%)** | 29/29 (100%) · 29/29 (100%) | 27.7 / 24.1 / 45.5 s | 164.8 s at `--workers 5` |
+| contract | **19/20 (95%)** | **20/20 (100%)** | 42/42 (100%) · 42/42 (100%) | 36.4 / 30.9 / 66.7 s | 185.3 s at `--workers 5` |
+| adversarial | **17/20 (85%)** | 19/20 (95%) | 41/42 (98%) · 36/42 (86%) · 37/42 with the parent rule | 33.9 / 25.2 / 86.4 s | 216.0 s at `--workers 5` |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
 **9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The 3.60 is the honest number — four
@@ -402,7 +402,7 @@ it is populated only by the offline audit harness, so a client must not read a
 | `INTENT_REASONING_EFFORT` | `off` | reasoning budget for the classifier; JSON extraction needs none |
 | `INTENT_CACHE_PATH` | *(empty)* | decision cache; empty = `DATA_DIR/intent_cache.json` |
 | `JUDGE_CACHE` | `true` | replay a verdict for an identical (question, answer, contexts, prompt) — verdicts vary run to run even at temperature 0 |
-| `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v1` / `v1` / `v1` | prompt variants; v1 and v2 tie end-to-end. `v3` adds the conditions list - triage returns what the question states, the agent applies each - and fixed both systematic condition failures (ABLATION 21); opt-in until all three packs are re-run |
+| `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v3` / `v3` / `v1` | prompt variants. v1 and v2 tie end-to-end; `v3` adds the conditions list - triage returns what the question states, the agent applies each - and fixed both systematic condition failures (LC-08 and MH-12, 0/4 → 4/4; ABLATION 21) |
 | `RAG_TOP_K` | `12` | passages per `search_policy_docs` call (6 was too shallow: reference sections rank 8-12 for the question that needs them) |
 | `RETRIEVAL_MODE` | `hybrid` | `vector` / `keyword` / `hybrid` (RRF fusion of cosine + FTS5/BM25) |
 | `RRF_K` | `60` | RRF damping constant (higher = flatter rank weights) |

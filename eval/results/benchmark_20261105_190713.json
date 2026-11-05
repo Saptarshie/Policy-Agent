@@ -1,0 +1,65 @@
+{
+  "benchmark": "hr_rag_policy_pack_and_benchmark",
+  "workers": 5,
+  "index_scanned": true,
+  "contradiction_flags": 1,
+  "timing_note": "5 concurrent: times include contention, not comparable",
+  "questions": 20,
+  "index_wall_s": 24.5,
+  "index_per_doc_s": {
+    "01_LEAVE_AND_ATTENDANCE_POLICY": 0.0,
+    "02_HEALTH_AND_WELLBEING_BENEFITS": 0.0,
+    "03_WORKPLACE_EXPENSE_AND_REMOTE_WORK_POLICY": 0.0,
+    "04_TRAVEL_RELOCATION_AND_MOBILITY_POLICY": 0.0
+  },
+  "answer_accuracy_pct": 100.0,
+  "strict_or_partial_pct": 100.0,
+  "verdicts": {
+    "correct": 20,
+    "partial": 0,
+    "incorrect": 0,
+    "unjudged": 0
+  },
+  "answerable": {
+    "n": 18,
+    "correct": 18,
+    "accuracy_pct": 100.0
+  },
+  "refusals": {
+    "n": 2,
+    "correct": 2,
+    "accuracy_pct": 100.0
+  },
+  "citation_recall": {
+    "expected": 29,
+    "doc_level_pct": 100.0,
+    "section_level_pct": 100.0,
+    "section_parent_level_pct": 100.0
+  },
+  "citation_recovery": {
+    "answers_with_additions": 8,
+    "citations_added": 14,
+    "max_added_in_one_answer": 3
+  },
+  "citation_warnings_total": 0,
+  "rubric": null,
+  "agent_steps": {
+    "max_steps_env": "20",
+    "forced_final": 0,
+    "forced_ids": [],
+    "max_entries": 25,
+    "mean_entries": 9.7,
+    "max_turns": 11,
+    "mean_turns": 4.2
+  },
+  "time_s": {
+    "total_wall": 164.8,
+    "qa_wall": 553.3,
+    "mean": 27.7,
+    "p50": 24.1,
+    "p95": 45.5,
+    "max": 76.1,
+    "min": 15.5
+  },
+  "rows": "D:\\prac_prog\\fun\\Prismforce\\Policy_agent\\policy-rag-agent_V3\\policy-rag-agent\\eval\\results\\benchmark_20261105_190713.jsonl"
+}
