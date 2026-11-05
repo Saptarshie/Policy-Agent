@@ -609,20 +609,20 @@ every citation it produced, and writes JSONL rows plus a summary JSON under
 | `complex_contract_reasoning_pack` | 4 | 20 | commercial contract / SLA arithmetic: credits, caps, proration, definitions that change a clause's scope |
 | `adversarial_policy_arbitrage_pack` | 4 | 20 | questions whose obvious reading is wrong once a definition elsewhere in the pack is applied — present, not yet scored |
 
-Run of record, both sequential on the same code
-(`benchmark_20261105_012006`, `…20261105_010648`):
+Run of record, both sequential, both indexed and answered on the code with the
+document brief (`benchmark_20261105_111219`, `…20261105_112329`):
 
 | pack | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95 | QA wall |
 |---|---|---|---|---|---|
-| HR policy | 19/20 | 20/20 | 29/29 · 29/29 | 17.0 / 14.9 / 31.5 s | 340.0 s (67.8 s at `--workers 10`) |
-| contract | 16/20 | 18/20 | 41/42 · 39/42 | 28.5 / 23.4 / 55.8 s | 570.8 s |
+| HR policy | 19/20 | 20/20 | 28/29 · 27/29 | 22.1 / 21.8 / 30.5 s | 441.0 s (67.8 s at `--workers 10`) |
+| contract | 16/20 | 19/20 | 41/42 · 39/42 | 30.6 / 28.0 / 45.0 s | 611.9 s |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
-**9.30 / 10** = 3.55 · 2.80 · 2.00 · 0.95. The rubric is reported separately from
+**9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The rubric is reported separately from
 "correct" on purpose: four answers are right in shape and incomplete, which a binary
-verdict hides and a 3.55 shows. One contract question hit the step budget (89 s, 20
-tool calls) and still graded partial, which is the honest cost of a fixed
-`AGENT_MAX_STEPS`.
+verdict hides and a 3.60 shows. The previous run of the same pack had one forced
+final (a question that spent 89 s and 20 tool calls); with the brief it has none,
+which is a difference in where the agent goes looking, not in the budget.
 
 What these numbers do **not** establish:
 

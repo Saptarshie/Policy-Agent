@@ -970,13 +970,27 @@ What the block is *for*, beyond accuracy: de-noising and query planning now spea
 document's vocabulary ("service credit", "carry-forward", "booking class") instead of the
 employee's, and a question naming a document is routed to that document's terms.
 
-End-to-end on the HR pack with briefs (run `benchmark_20261105_111219`, sequential,
-fresh index in `data_bench_brief`): **19/20** correct, 20/20 with partials, refusals
-2/2, citation recall **28/29 document, 27/29 document+section** (was 29/29 before the
-brief), 0 warnings, 0 forced finals, QA 441.0s.
+End to end, both packs re-indexed and answered on the brief code, sequentially
+(`benchmark_20261105_111219` HR in `data_bench_brief`, `…20261105_112329` contract in
+`data_bench_legal_brief`), against §13's pre-brief runs:
 
-So accuracy held and citation recall lost one or two references. With n=20 that is
-inside the per-run movement measured in §13 (the same pack has moved 19 <-> 20 and
-its miss wanders between cases), so it is recorded as "no detected change" rather than
-as a regression — but it is not a win either, and anyone re-running this should compare
-`citation_section_hits` per case rather than the single percentage.
+| pack | correct | + partial | cite doc | cite doc+sec | rubric | QA wall | forced finals |
+|---|---|---|---|---|---|---|---|
+| HR, pre-brief (§13) | 19/20 | 20/20 | 29/29 | 29/29 | — | 340.0s | 0 |
+| HR, with brief | 19/20 | 20/20 | 28/29 | 27/29 | — | 441.0s | 0 |
+| contract, pre-brief (§13) | 16/20 | 18/20 | 41/42 | 39/42 | 9.30 | 570.8s | 1 |
+| contract, with brief | 16/20 | **19/20** | 41/42 | 39/42 | **9.40** | 611.9s | **0** |
+
+Read honestly:
+
+1. **Accuracy did not move** — 19/20 and 16/20 on both sides of the change. What moved
+   is the partial/incorrect split on the contract pack (18/20 -> 19/20 correct-or-partial,
+   rubric 9.30 -> 9.40) and the disappearance of the forced final, i.e. the agent
+   reached the right clause in fewer turns. Small, and inside the movement §13 measured.
+2. **HR citation recall lost one to two references** (29/29 -> 28/29 doc, 27/29
+   doc+section). n=20, and this pack has moved by one case between runs before, so it
+   is recorded as no detected change rather than a regression — but it is not a win,
+   and a re-run should compare `citation_section_hits` per case, not the percentage.
+3. **Wall clock grew on both packs** (340 -> 441s, 571 -> 612s). That is endpoint load
+   during this session, not the change: the index step itself (which the brief does
+   affect) took 65-67s per pack versus 78-87s before.

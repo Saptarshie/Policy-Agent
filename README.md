@@ -161,22 +161,23 @@ python eval/run_benchmark.py --pack Benchmark/complex_contract_reasoning_pack --
 #   --limit N  --reuse (skip re-index)  --index-only  --no-judge  --workers N
 ```
 
-Run of record, sequential, same code (2026-11-05):
-`eval/results/benchmark_20261105_012006` (HR) and `…20261105_010648` (contract).
+Run of record, sequential, both packs indexed and answered on the code with the
+document brief (2026-11-05): `eval/results/benchmark_20261105_111219` (HR) and
+`…20261105_112329` (contract).
 
 | pack | correct | + partial | citation recall (doc / doc+section) | mean / p50 / p95 | QA wall |
 |---|---|---|---|---|---|
-| HR policy | **19/20 (95%)** | **20/20 (100%)** | 29/29 · 29/29 | 17.0 / 14.9 / 31.5 s | 340.0 s; **67.8 s** at `--workers 10` |
-| contract | **16/20 (80%)** | 18/20 (90%) | 41/42 (98%) · 39/42 (93%) | 28.5 / 23.4 / 55.8 s | 570.8 s |
+| HR policy | **19/20 (95%)** | **20/20 (100%)** | 28/29 (97%) · 27/29 (93%) | 22.1 / 21.8 / 30.5 s | 441.0 s; **67.8 s** at `--workers 10` |
+| contract | **16/20 (80%)** | 19/20 (95%) | 41/42 (98%) · 39/42 (93%) | 30.6 / 28.0 / 45.0 s | 611.9 s |
 
 Contract pack rubric (answer /4, reasoning /3, citations /2, uncertainty /1):
-**9.30 / 10** = 3.55 · 2.80 · 2.00 · 0.95. The 3.55 is the honest number — four
+**9.40 / 10** = 3.60 · 2.85 · 2.00 · 0.95. The 3.60 is the honest number — four
 answers are right in shape but incomplete, usually a clause that conditions the cap
 the reader would otherwise take whole.
 
-Latency is a property of the run, not of the system: the contract pack's p50 was
-18.9 s in a concurrent run and 23.4 s sequential, and one question in that run spent
-89 s and hit the step budget. Treat the wall column as "what it cost that evening".
+Latency is a property of the run, not of the system: the same contract pack has
+measured p50 18.9 s to 28.0 s across runs while the answers barely moved. Treat the
+wall column as "what it cost that evening".
 
 
 Two caveats the harness records itself:
