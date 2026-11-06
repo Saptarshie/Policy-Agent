@@ -1514,3 +1514,32 @@ All four answered with citations; none refused. What this does not fix: if the r
 older than the window (six messages), or the user's continuation depends on a detail that was
 in the *documents* rather than the conversation, the rewrite has less to work from - the block
 is a recency window, not a summary.
+
+### 22.3 Why it "still failed" after the first fix
+
+Because the first fix did not reach the running app. `Config` carries the shipped prompts twice:
+once as dataclass defaults, once as the fallback in `from_env()`. Only the dataclass was changed,
+and `from_env()` - which is what runs - still said `"v1"`, so every process kept the pre-conditions,
+pre-follow-up prompts while the docs, the tests and the commit messages said v3/v4. Measured on
+the live app: "any other way?" after a leave question still came back
+`CHITCHAT_OR_OUT_OF_SCOPE -> FAST_REFUSE` with zero tool calls.
+
+Two lessons, both cheap to act on and expensive to skip:
+
+- **A default that exists in two places is a default that disagrees.** `tests/test_config_defaults.py`
+  now asserts that every field the dataclass defaults is defaulted identically from the environment,
+  with the shipped prompts called out by name (agent v3, intent v4). Set `PROMPT_INTENT=v1` and it
+  fails, which is the point.
+- **A prompt change needs a restart to be observable.** The two servers on :8000 and :8081 were
+  started the day before the change; the file on disk was correct and the process was not. Restart
+  before believing a live failure, and check `/api/health` for the build you think you are talking to.
+
+After the restart, the same question over HTTP:
+
+```
+POST /api/ask  {"question": "any other way?", "history": [...leave question, ...LWOP answer]}
+intent: POLICY_DIRECT_LOOKUP | route: REACT_LOOP
+answer: "For a flu absence, the leave policy offers no illness-based alternative to Leave
+Without Pay once sick leave and paid leave are exhausted. The only other leave types ..."
+citations: leave_policy § 2, § 3, § 4, § 5, § 6, § 7, § 3.1
+```

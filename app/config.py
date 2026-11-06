@@ -260,8 +260,12 @@ def get_config() -> Config:
             intent_model=_str("INTENT_MODEL", ""),
             intent_max_tokens=_int("INTENT_MAX_TOKENS", 1500),
             intent_cache_path=_str("INTENT_CACHE_PATH", ""),
-            prompt_agent=_str("PROMPT_AGENT", "v1").strip().lower(),
+            # These defaults are the shipped prompts, and they are duplicated from the
+            # dataclass above - which is exactly how the app ran v1 for a day after the
+            # dataclass said v3: from_env() overrode it and nobody noticed. A test pins
+            # the two together (tests/test_config.py) so they cannot drift again.
+            prompt_agent=_str("PROMPT_AGENT", "v3").strip().lower(),
             prompt_judge=_str("PROMPT_JUDGE", "v1").strip().lower(),
-            prompt_intent=_str("PROMPT_INTENT", "v1").strip().lower(),
+            prompt_intent=_str("PROMPT_INTENT", "v4").strip().lower(),
         )
     return _CACHE

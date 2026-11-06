@@ -427,6 +427,7 @@ it is populated only by the offline audit harness, so a client must not read a
 | `INTENT_CACHE_PATH` | *(empty)* | decision cache; empty = `DATA_DIR/intent_cache.json` |
 | `JUDGE_CACHE` | `true` | replay a verdict for an identical (question, answer, contexts, prompt) — verdicts vary run to run even at temperature 0 |
 | `PROMPT_INTENT` / `PROMPT_AGENT` / `PROMPT_JUDGE` | `v4` / `v3` / `v1` | prompt variants. v1 and v2 tie end-to-end; `v3` adds the conditions list - triage returns what the question states, the agent applies each - and fixed both systematic condition failures (LC-08 and MH-12, 0/4 → 4/4; ABLATION 21) |
+| (prompt changes are read at startup: restart the server after editing any `PROMPT_*` value - the dataclass default and the `from_env()` fallback both have to say the same thing, and `tests/test_config_defaults.py` enforces it) |
 | `RAG_TOP_K` | `12` | passages per `search_policy_docs` call (6 was too shallow: reference sections rank 8-12 for the question that needs them) |
 | `RETRIEVAL_MODE` | `hybrid` | `vector` / `keyword` / `hybrid` (RRF fusion of cosine + FTS5/BM25) |
 | `RRF_K` | `60` | RRF damping constant (higher = flatter rank weights) |
@@ -479,7 +480,7 @@ policy-rag-agent/
 │   │   └── tracker.py          # candidates -> gate -> verify -> admin flag
 │   ├── api/routes.py           # FastAPI routes (factory: create_app(api=...))
 │   └── web/index.html          # single-file UI: docs, chat, live SSE trace, citation panel
-├── tests/                      # 326 offline tests: pytest OR python run.py selftest
+├── tests/                      # 329 offline tests: pytest OR python run.py selftest
 │   ├── fakes.py                # FakeLLM / StubLLM / FakeEmbedder
 │   ├── conftest.py             # hermetic env bootstrap
 │   └── fixtures/sample_policy.pdf
@@ -557,7 +558,7 @@ python eval/trace_steps.py "question"   # one question's full tool trace
 python scripts/make_pdf_fixture.py  # regenerate tests/fixtures/sample_policy.pdf
 ```
 
-The suite (326 tests in 29 files, offline, no keys) covers: schema repair + feedback,
+The suite (329 tests in 29 files, offline, no keys) covers: schema repair + feedback,
 the ReAct loop (native and text-based tool calling, citation verification, the
 calculator and scratchpad tools, parallel tool calls), chunking/windows, the
 ingestion pipeline (the parallel-window pool and the per-document brief), the
